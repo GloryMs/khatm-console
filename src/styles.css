@@ -1,0 +1,31 @@
+:root{ color-scheme: light; }
+*{ box-sizing:border-box; }
+body{ margin:0; font-family: "Segoe UI", Tahoma, sans-serif; background:#FAFAF8; color:#16243B; }
+.page{ max-width:1000px; margin:0 auto; padding:0 20px 40px; }
+.hdr{ display:flex; align-items:center; justify-content:space-between; padding:22px 0; border-bottom:1px solid #E2DED4; flex-wrap:wrap; gap:12px; }
+.brand{ font-size:26px; font-weight:700; }
+.brand span{ font-size:14px; font-weight:400; color:#5C6675; }
+nav button{ background:none; border:1px solid #D2CCBC; border-radius:8px; padding:8px 16px; margin-inline-start:8px; cursor:pointer; font-size:15px; }
+nav button.on{ background:#16243B; color:#fff; border-color:#16243B; }
+.grid{ display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:24px; }
+@media (max-width:760px){ .grid{ grid-template-columns:1fr; } }
+.card{ background:#fff; border:1px solid #E2DED4; border-radius:14px; padding:22px; }
+.card.center{ text-align:center; }
+h2{ margin:0 0 16px; font-size:19px; }
+label{ display:block; font-size:14px; color:#34425C; margin-bottom:14px; }
+input, textarea{ width:100%; margin-top:6px; padding:10px 12px; border:1px solid #D2CCBC; border-radius:8px; font-size:14px; font-family:inherit; }
+textarea{ direction:ltr; text-align:left; }
+.row{ display:flex; gap:12px; }
+.row > *{ flex:1; }
+button{ font-family:inherit; }
+button.primary{ background:#0F7A5A; color:#fff; border:none; border-radius:8px; padding:11px 18px; font-size:15px; cursor:pointer; }
+button.danger{ background:#B23A2E; color:#fff; border:none; border-radius:8px; padding:11px 18px; font-size:15px; cursor:pointer; }
+.qr{ display:inline-block; padding:14px; background:#fff; border:1px solid #E2DED4; border-radius:12px; }
+.kv{ display:flex; gap:10px; align-items:center; justify-content:center; margin-top:10px; font-size:14px; }
+.kv code, code{ font-family: ui-monospace, Menlo, monospace; background:#F4ECD9; padding:2px 8px; border-radius:6px; direction:ltr; }
+.muted{ color:#5C6675; } .small{ font-size:13px; }
+.reader{ margin:12px 0; border-radius:10px; overflow:hidden; }
+.verdict{ margin-top:14px; padding:14px; border-radius:10px; display:flex; flex-direction:column; gap:4px; font-size:14px; }
+.verdict.ok{ background:#E6F1EC; border:1px solid #CDE3D8; }
+.verdict.bad{ background:#F7E7E4; border:1px solid #E6C2BB; }
+.center button{ margin:6px 4px 0; background:none; border:1px solid #D2CCBC; border-radius:8px; padding:8px 14px; cursor:pointer; }

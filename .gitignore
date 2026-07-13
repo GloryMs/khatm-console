@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+*.local
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+coverage/
+# generated API client is rebuilt from openapi.json — commit the spec, not the output
+src/api/generated/

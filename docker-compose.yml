@@ -1,0 +1,18 @@
+# khatm-console — local dev compose (VSCode)
+# Prereq (once): docker network create khatm-net
+# Backend must be up from khatm-platform compose (service name: khatm-api)
+name: khatm-console
+
+services:
+  khatm-web:
+    build: .
+    container_name: khatm-web
+    ports: ["5173:80"]
+    environment:
+      # nginx proxies /api → http://khatm-api:8080 over khatm-net
+      API_UPSTREAM: http://khatm-api:8080
+    networks: [khatm-net]
+
+networks:
+  khatm-net:
+    external: true
