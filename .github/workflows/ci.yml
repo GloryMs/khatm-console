@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install (locked)
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint (includes i18next/no-literal-string)
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format:check
+
+      # Includes the i18n en/ar key-set parity test.
+      - name: Unit tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      # ADR-08: nobody hand-writes API types. Regenerate from the vendored
+      # contract and fail if the committed generated client has drifted.
+      - name: Contract-types freshness
+        run: |
+          npm run gen:api
+          git diff --exit-code -- src/api/generated

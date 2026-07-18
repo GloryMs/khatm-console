@@ -1,0 +1,52 @@
+{
+  "app": {
+    "title": "Khatm Console",
+    "brand": "Khatm"
+  },
+  "nav": {
+    "schemas": "Schemas"
+  },
+  "shell": {
+    "sidebarLabel": "Primary navigation",
+    "topbarLabel": "Application header"
+  },
+  "language": {
+    "switcherLabel": "Language",
+    "english": "English",
+    "arabic": "العربية"
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in",
+      "username": "Username",
+      "password": "Password",
+      "usernameRequired": "Username is required",
+      "passwordRequired": "Password is required",
+      "submit": "Sign in",
+      "submitting": "Signing in…"
+    },
+    "logout": "Log out",
+    "sessionLoading": "Loading session…"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "code": "Code",
+    "traceId": "Trace ID",
+    "noPermission": {
+      "title": "No permission",
+      "body": "You don't have permission to view this."
+    },
+    "boundary": {
+      "title": "Something went wrong.",
+      "reload": "Reload"
+    }
+  },
+  "schemas": {
+    "title": "Credential Schemas",
+    "empty": "No schemas registered yet.",
+    "version": "v{{version}}"
+  },
+  "common": {
+    "loading": "Loading…"
+  }
+}

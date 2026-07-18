@@ -1,4 +1,5 @@
 # CONVENTIONS — khatm-console (React/TS)
+
 > Details live in CLAUDE.md sections (rules 1–4). This file adds the mechanical bits.
 
 - `npm run check` = tsc --noEmit + eslint + prettier --check + vitest + i18n parity script.

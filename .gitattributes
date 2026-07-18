@@ -1,0 +1,21 @@
+# Pin line endings for lintable text so Windows checkouts can't reintroduce CRLF —
+# this is what caused the CRLF/Spotless and CRLF/doc-generation incidents in khatm-platform.
+* text=auto eol=lf
+
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
