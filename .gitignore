@@ -9,5 +9,6 @@ dist/
 .idea/
 .DS_Store
 coverage/
-# generated API client is rebuilt from openapi.json — commit the spec, not the output
-src/api/generated/
+*.tsbuildinfo
+# generated API client (src/api/generated/) IS committed — ADR-08: nobody hand-writes
+# API types. CI regenerates from contracts/openapi.json and diffs; mismatch fails the build.

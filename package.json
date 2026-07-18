@@ -1,21 +1,54 @@
 {
-  "name": "khatm-poc-web",
+  "name": "khatm-console",
   "private": true,
   "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "typecheck": "tsc -b --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm run test",
+    "contract:update": "node scripts/update-contract.mjs",
+    "gen:api": "openapi-typescript contracts/openapi.json -o src/api/generated/schema.ts"
   },
   "dependencies": {
-    "html5-qrcode": "^2.3.8",
-    "qrcode.react": "^4.1.0",
+    "@tanstack/react-query": "^5.62.0",
+    "i18next": "^24.0.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "react-hook-form": "^7.54.0",
+    "react-i18next": "^15.1.0",
+    "react-router-dom": "^6.28.0",
+    "zod": "^3.24.0",
+    "@hookform/resolvers": "^3.9.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^4.3.1",
-    "vite": "^5.4.2"
+    "@testing-library/jest-dom": "^6.6.0",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.0",
+    "@eslint/js": "^9.17.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@types/node": "^22.10.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-i18next": "^6.1.1",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.16",
+    "globals": "^15.14.0",
+    "jsdom": "^25.0.1",
+    "openapi-typescript": "^7.5.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.0",
+    "vite": "^6.0.5",
+    "vitest": "^3.2.0"
   }
 }

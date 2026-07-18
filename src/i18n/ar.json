@@ -1,0 +1,52 @@
+{
+  "app": {
+    "title": "كونسول ختم",
+    "brand": "ختم"
+  },
+  "nav": {
+    "schemas": "المخططات"
+  },
+  "shell": {
+    "sidebarLabel": "التنقل الأساسي",
+    "topbarLabel": "رأس التطبيق"
+  },
+  "language": {
+    "switcherLabel": "اللغة",
+    "english": "English",
+    "arabic": "العربية"
+  },
+  "auth": {
+    "login": {
+      "title": "تسجيل الدخول",
+      "username": "اسم المستخدم",
+      "password": "كلمة المرور",
+      "usernameRequired": "اسم المستخدم مطلوب",
+      "passwordRequired": "كلمة المرور مطلوبة",
+      "submit": "تسجيل الدخول",
+      "submitting": "جارٍ تسجيل الدخول…"
+    },
+    "logout": "تسجيل الخروج",
+    "sessionLoading": "جارٍ تحميل الجلسة…"
+  },
+  "errors": {
+    "generic": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+    "code": "الرمز",
+    "traceId": "معرّف التتبع",
+    "noPermission": {
+      "title": "لا يوجد إذن",
+      "body": "ليس لديك إذن لعرض هذا."
+    },
+    "boundary": {
+      "title": "حدث خطأ ما.",
+      "reload": "إعادة التحميل"
+    }
+  },
+  "schemas": {
+    "title": "مخططات بيانات الاعتماد",
+    "empty": "لا توجد مخططات مسجّلة بعد.",
+    "version": "الإصدار {{version}}"
+  },
+  "common": {
+    "loading": "جارٍ التحميل…"
+  }
+}

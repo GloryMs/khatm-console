@@ -1,0 +1,31 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+code {
+  font-family: ui-monospace, Menlo, monospace;
+  background: var(--color-code-bg);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+/* API refs/codes/enum values stay left-to-right even inside RTL text. */
+.ltr-embed {
+  unicode-bidi: embed;
+  direction: ltr;
+}
