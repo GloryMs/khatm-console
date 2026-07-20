@@ -46,7 +46,7 @@
   (works with the caller's own `gh` credentials). Also used this session to pull spec markdown
   and source files (`FS-0.2`, `FS-0.4`, `FS-1_2_1`, `CredentialService.java`,
   `SchemaCatalogService.java`, `CredentialController.java`) directly via `gh api
-  repos/GloryMs/khatm-platform/contents/...` when the OpenAPI contract's types alone didn't
+repos/GloryMs/khatm-platform/contents/...` when the OpenAPI contract's types alone didn't
   reveal a shape (e.g. `claimsDefJson`'s parsed structure, `{id}`'s actual lookup semantics).
   Worth remembering as a technique for future sessions when the contract is silent on a detail.
 - Design tokens (`src/styles/tokens.css`) reuse the POC's neutral palette pending a real
