@@ -5,7 +5,8 @@
 ## Current phase / task
 
 - Phase 1 — FS-C1/C1b feature screens — DONE (branches `feat/C1-feature-screens` and
-  `feat/C1b-issue-screen`). Verify, Revoke, and Issue are wired; C1b PR open, not merged.
+  `feat/C1b-issue-screen`). Verify, Revoke, and Issue are wired; C1b PR #3 merged into `main`
+  (2026-07-20, merge commit `d61416a`).
 
 ## Last completed
 
