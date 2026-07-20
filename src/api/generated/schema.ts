@@ -124,6 +124,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/claims/redeem": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Redeem a one-time wallet claim code
+         * @description The single-use exchange that hands a freshly issued credential to a wallet: the code is consumed atomically (locked, validated, decrypted, marked claimed, and the platform's only copy of the disclosures zeroed — all in one transaction, before this response is built) so exactly one caller can ever redeem a given code. Authenticates by possession of the code alone — no session or API key, ever (spec FS-1.2.1 §9); public, rate-limited per source address instead.
+         *
+         *     **QR contract v1** (spec FS-1.2.1 D8, stable): the QR payload a console issue screen renders is the JSON text `{"v":1,"api":"<platform base URL>","code":"<claim code>"}`. A wallet decodes it and POSTs `code` here, against `{api}/api/v1/claims/redeem`. `v` exists so a future incompatible QR shape can be introduced without breaking wallets still reading `v:1`.
+         *
+         *     The wallet is contractually obligated to persist the full response immediately on receipt, before any display — the platform cannot hand it out a second time. A lost response after a successful redeem (e.g. the connection drops) is not recoverable by retrying; the issuer must create a new claim code from the console.
+         */
+        post: operations["redeem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/credentials/consume": {
         parameters: {
             query?: never;
@@ -204,6 +228,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/credentials/{id}/claim-code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mint a fresh wallet claim code for an already-issued credential
+         * @description The console-facing counterpart to POST /issue's one-time claim-code delivery — spec FS-1.2.1 D2's explicit recovery path: if a code never reached the wallet (lost response, expired unclaimed, or the issuer simply wants to hand the credential out again), the issuer mints a new one here rather than re-issuing the whole credential. Requires the exact sdJwt presentation string the original /issue call returned — the platform never stores disclosures outside a claim_code row (P1), so this endpoint cannot reconstruct them on its own; the caller is expected to have retained that one-time delivery for exactly this purpose.
+         *
+         *     Minting voids any prior still-live code for this credential (its disclosures_enc is zeroed, the same mechanism the redeem and expiry-sweep paths use) — at most one code is ever redeemable per credential at a time.
+         *
+         *     The response's code is a one-time delivery, exactly like /issue's sdJwt: it appears in this response and nowhere else, ever. It is what a console issue screen encodes into the QR v1 payload described on POST /api/v1/claims/redeem — {"v":1,"api":"<platform base URL>","code":"<this code>"} — for a wallet to scan and redeem at that endpoint.
+         */
+        post: operations["mintClaimCode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/credentials/{id}/revoke": {
         parameters: {
             query?: never;
@@ -268,6 +316,40 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Request to mint a fresh wallet claim code for an already-issued credential */
+        ClaimCodeMintRequest: {
+            sdJwt: string;
+            /** Format: int32 */
+            ttlMinutes?: number;
+        };
+        /** @description Result of minting a one-time wallet claim code */
+        ClaimCodeMintResponse: {
+            code?: string;
+            /** Format: date-time */
+            expiresAt?: string;
+        };
+        /** @description Request to redeem a one-time wallet claim code */
+        ClaimRedeemRequest: {
+            code: string;
+        };
+        /** @description Full, one-time delivery of a credential to a wallet (spec FS-1.2.1 D4) */
+        ClaimRedeemResponse: {
+            credential?: string;
+            disclosures?: string[];
+            /** Format: date-time */
+            issuedAt?: string;
+            ref?: string;
+            schema?: components["schemas"]["ClaimSchemaRef"];
+            statusListUri?: string;
+        };
+        /** @description The redeemed credential's schema, display shape */
+        ClaimSchemaRef: {
+            /** Format: uuid */
+            id?: string;
+            nameI18n?: components["schemas"]["LocalizedText"];
+            /** Format: int32 */
+            version?: number;
+        };
         ConsumeRequest: {
             consumer?: string;
             id?: string;
@@ -556,6 +638,57 @@ export interface operations {
             };
         };
     };
+    redeem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimRedeemRequest"];
+            };
+        };
+        responses: {
+            /** @description Credential delivered */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ClaimRedeemResponse"];
+                };
+            };
+            /** @description Bean Validation failed (a blank code) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The code is unknown, malformed, expired, already claimed, or expiry-zeroed — one generic outcome (KH-CLM-0404) for every flavor, so an external caller cannot distinguish 'never existed' from 'someone already claimed it' (spec D5) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Too many redeem attempts from this source address within the current window (KH-CLM-0429, spec D6) */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     consume: {
         parameters: {
             query?: never;
@@ -704,6 +837,77 @@ export interface operations {
             };
             /** @description No credential with this id (KH-CRD-0404) */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    mintClaimCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimCodeMintRequest"];
+            };
+        };
+        responses: {
+            /** @description Claim code minted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ClaimCodeMintResponse"];
+                };
+            };
+            /** @description Bean Validation failed (a blank sdJwt) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the issue scope, or called with a CONSUMING_PARTY API key instead of a console session or TENANT API key */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No credential with this id (KH-CRD-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The credential is revoked or has expired and can no longer accept a claim code (KH-CRD-0409) */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
