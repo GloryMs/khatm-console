@@ -22,10 +22,18 @@ function fields(): ClaimField[] {
   return parseClaimsDef(FIXTURE).fields;
 }
 
-function renderForm(onSubmit: (v: IssueFormValues) => void = vi.fn()) {
+function renderForm(
+  onSubmit: (v: IssueFormValues) => void = vi.fn(),
+  options: { defaults?: { maxUses?: string; validMinutes?: string }; sdFields?: string[] } = {},
+) {
   render(
     <I18nextProvider i18n={i18n}>
-      <IssueForm fields={fields()} onSubmit={onSubmit} />
+      <IssueForm
+        fields={fields()}
+        defaults={options.defaults}
+        sdFields={options.sdFields}
+        onSubmit={onSubmit}
+      />
     </I18nextProvider>,
   );
   return onSubmit;
@@ -50,12 +58,20 @@ describe('IssueForm (dynamic generation from claims_def)', () => {
     expect(screen.getByLabelText('Location')).toHaveAttribute('type', 'text');
   });
 
-  it('badges required fields and selectively-disclosable fields distinctly', () => {
-    renderForm();
+  it('badges required fields and real selectively-disclosable fields distinctly', () => {
+    renderForm(vi.fn(), { sdFields: ['caseNumber'] });
     const resultField = screen.getByLabelText('Result').parentElement;
     const caseField = screen.getByLabelText('Case number').parentElement;
+    const issuedAtField = screen.getByLabelText('Issued at').parentElement;
     expect(resultField).toHaveTextContent(i18n.t('issue.requiredField'));
     expect(caseField).toHaveTextContent(i18n.t('issue.selectiveDisclosure'));
+    expect(issuedAtField).not.toHaveTextContent(i18n.t('issue.selectiveDisclosure'));
+  });
+
+  it('prefills max uses and validity from schema defaults', () => {
+    renderForm(vi.fn(), { defaults: { maxUses: '3', validMinutes: '60' } });
+    expect(screen.getByLabelText(i18n.t('issue.maxUses'))).toHaveValue(3);
+    expect(screen.getByLabelText(i18n.t('issue.validMinutes'))).toHaveValue(60);
   });
 
   it('blocks submit and shows required errors when mandatory fields are empty', async () => {

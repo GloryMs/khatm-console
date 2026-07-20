@@ -159,7 +159,7 @@ export interface paths {
         put?: never;
         /**
          * Consume one use of a credential
-         * @description The atomic double-spend guard: a single-transaction conditional UPDATE decrements the remaining uses only if the credential is still ACTIVE and unexpired, so exactly one caller wins under concurrency. Requires the consume scope and a CONSUMING_PARTY API key (a console session is always 403 here). An optional idempotencyKey makes repeated calls with the same key return the first outcome without re-running the UPDATE.
+         * @description The atomic double-spend guard: a single-transaction conditional UPDATE decrements the remaining uses only if the credential is still ACTIVE and unexpired, so exactly one caller wins under concurrency. Requires the consume scope and a CONSUMING_PARTY API key (a console session, or a TENANT key even with the consume scope, is always 403 here). The caller's consuming party must also be scoped to the credential's schema via consuming_party_schema (KH-1.4.3, deny-by-default — an unconfigured party can consume nothing). An optional idempotencyKey makes repeated calls with the same key return the first outcome without re-running the UPDATE.
          */
         post: operations["consume"];
         delete?: never;
@@ -312,6 +312,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sl/{tenantSlug}/{listCode}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fetch a signed status-list artifact
+         * @description The public, unauthenticated source of revocation truth for offline verifiers (spec FS-1.3 D2, SAD §6). Returns the list's signed bitstring as a compact JWS (application/jose) — a verifier validates its signature against the platform's JWKS, then base64url-decodes and gunzips the `bits` claim to read the per-credential revocation bit at the index named in the credential's `status` claim. The ETag is the list's `version`; a matching If-None-Match returns 304 with no body, so periodic polls stay cheap until a revoke bumps the version. Cached for 60s, matching NFR-06's revoke-to-publish budget.
+         */
+        get: operations["getStatusList"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -438,14 +458,20 @@ export interface components {
         };
         SchemaDetail: {
             claimsDefJson?: string;
+            code?: string;
+            /** Format: int32 */
+            defaultMaxUses?: number;
+            defaultValidity?: string;
             /** Format: uuid */
             id?: string;
             nameI18n?: components["schemas"]["LocalizedText"];
+            sdFields?: string[];
             status?: string;
             /** Format: int32 */
             version?: number;
         };
         SchemaSummary: {
+            code?: string;
             /** Format: uuid */
             id?: string;
             nameI18n?: components["schemas"]["LocalizedText"];
@@ -465,6 +491,10 @@ export interface components {
             reason?: string;
             reasonMessage?: string;
             revoked?: boolean;
+            statusListChecked?: boolean;
+            statusListUri?: string;
+            /** Format: int64 */
+            statusListVersion?: number;
             /** Format: int32 */
             usesRemaining?: number;
             valid?: boolean;
@@ -720,7 +750,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Missing the consume scope, or called with a console session instead of a CONSUMING_PARTY API key */
+            /** @description Missing the consume scope, called with a console session or a TENANT API key instead of a CONSUMING_PARTY key (KH-RBC-0403), or the credential's schema is not in the calling party's allowlist (KH-CNS-0403, KH-1.4.3) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1029,6 +1059,55 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    getStatusList: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-None-Match"?: string;
+            };
+            path: {
+                /** @description the tenant's slug */
+                tenantSlug: string;
+                /** @description the status list's code */
+                listCode: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The signed status-list artifact */
+            200: {
+                headers: {
+                    /** @description max-age=60 */
+                    "Cache-Control"?: string;
+                    /** @description The list's version, quoted — weak entity tag for revalidation */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/jose": string;
+                };
+            };
+            /** @description The client's If-None-Match matched the current version — body omitted */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/jose": string;
+                };
+            };
+            /** @description No status list at this tenantSlug/listCode, or the tenantSlug is unknown (KH-STS-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/jose": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };

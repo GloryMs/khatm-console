@@ -2,3 +2,4 @@ dist
 coverage
 src/api/generated
 contracts/openapi.json
+.claude
