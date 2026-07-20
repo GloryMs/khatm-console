@@ -8,6 +8,12 @@ export function Sidebar() {
     <nav className={styles.sidebar} aria-label={t('shell.sidebarLabel')}>
       <div className={styles.brand}>{t('app.brand')}</div>
       <NavLink
+        to="/issue"
+        className={({ isActive }) => (isActive ? styles.linkActive : styles.link)}
+      >
+        {t('nav.issue')}
+      </NavLink>
+      <NavLink
         to="/schemas"
         className={({ isActive }) => (isActive ? styles.linkActive : styles.link)}
       >

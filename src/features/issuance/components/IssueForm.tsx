@@ -6,7 +6,7 @@ import type { TFunction } from 'i18next';
 import { z } from 'zod';
 import { ApiErrorBanner } from '@/components/ui/ApiErrorBanner';
 import { useLocalizedText } from '@/hooks/useLocalizedText';
-import { isKnownFieldType, type ClaimField } from '../claimsDef';
+import { isKnownFieldType, isSelective, type ClaimField } from '../claimsDef';
 import styles from './IssueForm.module.css';
 
 /** Collected issue values. `claims` keys are the schema's field names. */
@@ -17,12 +17,19 @@ export interface IssueFormValues {
   claims: Record<string, string>;
 }
 
+export interface IssueFormDefaults {
+  maxUses?: string;
+  validMinutes?: string;
+}
+
 interface IssueFormProps {
   fields: ClaimField[];
   onSubmit: (values: IssueFormValues) => void;
   onBack?: () => void;
   isSubmitting?: boolean;
   error?: unknown;
+  defaults?: IssueFormDefaults;
+  sdFields?: readonly string[];
 }
 
 function buildSchema(fields: ClaimField[], t: TFunction, localize: (text: unknown) => string) {
@@ -56,13 +63,29 @@ function buildSchema(fields: ClaimField[], t: TFunction, localize: (text: unknow
   });
 }
 
-function defaultValues(fields: ClaimField[]): IssueFormValues {
+function defaultValues(
+  fields: ClaimField[],
+  defaults: IssueFormDefaults | undefined,
+): IssueFormValues {
   const claims: Record<string, string> = {};
   for (const field of fields) claims[field.name] = '';
-  return { holderRef: '', maxUses: '', validMinutes: '', claims };
+  return {
+    holderRef: '',
+    maxUses: defaults?.maxUses ?? '',
+    validMinutes: defaults?.validMinutes ?? '',
+    claims,
+  };
 }
 
-export function IssueForm({ fields, onSubmit, onBack, isSubmitting, error }: IssueFormProps) {
+export function IssueForm({
+  fields,
+  onSubmit,
+  onBack,
+  isSubmitting,
+  error,
+  defaults,
+  sdFields = [],
+}: IssueFormProps) {
   const { t } = useTranslation();
   const localize = useLocalizedText();
   const schema = useMemo(
@@ -70,13 +93,14 @@ export function IssueForm({ fields, onSubmit, onBack, isSubmitting, error }: Iss
     [fields, t, localize],
   );
 
+  const formDefaults = useMemo(() => defaultValues(fields, defaults), [fields, defaults]);
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<IssueFormValues>({
     resolver: zodResolver(schema),
-    defaultValues: useMemo(() => defaultValues(fields), [fields]),
+    defaultValues: formDefaults,
   });
 
   // Render unknown field types as text, with one dev-only warning so an author
@@ -145,11 +169,12 @@ export function IssueForm({ fields, onSubmit, onBack, isSubmitting, error }: Iss
                 {label}
               </label>
               <span className={styles.badges}>
-                {field.required ? (
+                {field.required && (
                   <span className={`${styles.badge} ${styles.badgeRequired}`}>
                     {t('issue.requiredField')}
                   </span>
-                ) : (
+                )}
+                {isSelective(field, sdFields) && (
                   <span className={`${styles.badge} ${styles.badgeSelective}`}>
                     {t('issue.selectiveDisclosure')}
                   </span>

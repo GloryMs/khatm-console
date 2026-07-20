@@ -13,13 +13,7 @@ export interface ClaimField {
   name: string;
   /** Claimed value type. Only `string`, `number`, and `date` are rendered specially. */
   type: string;
-  /**
-   * Mandatory-to-disclose (FS-0.4 D2): `true` exactly when the field is NOT in
-   * the schema's `sd_fields`. A `false` value therefore marks a field the holder
-   * may withhold — i.e. selectively disclosable. This is the contract-backed
-   * source of the "selective disclosure" badge, since `sd_fields` itself is not
-   * exposed on `SchemaDetail`.
-   */
+  /** Whether the issuer must provide a value for this claim before issuing. */
   required: boolean;
   labelI18n: LocalizedText;
 }
@@ -93,9 +87,9 @@ export function parseClaimsDef(claimsDefJson: string | undefined | null): Claims
   return { fields };
 }
 
-/** A field is selectively disclosable (withholdable) iff it is not mandatory. */
-export function isSelective(field: ClaimField): boolean {
-  return !field.required;
+/** A field is selectively disclosable when the schema detail lists it in `sdFields`. */
+export function isSelective(field: ClaimField, sdFields: readonly string[]): boolean {
+  return sdFields.includes(field.name);
 }
 
 export function isKnownFieldType(type: string): type is KnownFieldType {

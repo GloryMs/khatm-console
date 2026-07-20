@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isKnownFieldType, isSelective, parseClaimsDef } from './claimsDef';
+import { isKnownFieldType, parseClaimsDef } from './claimsDef';
 
 // Authoritative claims_def shape, per khatm-platform CredentialService.buildSchemaDefinition:
 // { "<field>": { type, required, label_i18n {en,ar} }, ... }
@@ -30,12 +30,6 @@ describe('parseClaimsDef', () => {
     const caseNumber = fields.find((f) => f.name === 'caseNumber');
     expect(caseNumber?.required).toBe(false);
     expect(caseNumber?.labelI18n.ar).toBe('رقم القضية');
-  });
-
-  it('marks a field selectively disclosable exactly when it is not required (FS-0.4 D2)', () => {
-    const { fields } = parseClaimsDef(CRIMINAL_RECORD_CLAIMS_DEF);
-    const selectiveNames = fields.filter(isSelective).map((f) => f.name);
-    expect(selectiveNames).toEqual(['caseNumber', 'issuedAt']);
   });
 
   it('recognises only string/number/date as known field types', () => {
