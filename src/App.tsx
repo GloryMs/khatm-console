@@ -6,7 +6,9 @@ import { AppShell } from '@/components/ui/AppShell';
 import { AuthProvider } from '@/features/auth/AuthProvider';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { RequireAuth } from '@/features/auth/RequireAuth';
+import { RevokePage } from '@/features/revoke/RevokePage';
 import { SchemasPage } from '@/features/schemas/SchemasPage';
+import { VerifyPage } from '@/features/verify/VerifyPage';
 
 export function App() {
   return (
@@ -20,6 +22,8 @@ export function App() {
                 <Route element={<AppShell />}>
                   <Route path="/" element={<Navigate to="/schemas" replace />} />
                   <Route path="/schemas" element={<SchemasPage />} />
+                  <Route path="/verify" element={<VerifyPage />} />
+                  <Route path="/revoke" element={<RevokePage />} />
                 </Route>
               </Route>
               <Route path="*" element={<Navigate to="/" replace />} />

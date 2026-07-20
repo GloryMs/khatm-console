@@ -13,6 +13,18 @@ export function Sidebar() {
       >
         {t('nav.schemas')}
       </NavLink>
+      <NavLink
+        to="/verify"
+        className={({ isActive }) => (isActive ? styles.linkActive : styles.link)}
+      >
+        {t('nav.verify')}
+      </NavLink>
+      <NavLink
+        to="/revoke"
+        className={({ isActive }) => (isActive ? styles.linkActive : styles.link)}
+      >
+        {t('nav.revoke')}
+      </NavLink>
     </nav>
   );
 }
