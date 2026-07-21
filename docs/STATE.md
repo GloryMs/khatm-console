@@ -9,6 +9,13 @@
 
 ## Last completed
 
+- 2026-07-21 (follow-up): Majd's manual pass against the running Docker stack caught a real bug
+  in schema creation — `POST /api/v1/schemas` 400'd (`KH-SCH-0400`) on a text-typed claim field
+  because the builder sent `type: "string"`, but the server only accepts `"text"`. Fixed (see
+  "Claim field `type` literal" under Open decisions, now resolved) and re-verified by rebuilding
+  the container. This is exactly the risk flagged in the original PR description — caught before
+  merge, as intended.
+
 - 2026-07-21: C2 schema management + credential search session. Session was paused mid-start:
   the contract initially still lacked the schema-management endpoints and `GET
 /api/v1/credentials` (hard gate, reported, no code written), then resumed once Majd confirmed
@@ -107,13 +114,15 @@
   `features/issuance/claimsDef.ts`) does carry a `required` boolean per field. Unclear whether
   the platform infers `required` some other way (e.g. `!selective`) or this is a genuine
   contract gap — needs a platform-side answer before the toggle can be added.
-- **Claim field `type` literal is unconfirmed for authoring.** The `POST /api/v1/schemas`
-  description prose says the server rejects "an unsupported type (text/number/date)", but the
-  existing read-side convention (informed by prior review of `CredentialService
-.buildSchemaDefinition`) uses the literal `"string"`, not `"text"`. The builder sends
-  `"string"` for the text-type option, matching the read-side convention — **needs verification
-  against a live backend create call** before relying on it; if the server actually expects
-  `"text"`, every schema-creation attempt with a text field will 400.
+- **Claim field `type` literal — resolved.** Live-tested against the running backend
+  (2026-07-21, Majd): `POST /api/v1/schemas` with a field typed `"string"` 400s with
+  `KH-SCH-0400`: `"expected one of [date, number, text]"`. The builder now sends `"text"`
+  (`schemaManagement/claimsBuilder.ts`'s `BuilderFieldType`), and the read side
+  (`issuance/claimsDef.ts`'s `isKnownFieldType`) recognizes both `"text"` and the legacy
+  `"string"` (for schemas seeded before this authoring endpoint existed) as the same
+  free-text render hint. `fromSchemaDetail` normalizes any stored `"string"` to `"text"` on
+  prefill. Fixed and covered by a new test (`claimsBuilder.test.ts` — normalizes legacy
+  "string" to "text").
 - Design tokens / visual identity file — pending from stakeholder (use neutral tokens meanwhile).
 - `khatm-platform`'s CI publishing step for `docs/api/openapi.json` (KH-1.6) should eventually
   make the raw URL work without the `gh` fallback — worth revisiting once that lands.

@@ -12,12 +12,12 @@ import {
 const rows: BuilderFieldRow[] = [
   {
     name: 'caseNumber',
-    type: 'string',
+    type: 'text',
     labelEn: 'Case number',
     labelAr: 'رقم القضية',
     selective: true,
   },
-  { name: 'result', type: 'string', labelEn: 'Result', labelAr: 'النتيجة', selective: false },
+  { name: 'result', type: 'text', labelEn: 'Result', labelAr: 'النتيجة', selective: false },
   {
     name: 'issuedOn',
     type: 'date',
@@ -28,10 +28,10 @@ const rows: BuilderFieldRow[] = [
 ];
 
 describe('toClaimsDef', () => {
-  it('serializes rows to the request DTO in row order', () => {
+  it('serializes rows to the request DTO in row order, using the contract\'s "text" literal', () => {
     expect(toClaimsDef(rows)).toEqual([
-      { name: 'caseNumber', type: 'string', labelI18n: { en: 'Case number', ar: 'رقم القضية' } },
-      { name: 'result', type: 'string', labelI18n: { en: 'Result', ar: 'النتيجة' } },
+      { name: 'caseNumber', type: 'text', labelI18n: { en: 'Case number', ar: 'رقم القضية' } },
+      { name: 'result', type: 'text', labelI18n: { en: 'Result', ar: 'النتيجة' } },
       { name: 'issuedOn', type: 'date', labelI18n: { en: 'Issued on', ar: 'تاريخ الإصدار' } },
     ]);
   });
@@ -67,10 +67,10 @@ describe('deriveSdFields', () => {
 });
 
 describe('emptyRow', () => {
-  it('starts blank, non-selective, and typed as string', () => {
+  it('starts blank, non-selective, and typed as text', () => {
     expect(emptyRow()).toEqual({
       name: '',
-      type: 'string',
+      type: 'text',
       labelEn: '',
       labelAr: '',
       selective: false,
@@ -79,10 +79,11 @@ describe('emptyRow', () => {
 });
 
 describe('isBuilderFieldType', () => {
-  it('accepts the three supported types and rejects anything else', () => {
-    expect(isBuilderFieldType('string')).toBe(true);
+  it('accepts the three contract-supported types and rejects anything else, including the legacy "string" alias', () => {
+    expect(isBuilderFieldType('text')).toBe(true);
     expect(isBuilderFieldType('number')).toBe(true);
     expect(isBuilderFieldType('date')).toBe(true);
+    expect(isBuilderFieldType('string')).toBe(false);
     expect(isBuilderFieldType('boolean')).toBe(false);
   });
 });
@@ -97,9 +98,9 @@ describe('fromSchemaDetail', () => {
       nameI18n: { en: 'Criminal record', ar: 'السجل الجنائي' },
       sdFields: ['caseNumber'],
       claimsDefJson: JSON.stringify({
-        result: { type: 'string', required: true, label_i18n: { en: 'Result', ar: 'النتيجة' } },
+        result: { type: 'text', required: true, label_i18n: { en: 'Result', ar: 'النتيجة' } },
         caseNumber: {
-          type: 'string',
+          type: 'text',
           required: false,
           label_i18n: { en: 'Case number', ar: 'رقم القضية' },
         },
@@ -107,14 +108,31 @@ describe('fromSchemaDetail', () => {
     };
 
     expect(fromSchemaDetail(detail)).toEqual([
-      { name: 'result', type: 'string', labelEn: 'Result', labelAr: 'النتيجة', selective: false },
+      { name: 'result', type: 'text', labelEn: 'Result', labelAr: 'النتيجة', selective: false },
       {
         name: 'caseNumber',
-        type: 'string',
+        type: 'text',
         labelEn: 'Case number',
         labelAr: 'رقم القضية',
         selective: true,
       },
+    ]);
+  });
+
+  it('normalizes the legacy "string" type (pre-existing/seeded schemas) to "text"', () => {
+    const detail: SchemaDetail = {
+      id: 's1',
+      code: 'Legacy/v1',
+      version: 1,
+      status: 'PUBLISHED',
+      nameI18n: { en: 'Legacy', ar: 'قديم' },
+      claimsDefJson: JSON.stringify({
+        result: { type: 'string', required: true, label_i18n: { en: 'Result', ar: 'النتيجة' } },
+      }),
+    };
+
+    expect(fromSchemaDetail(detail)).toEqual([
+      { name: 'result', type: 'text', labelEn: 'Result', labelAr: 'النتيجة', selective: false },
     ]);
   });
 
@@ -141,7 +159,7 @@ describe('fromSchemaDetail', () => {
     expect(fromSchemaDetail(detail)).toEqual([]);
   });
 
-  it('falls back to type "string" for an unrecognized stored type', () => {
+  it('falls back to type "text" for an unrecognized stored type', () => {
     const detail: SchemaDetail = {
       id: 's1',
       code: 'X/v1',
@@ -153,7 +171,7 @@ describe('fromSchemaDetail', () => {
       }),
     };
     expect(fromSchemaDetail(detail)).toEqual([
-      { name: 'weird', type: 'string', labelEn: 'Weird', labelAr: 'غريب', selective: false },
+      { name: 'weird', type: 'text', labelEn: 'Weird', labelAr: 'غريب', selective: false },
     ]);
   });
 });

@@ -22,8 +22,13 @@ export interface ClaimsDef {
   fields: ClaimField[];
 }
 
-/** Recognised render hints; anything else falls back to a plain text input. */
-export type KnownFieldType = 'string' | 'number' | 'date';
+/**
+ * Recognised render hints; anything else falls back to a plain text input.
+ * `"string"` and `"text"` both render as plain text — `"string"` is a legacy
+ * alias from schemas seeded before the schema-authoring endpoint validated
+ * its input (which only accepts `"text"`, KH-SCH-0400).
+ */
+export type KnownFieldType = 'string' | 'text' | 'number' | 'date';
 
 interface RawField {
   type?: unknown;
@@ -93,5 +98,5 @@ export function isSelective(field: ClaimField, sdFields: readonly string[]): boo
 }
 
 export function isKnownFieldType(type: string): type is KnownFieldType {
-  return type === 'string' || type === 'number' || type === 'date';
+  return type === 'string' || type === 'text' || type === 'number' || type === 'date';
 }

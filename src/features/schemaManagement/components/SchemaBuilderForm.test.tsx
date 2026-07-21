@@ -57,7 +57,7 @@ describe('SchemaBuilderForm', () => {
       code: 'X/v1',
       nameEn: 'X',
       nameAr: 'اكس',
-      rows: [{ name: 'result', type: 'string', labelEn: 'Result', labelAr: '', selective: false }],
+      rows: [{ name: 'result', type: 'text', labelEn: 'Result', labelAr: '', selective: false }],
     });
     const user = userEvent.setup();
     await user.click(
@@ -77,7 +77,7 @@ describe('SchemaBuilderForm', () => {
       nameEn: 'X',
       nameAr: '',
       rows: [
-        { name: 'result', type: 'string', labelEn: 'Result', labelAr: 'نتيجة', selective: false },
+        { name: 'result', type: 'text', labelEn: 'Result', labelAr: 'نتيجة', selective: false },
       ],
     });
     const user = userEvent.setup();
@@ -150,7 +150,7 @@ describe('SchemaBuilderForm', () => {
       .calls[0][0] as SchemaBuilderFormValues;
     expect(values.code).toBe('X/v1');
     expect(values.rows).toEqual([
-      { name: 'result', type: 'string', labelEn: 'Result', labelAr: 'النتيجة', selective: true },
+      { name: 'result', type: 'text', labelEn: 'Result', labelAr: 'النتيجة', selective: true },
     ]);
   });
 });

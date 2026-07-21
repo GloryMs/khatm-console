@@ -35,7 +35,7 @@ function buildSchema(t: TFunction, requireCode: boolean) {
       .string()
       .trim()
       .min(1, { message: t('schemaManagement.builder.fieldNameRequired') }),
-    type: z.enum(['string', 'number', 'date']),
+    type: z.enum(['text', 'number', 'date']),
     labelEn: z
       .string()
       .trim()

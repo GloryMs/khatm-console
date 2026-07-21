@@ -1,8 +1,8 @@
 import type { ClaimFieldRequest, SchemaDetail } from '@/features/schemas/api';
 
-export type BuilderFieldType = 'string' | 'number' | 'date';
+export type BuilderFieldType = 'text' | 'number' | 'date';
 
-export const BUILDER_FIELD_TYPES: readonly BuilderFieldType[] = ['string', 'number', 'date'];
+export const BUILDER_FIELD_TYPES: readonly BuilderFieldType[] = ['text', 'number', 'date'];
 
 /**
  * One claims-def builder row. The authoring contract (`ClaimFieldRequest`)
@@ -23,7 +23,7 @@ export function isBuilderFieldType(value: string): value is BuilderFieldType {
 }
 
 export function emptyRow(): BuilderFieldRow {
-  return { name: '', type: 'string', labelEn: '', labelAr: '', selective: false };
+  return { name: '', type: 'text', labelEn: '', labelAr: '', selective: false };
 }
 
 /** Serialize builder rows to the request's `claimsDef` array, preserving row order. */
@@ -48,6 +48,19 @@ interface RawField {
 
 function asString(value: unknown): string {
   return typeof value === 'string' ? value : '';
+}
+
+/**
+ * Normalize a stored claim field type to a builder type. `"string"` is a
+ * legacy alias — pre-existing schemas seeded before this authoring endpoint
+ * validated its input may still carry it — the server only accepts `"text"`
+ * for newly authored/edited schemas (KH-SCH-0400: "expected one of [date,
+ * number, text]").
+ */
+function normalizeFieldType(type: string): BuilderFieldType {
+  if (type === 'text' || type === 'string') return 'text';
+  if (type === 'number' || type === 'date') return type;
+  return 'text';
 }
 
 function parseLabel(value: unknown): { en: string; ar: string } {
@@ -80,11 +93,10 @@ export function fromSchemaDetail(detail: SchemaDetail): BuilderFieldRow[] {
   for (const [name, value] of Object.entries(parsed as Record<string, unknown>)) {
     if (value === null || typeof value !== 'object' || Array.isArray(value)) continue;
     const raw = value as RawField;
-    const type = asString(raw.type);
     const label = parseLabel(raw.label_i18n ?? raw.labelI18n);
     rows.push({
       name,
-      type: isBuilderFieldType(type) ? type : 'string',
+      type: normalizeFieldType(asString(raw.type)),
       labelEn: label.en,
       labelAr: label.ar,
       selective: sdFields.includes(name),
