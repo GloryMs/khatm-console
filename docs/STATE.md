@@ -4,8 +4,9 @@
 
 ## Current phase / task
 
-- Phase 2 — C2 schema management + credential search — session complete, branch
-  `feat/C2-schema-mgmt-and-search`, PR open against `main` (not merged — see exit protocol).
+- Phase 2 — C2 schema management + credential search — DONE. PR #4
+  (`feat/C2-schema-mgmt-and-search`) merged into `main` on 2026-07-21 after Majd's manual
+  create → publish → issue → redeem → verify → revoke round-trip against the live Docker stack.
 
 ## Last completed
 
