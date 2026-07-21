@@ -260,6 +260,9 @@ export function SchemaBuilderForm({
                 )}
               </div>
               <div className={styles.checkboxField}>
+                <span className={styles.checkboxSpacer} aria-hidden="true">
+                  &nbsp;
+                </span>
                 <label className={styles.checkboxLabel}>
                   <input type="checkbox" {...register(`rows.${index}.selective`)} />
                   {t('schemaManagement.builder.fieldSelective')}
