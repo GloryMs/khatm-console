@@ -122,86 +122,86 @@ export function SchemaBuilderForm({
           <label className={styles.label} htmlFor="schema-code">
             {t('schemaManagement.builder.code')}
           </label>
-          {mode === 'create' ? (
-            <>
-              <span className={styles.help}>{t('schemaManagement.builder.codeHelp')}</span>
-              <input id="schema-code" type="text" autoComplete="off" {...register('code')} />
-              {errors.code && <span className={styles.fieldError}>{errors.code.message}</span>}
-            </>
-          ) : (
-            <input
-              id="schema-code"
-              type="text"
-              className={`${styles.readOnlyValue} ltr-embed`}
-              value={defaultValues.code}
-              disabled
-              readOnly
-            />
-          )}
+          <div className={styles.control}>
+            {mode === 'create' ? (
+              <>
+                <input id="schema-code" type="text" autoComplete="off" {...register('code')} />
+                <span className={styles.help}>{t('schemaManagement.builder.codeHelp')}</span>
+                {errors.code && <span className={styles.fieldError}>{errors.code.message}</span>}
+              </>
+            ) : (
+              <input
+                id="schema-code"
+                type="text"
+                className={`${styles.readOnlyValue} ltr-embed`}
+                value={defaultValues.code}
+                disabled
+                readOnly
+              />
+            )}
+          </div>
         </div>
         <div className={styles.field}>
           <label className={styles.label} htmlFor="schema-nameEn">
             {t('schemaManagement.builder.nameEn')}
           </label>
-          <span className={styles.help} aria-hidden="true">
-            &nbsp;
-          </span>
-          <input id="schema-nameEn" type="text" autoComplete="off" {...register('nameEn')} />
-          {errors.nameEn && <span className={styles.fieldError}>{errors.nameEn.message}</span>}
+          <div className={styles.control}>
+            <input id="schema-nameEn" type="text" autoComplete="off" {...register('nameEn')} />
+            {errors.nameEn && <span className={styles.fieldError}>{errors.nameEn.message}</span>}
+          </div>
         </div>
         <div className={styles.field}>
           <label className={styles.label} htmlFor="schema-nameAr">
             {t('schemaManagement.builder.nameAr')}
           </label>
-          <span className={styles.help} aria-hidden="true">
-            &nbsp;
-          </span>
-          <input id="schema-nameAr" type="text" autoComplete="off" {...register('nameAr')} />
-          {errors.nameAr && <span className={styles.fieldError}>{errors.nameAr.message}</span>}
+          <div className={styles.control}>
+            <input id="schema-nameAr" type="text" autoComplete="off" {...register('nameAr')} />
+            {errors.nameAr && <span className={styles.fieldError}>{errors.nameAr.message}</span>}
+          </div>
         </div>
         <div className={styles.field}>
           <label className={styles.label} htmlFor="schema-defaultMaxUses">
             {t('schemaManagement.builder.defaultMaxUses')}
           </label>
-          <span className={styles.help}>{t('schemaManagement.builder.defaultMaxUsesHelp')}</span>
-          <input
-            id="schema-defaultMaxUses"
-            type="number"
-            min={1}
-            autoComplete="off"
-            {...register('defaultMaxUses')}
-          />
+          <div className={styles.control}>
+            <input
+              id="schema-defaultMaxUses"
+              type="number"
+              min={1}
+              autoComplete="off"
+              {...register('defaultMaxUses')}
+            />
+            <span className={styles.help}>{t('schemaManagement.builder.defaultMaxUsesHelp')}</span>
+          </div>
         </div>
         <div className={styles.field}>
           <label className={styles.label} htmlFor="schema-defaultValidityDays">
             {t('schemaManagement.builder.defaultValidityDays')}
           </label>
-          <span className={styles.help} aria-hidden="true">
-            &nbsp;
-          </span>
-          <input
-            id="schema-defaultValidityDays"
-            type="number"
-            min={0}
-            autoComplete="off"
-            {...register('defaultValidityDays')}
-          />
+          <div className={styles.control}>
+            <input
+              id="schema-defaultValidityDays"
+              type="number"
+              min={0}
+              autoComplete="off"
+              {...register('defaultValidityDays')}
+            />
+          </div>
         </div>
         <div className={styles.field}>
           <label className={styles.label} htmlFor="schema-defaultValidityHours">
             {t('schemaManagement.builder.defaultValidityHours')}
           </label>
-          <span className={styles.help} aria-hidden="true">
-            &nbsp;
-          </span>
-          <input
-            id="schema-defaultValidityHours"
-            type="number"
-            min={0}
-            max={23}
-            autoComplete="off"
-            {...register('defaultValidityHours')}
-          />
+          <div className={styles.control}>
+            <input
+              id="schema-defaultValidityHours"
+              type="number"
+              min={0}
+              max={23}
+              autoComplete="off"
+              {...register('defaultValidityHours')}
+            />
+          </div>
         </div>
       </div>
 
