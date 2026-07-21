@@ -92,7 +92,7 @@
     "title": "التحقق من بيان الاعتماد",
     "prompt": "الصق عرض SD-JWT للتحقق منه.",
     "sdJwtLabel": "عرض SD-JWT",
-    "sdJwtPlaceholder": "SD-JWT مضغوط (مفصول بـ ~) أو JWT مضغوط مجرد",
+    "sdJwtPlaceholder": "SD-JWT مضغوط (مفصول بـ ~) أو JWT مضغوط مجرد — وانتهِ بعلامة ~ في حال عدم وجود JWT لربط المفتاح",
     "submit": "تحقق",
     "submitting": "جارٍ التحقق…",
     "sdJwtRequired": "العرض مطلوب",

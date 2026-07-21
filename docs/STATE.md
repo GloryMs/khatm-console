@@ -9,7 +9,24 @@
 
 ## Last completed
 
-- 2026-07-21 (follow-up): Majd's manual pass against the running Docker stack caught a real bug
+- 2026-07-21 (follow-up 2): Full manual round-trip against the running stack — create draft
+  (with a `full_name`/`birth_date`/`national_id` schema) → publish → issue → redeem the claim
+  code → verify. Two findings, neither a khatm-console bug:
+  - **`required` is server-derived as `!selective`, confirmed by direct DB inspection** of
+    `credential_schema.claims_def`: fields in `sd_fields` are stored `required: false`, the one
+    field not in `sd_fields` is stored `required: true` — even though the console never sends a
+    `required` flag at all. Closes the open question about how the server fills in `required`
+    (see Open decisions, now resolved).
+  - **SD-JWT presentations need a trailing `~`** when there's no key-binding JWT (per the SD-JWT
+    spec) — verified by hand: a presentation built as `credential + "~" + disclosures.join("~")`
+    (no trailing `~`) verified as `invalid`/`withheld_mandatory_claim` with **zero** disclosed
+    claims recognized at all; appending one more `~` made the identical presentation verify as
+    `valid: true` with all three claims disclosed. Not a bug — the platform's parser is
+    spec-correct; the omission was in ad hoc manual-testing guidance given to Majd. Fixed the
+    console's `verify.sdJwtPlaceholder` hint (both languages) to call out the trailing `~`
+    explicitly so the next manual tester doesn't hit the same dead end.
+
+- 2026-07-21 (follow-up 1): Majd's manual pass against the running Docker stack caught a real bug
   in schema creation — `POST /api/v1/schemas` 400'd (`KH-SCH-0400`) on a text-typed claim field
   because the builder sent `type: "string"`, but the server only accepts `"text"`. Fixed (see
   "Claim field `type` literal" under Open decisions, now resolved) and re-verified by rebuilding
@@ -107,13 +124,15 @@
   built to the contract (UUID `id`) per "path/type authority: the generated types, not this brief."
   **Closed as a UX gap** by C2: credential search now surfaces the id up front and deep-links
   `/revoke?id=<id>`, so an operator never has to already know the UUID.
-- **`ClaimFieldRequest` (schema authoring) has no per-field `required` flag** — only
-  `name`/`type`/`labelI18n`, confirmed against the generated contract (no enum, no extra
-  property). The claims-def builder therefore has no "required" toggle, even though the brief
-  asked for one and the _read-side_ `claims_def` JSON (parsed by
-  `features/issuance/claimsDef.ts`) does carry a `required` boolean per field. Unclear whether
-  the platform infers `required` some other way (e.g. `!selective`) or this is a genuine
-  contract gap — needs a platform-side answer before the toggle can be added.
+- **`ClaimFieldRequest` (schema authoring) has no per-field `required` flag — resolved, by
+  design.** Confirmed by direct inspection of `credential_schema.claims_def` for a live-created
+  schema: every field in `sd_fields` is stored `required: false`; the one field not in
+  `sd_fields` is stored `required: true`. The server derives `required` as `!selective` — there
+  is no independent "required" concept to expose a toggle for, so the claims-def builder not
+  having one is correct, not a gap. (One nuance: this means a field can't be both mandatory
+  _and_ selectively-disclosable, nor optional-to-fill-in _and_ mandatory-to-disclose — the
+  platform only supports the two combinations selective+optional and mandatory+required. Fine
+  for now; revisit if a future schema genuinely needs the other two combinations.)
 - **Claim field `type` literal — resolved.** Live-tested against the running backend
   (2026-07-21, Majd): `POST /api/v1/schemas` with a field typed `"string"` 400s with
   `KH-SCH-0400`: `"expected one of [date, number, text]"`. The builder now sends `"text"`
@@ -135,9 +154,7 @@
 1. C3: bulk issuance wizard (CSV upload → validate → preview → issue → report) — needs
    KH-1.1.3-BE first.
 2. Dashboard v1 (issues/verifies/consumes/failures counters).
-3. Resolve the two schema-authoring open decisions above (per-field `required`, and the
-   `"string"` vs `"text"` claim type literal) against a live backend before they bite a real user.
-4. A real visual/RTL pass over Verify, Revoke, Issue, schema management, and credential search
-   once a browser tool or the platform backend is available to click through against — Majd runs
-   the manual EN/AR + RTL pass before merge, as he did for C1/C1b (no browser-automation tool in
-   this environment this session either).
+3. A real visual/RTL pass over Verify, Revoke, Issue, schema management, and credential search —
+   partially done this session via Majd's manual create→publish→issue→redeem→verify→revoke
+   round-trip against the live Docker stack (no browser-automation tool in this environment); a
+   full EN/AR + RTL click-through still worth doing before merge.

@@ -92,7 +92,7 @@
     "title": "Verify Credential",
     "prompt": "Paste an SD-JWT presentation to verify it.",
     "sdJwtLabel": "SD-JWT presentation",
-    "sdJwtPlaceholder": "compact SD-JWT (~ separated) or a bare compact JWT",
+    "sdJwtPlaceholder": "compact SD-JWT (~ separated) or a bare compact JWT — end with a trailing ~ if there's no key-binding JWT",
     "submit": "Verify",
     "submitting": "Verifying…",
     "sdJwtRequired": "A presentation is required",
