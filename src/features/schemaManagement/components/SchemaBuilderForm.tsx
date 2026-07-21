@@ -143,6 +143,9 @@ export function SchemaBuilderForm({
           <label className={styles.label} htmlFor="schema-nameEn">
             {t('schemaManagement.builder.nameEn')}
           </label>
+          <span className={styles.help} aria-hidden="true">
+            &nbsp;
+          </span>
           <input id="schema-nameEn" type="text" autoComplete="off" {...register('nameEn')} />
           {errors.nameEn && <span className={styles.fieldError}>{errors.nameEn.message}</span>}
         </div>
@@ -150,6 +153,9 @@ export function SchemaBuilderForm({
           <label className={styles.label} htmlFor="schema-nameAr">
             {t('schemaManagement.builder.nameAr')}
           </label>
+          <span className={styles.help} aria-hidden="true">
+            &nbsp;
+          </span>
           <input id="schema-nameAr" type="text" autoComplete="off" {...register('nameAr')} />
           {errors.nameAr && <span className={styles.fieldError}>{errors.nameAr.message}</span>}
         </div>
@@ -170,6 +176,9 @@ export function SchemaBuilderForm({
           <label className={styles.label} htmlFor="schema-defaultValidityDays">
             {t('schemaManagement.builder.defaultValidityDays')}
           </label>
+          <span className={styles.help} aria-hidden="true">
+            &nbsp;
+          </span>
           <input
             id="schema-defaultValidityDays"
             type="number"
@@ -182,6 +191,9 @@ export function SchemaBuilderForm({
           <label className={styles.label} htmlFor="schema-defaultValidityHours">
             {t('schemaManagement.builder.defaultValidityHours')}
           </label>
+          <span className={styles.help} aria-hidden="true">
+            &nbsp;
+          </span>
           <input
             id="schema-defaultValidityHours"
             type="number"
