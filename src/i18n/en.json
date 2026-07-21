@@ -5,6 +5,8 @@
   },
   "nav": {
     "schemas": "Schemas",
+    "schemaManage": "Manage Schemas",
+    "credentials": "Credentials",
     "issue": "Issue",
     "verify": "Verify",
     "revoke": "Revoke"
@@ -144,5 +146,102 @@
     "copy": "Copy",
     "copied": "Copied",
     "back": "Back"
+  },
+  "schemaManagement": {
+    "title": "Manage Schemas",
+    "empty": "No schemas registered yet.",
+    "createCta": "Create schema",
+    "columnName": "Name",
+    "columnCode": "Code",
+    "columnStatus": "Status",
+    "columnActions": "Actions",
+    "statusDraft": "Draft",
+    "statusPublished": "Published",
+    "statusArchived": "Archived",
+    "actionEdit": "Edit",
+    "actionPublish": "Publish",
+    "actionNewVersion": "New version",
+    "actionArchive": "Archive",
+    "actionView": "View",
+    "publishConfirm": {
+      "title": "Publish this schema?",
+      "body": "After publishing, its claim fields can never change again. Any future correction requires a new version. This action cannot be undone.",
+      "confirm": "Publish now",
+      "publishing": "Publishing…",
+      "cancel": "Cancel"
+    },
+    "archiveConfirm": {
+      "title": "Archive this schema?",
+      "body": "Archiving stops new issuance against this schema only. Every credential already issued against it — and its verification and consumption — is completely unaffected.",
+      "confirm": "Archive now",
+      "archiving": "Archiving…",
+      "cancel": "Cancel"
+    },
+    "builder": {
+      "createTitle": "Create schema",
+      "editTitle": "Edit draft schema",
+      "versionTitle": "New schema version",
+      "code": "Code",
+      "codeHelp": "Immutable once created — cannot be changed later.",
+      "codeRequired": "Code is required",
+      "nameEn": "Name (English)",
+      "nameAr": "Name (Arabic)",
+      "nameRequired": "Both English and Arabic names are required",
+      "defaultMaxUses": "Default maximum uses",
+      "defaultMaxUsesHelp": "Optional; prefills the Issue form.",
+      "defaultValidityDays": "Default validity — days",
+      "defaultValidityHours": "Default validity — hours",
+      "fieldsHeading": "Claim fields",
+      "addField": "Add field",
+      "removeField": "Remove",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "fieldName": "Field name",
+      "fieldNameRequired": "Field name is required",
+      "fieldType": "Type",
+      "typeString": "Text",
+      "typeNumber": "Number",
+      "typeDate": "Date",
+      "fieldLabelEn": "Label (English)",
+      "fieldLabelAr": "Label (Arabic)",
+      "labelRequired": "Both English and Arabic labels are required",
+      "fieldSelective": "Selective disclosure",
+      "atLeastOneField": "At least one claim field is required",
+      "duplicateFieldName": "Field names must be unique",
+      "submitCreate": "Create schema",
+      "submitEdit": "Save draft",
+      "submitVersion": "Create version",
+      "submitting": "Saving…"
+    }
+  },
+  "credentials": {
+    "title": "Credentials",
+    "empty": "No credentials match these filters.",
+    "rowRevoke": "Revoke",
+    "filters": {
+      "ref": "Reference",
+      "pseudoRef": "Holder reference",
+      "schema": "Schema",
+      "schemaAny": "Any schema",
+      "revoked": "Revoked",
+      "revokedAny": "Any",
+      "revokedYes": "Revoked",
+      "revokedNo": "Not revoked",
+      "search": "Search",
+      "reset": "Reset"
+    },
+    "table": {
+      "ref": "Reference",
+      "schema": "Schema",
+      "issuedAt": "Issued",
+      "status": "Status",
+      "uses": "Uses remaining",
+      "actions": "Actions"
+    },
+    "pagination": {
+      "prev": "Previous",
+      "next": "Next",
+      "pageInfo": "Page {{page}} of {{totalPages}}"
+    }
   }
 }

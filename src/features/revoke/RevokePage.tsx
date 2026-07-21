@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
 import { ApiErrorBanner } from '@/components/ui/ApiErrorBanner';
 import { useErrorMessage } from '@/api/useErrorMessage';
@@ -26,6 +27,8 @@ export function RevokePage() {
 function RevokePageBody() {
   const { t } = useTranslation();
   const resolveError = useErrorMessage();
+  const [searchParams] = useSearchParams();
+  const presetId = searchParams.get('id');
   const schema = useMemo(
     () => z.object({ id: z.string().min(1, { message: t('revoke.lookupLabel') }) }),
     [t],
@@ -34,9 +37,14 @@ function RevokePageBody() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LookupFormValues>({ resolver: zodResolver(schema) });
+  } = useForm<LookupFormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { id: presetId ?? '' },
+  });
 
-  const [activeId, setActiveId] = useState<string | null>(null);
+  // Preloaded from a credential search deep-link (`/revoke?id=...`) — skips
+  // the manual lookup step so the operator lands straight on the summary.
+  const [activeId, setActiveId] = useState<string | null>(presetId);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const credentialQuery = useCredential(activeId);

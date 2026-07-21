@@ -4,11 +4,42 @@
 
 ## Current phase / task
 
-- Phase 1 — FS-C1/C1b feature screens — DONE (branches `feat/C1-feature-screens` and
-  `feat/C1b-issue-screen`). Verify, Revoke, and Issue are wired; C1b PR #3 merged into `main`
-  (2026-07-20, merge commit `d61416a`).
+- Phase 2 — C2 schema management + credential search — session complete, branch
+  `feat/C2-schema-mgmt-and-search`, PR open against `main` (not merged — see exit protocol).
 
 ## Last completed
+
+- 2026-07-21: C2 schema management + credential search session. Session was paused mid-start:
+  the contract initially still lacked the schema-management endpoints and `GET
+/api/v1/credentials` (hard gate, reported, no code written), then resumed once Majd confirmed
+  the KH-1.1-BE platform PR had merged. Re-ran `npm run contract:update` + `npm run gen:api` —
+  contract now has `POST /api/v1/schemas`, `PUT /api/v1/schemas/{id}`, `POST .../publish`,
+  `POST .../archive`, `POST .../versions`, and `GET /api/v1/credentials`. Delivered:
+  - **Schema management** (`/schemas/manage`, `RequireScope('admin')`): list of all statuses
+    (status badges, per-row actions by status), a claims-def builder
+    (`src/features/schemaManagement/`) for create/edit(DRAFT)/new-version(from PUBLISHED),
+    publish and archive confirm dialogs (shared `src/components/ui/ConfirmDialog.tsx`), and a
+    read-only view for ARCHIVED schemas. The read-only `/schemas` catalog is unchanged.
+    Every write invalidates the management list, the `/schemas` catalog, and the Issue picker's
+    published-schemas query (`usePublishSchema` etc. in `schemaManagement/hooks.ts`) — verified
+    with a test that publish's `onSuccess` invalidates all three query keys.
+  - **Credential search** (`/credentials`, any authenticated operator):
+    `src/features/credentials/` — filter bar (ref/pseudoRef exact, schema dropdown, tri-state
+    revoked), paged results table (page size 20) from `GET /api/v1/credentials`. Each row's
+    Revoke action deep-links to `/revoke?id=<id>`; `RevokePage` now reads an optional `?id=`
+    query param to preload the lookup and skip straight to the summary — closes the "know the
+    id up front" gap noted after C1.
+  - Sidebar gained two entries: "Manage Schemas" (only rendered when `hasScope('admin')`,
+    mirroring `RequireScope`'s own gating logic) and "Credentials" (always visible).
+  - EN/AR i18n parity green; RTL-correct (logical properties only, verified by grep — no
+    physical left/right properties introduced).
+  - Tests: claims-def builder serialization round-trip + sd-derivation + version-prefill
+    mapping (`claimsBuilder.test.ts`), both-language validation + at-least-one-field +
+    duplicate-name validation (`SchemaBuilderForm.test.tsx`), publish-confirm guard + admin
+    scope gating (`SchemaManagementPage.test.tsx`), version-prefill through the page
+    (`SchemaBuilderPage.test.tsx`), issue-picker invalidation (`hooks.test.tsx`), search
+    filter → query-param construction (`queryParams.test.ts`), revoke deep-link preload
+    (`RevokePage.test.tsx`).
 
 - 2026-07-20: FS-C1b Issue screen session. Confirmed C1 was merged into `main`, refreshed the
   vendored OpenAPI contract via `npm run contract:update` (authenticated `gh api` fallback), and
@@ -60,13 +91,29 @@
 - Design tokens (`src/styles/tokens.css`) reuse the POC's neutral palette pending a real
   visual-identity file from the stakeholder.
 - No browser-automation tool is available in this environment unless a future session gains one.
-  For C1/C1b, automated checks cover type/lint/format/unit tests; a real manual visual/RTL pass
-  should still happen before merge.
+  For C1/C1b/C2, automated checks cover type/lint/format/unit tests; a real manual visual/RTL
+  pass should still happen before merge.
 
 ## Open decisions / blockers
 
 - Revoke's lookup-by-id vs. the brief's lookup-by-`ref` is a brief/contract mismatch, not a gap —
   built to the contract (UUID `id`) per "path/type authority: the generated types, not this brief."
+  **Closed as a UX gap** by C2: credential search now surfaces the id up front and deep-links
+  `/revoke?id=<id>`, so an operator never has to already know the UUID.
+- **`ClaimFieldRequest` (schema authoring) has no per-field `required` flag** — only
+  `name`/`type`/`labelI18n`, confirmed against the generated contract (no enum, no extra
+  property). The claims-def builder therefore has no "required" toggle, even though the brief
+  asked for one and the _read-side_ `claims_def` JSON (parsed by
+  `features/issuance/claimsDef.ts`) does carry a `required` boolean per field. Unclear whether
+  the platform infers `required` some other way (e.g. `!selective`) or this is a genuine
+  contract gap — needs a platform-side answer before the toggle can be added.
+- **Claim field `type` literal is unconfirmed for authoring.** The `POST /api/v1/schemas`
+  description prose says the server rejects "an unsupported type (text/number/date)", but the
+  existing read-side convention (informed by prior review of `CredentialService
+.buildSchemaDefinition`) uses the literal `"string"`, not `"text"`. The builder sends
+  `"string"` for the text-type option, matching the read-side convention — **needs verification
+  against a live backend create call** before relying on it; if the server actually expects
+  `"text"`, every schema-creation attempt with a text field will 400.
 - Design tokens / visual identity file — pending from stakeholder (use neutral tokens meanwhile).
 - `khatm-platform`'s CI publishing step for `docs/api/openapi.json` (KH-1.6) should eventually
   make the raw URL work without the `gh` fallback — worth revisiting once that lands.
@@ -76,9 +123,12 @@
 
 ## Next up (ordered per Majd)
 
-1. C2 / KH-1.1.1 schema management UI (create/version — still only a read-only list).
-2. KH-1.1.4 credential search/list (feeds Revoke's know-the-id-up-front gap).
-3. KH-1.1.3 bulk issuance: CSV upload → validate → preview → issue → report.
-4. Dashboard v1 (issues/verifies/consumes/failures counters).
-5. A real visual/RTL pass over Verify, Revoke, and Issue once a browser tool or the platform
-   backend is available to click through against.
+1. C3: bulk issuance wizard (CSV upload → validate → preview → issue → report) — needs
+   KH-1.1.3-BE first.
+2. Dashboard v1 (issues/verifies/consumes/failures counters).
+3. Resolve the two schema-authoring open decisions above (per-field `required`, and the
+   `"string"` vs `"text"` claim type literal) against a live backend before they bite a real user.
+4. A real visual/RTL pass over Verify, Revoke, Issue, schema management, and credential search
+   once a browser tool or the platform backend is available to click through against — Majd runs
+   the manual EN/AR + RTL pass before merge, as he did for C1/C1b (no browser-automation tool in
+   this environment this session either).
