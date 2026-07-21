@@ -5,6 +5,8 @@
   },
   "nav": {
     "schemas": "المخططات",
+    "schemaManage": "إدارة المخططات",
+    "credentials": "بيانات الاعتماد",
     "issue": "إصدار",
     "verify": "تحقق",
     "revoke": "إبطال"
@@ -90,7 +92,7 @@
     "title": "التحقق من بيان الاعتماد",
     "prompt": "الصق عرض SD-JWT للتحقق منه.",
     "sdJwtLabel": "عرض SD-JWT",
-    "sdJwtPlaceholder": "SD-JWT مضغوط (مفصول بـ ~) أو JWT مضغوط مجرد",
+    "sdJwtPlaceholder": "SD-JWT مضغوط (مفصول بـ ~) أو JWT مضغوط مجرد — وانتهِ بعلامة ~ في حال عدم وجود JWT لربط المفتاح",
     "submit": "تحقق",
     "submitting": "جارٍ التحقق…",
     "sdJwtRequired": "العرض مطلوب",
@@ -144,5 +146,102 @@
     "copy": "نسخ",
     "copied": "تم النسخ",
     "back": "رجوع"
+  },
+  "schemaManagement": {
+    "title": "إدارة المخططات",
+    "empty": "لا توجد مخططات مسجّلة بعد.",
+    "createCta": "إنشاء مخطط",
+    "columnName": "الاسم",
+    "columnCode": "الرمز",
+    "columnStatus": "الحالة",
+    "columnActions": "الإجراءات",
+    "statusDraft": "مسودة",
+    "statusPublished": "منشور",
+    "statusArchived": "مؤرشف",
+    "actionEdit": "تعديل",
+    "actionPublish": "نشر",
+    "actionNewVersion": "إصدار جديد",
+    "actionArchive": "أرشفة",
+    "actionView": "عرض",
+    "publishConfirm": {
+      "title": "هل تريد نشر هذا المخطط؟",
+      "body": "بعد النشر، لا يمكن تغيير حقول المطالبة الخاصة به مرة أخرى أبدًا. أي تصحيح لاحق يتطلب إصدارًا جديدًا. لا يمكن التراجع عن هذا الإجراء.",
+      "confirm": "نشر الآن",
+      "publishing": "جارٍ النشر…",
+      "cancel": "إلغاء"
+    },
+    "archiveConfirm": {
+      "title": "هل تريد أرشفة هذا المخطط؟",
+      "body": "تؤدي الأرشفة إلى إيقاف الإصدار الجديد المستند إلى هذا المخطط فقط. كل بيان اعتماد صدر بالفعل بناءً عليه — والتحقق منه واستهلاكه — يبقى دون أي تأثير.",
+      "confirm": "أرشفة الآن",
+      "archiving": "جارٍ الأرشفة…",
+      "cancel": "إلغاء"
+    },
+    "builder": {
+      "createTitle": "إنشاء مخطط",
+      "editTitle": "تعديل مسودة المخطط",
+      "versionTitle": "إصدار جديد للمخطط",
+      "code": "الرمز",
+      "codeHelp": "غير قابل للتغيير بعد الإنشاء — لا يمكن تعديله لاحقًا.",
+      "codeRequired": "الرمز مطلوب",
+      "nameEn": "الاسم (بالإنجليزية)",
+      "nameAr": "الاسم (بالعربية)",
+      "nameRequired": "الاسم بالإنجليزية والعربية مطلوبان معًا",
+      "defaultMaxUses": "الحد الأقصى الافتراضي للاستخدامات",
+      "defaultMaxUsesHelp": "اختياري؛ يُستخدم لتعبئة نموذج الإصدار مسبقًا.",
+      "defaultValidityDays": "الصلاحية الافتراضية — أيام",
+      "defaultValidityHours": "الصلاحية الافتراضية — ساعات",
+      "fieldsHeading": "حقول المطالبة",
+      "addField": "إضافة حقل",
+      "removeField": "إزالة",
+      "moveUp": "تحريك لأعلى",
+      "moveDown": "تحريك لأسفل",
+      "fieldName": "اسم الحقل",
+      "fieldNameRequired": "اسم الحقل مطلوب",
+      "fieldType": "النوع",
+      "typeText": "نص",
+      "typeNumber": "رقم",
+      "typeDate": "تاريخ",
+      "fieldLabelEn": "التسمية (بالإنجليزية)",
+      "fieldLabelAr": "التسمية (بالعربية)",
+      "labelRequired": "التسمية بالإنجليزية والعربية مطلوبتان معًا",
+      "fieldSelective": "كشف انتقائي",
+      "atLeastOneField": "مطلوب حقل مطالبة واحد على الأقل",
+      "duplicateFieldName": "يجب أن تكون أسماء الحقول فريدة",
+      "submitCreate": "إنشاء المخطط",
+      "submitEdit": "حفظ المسودة",
+      "submitVersion": "إنشاء الإصدار",
+      "submitting": "جارٍ الحفظ…"
+    }
+  },
+  "credentials": {
+    "title": "بيانات الاعتماد",
+    "empty": "لا توجد بيانات اعتماد مطابقة لهذه المرشحات.",
+    "rowRevoke": "إبطال",
+    "filters": {
+      "ref": "المرجع",
+      "pseudoRef": "مرجع الحامل",
+      "schema": "المخطط",
+      "schemaAny": "أي مخطط",
+      "revoked": "مبطل",
+      "revokedAny": "الكل",
+      "revokedYes": "مبطل",
+      "revokedNo": "غير مبطل",
+      "search": "بحث",
+      "reset": "إعادة تعيين"
+    },
+    "table": {
+      "ref": "المرجع",
+      "schema": "المخطط",
+      "issuedAt": "تاريخ الإصدار",
+      "status": "الحالة",
+      "uses": "الاستخدامات المتبقية",
+      "actions": "الإجراءات"
+    },
+    "pagination": {
+      "prev": "السابق",
+      "next": "التالي",
+      "pageInfo": "الصفحة {{page}} من {{totalPages}}"
+    }
   }
 }
