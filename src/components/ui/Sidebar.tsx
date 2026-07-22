@@ -10,10 +10,22 @@ export function Sidebar() {
     <nav className={styles.sidebar} aria-label={t('shell.sidebarLabel')}>
       <div className={styles.brand}>{t('app.brand')}</div>
       <NavLink
+        to="/dashboard"
+        className={({ isActive }) => (isActive ? styles.linkActive : styles.link)}
+      >
+        {t('nav.dashboard')}
+      </NavLink>
+      <NavLink
         to="/issue"
         className={({ isActive }) => (isActive ? styles.linkActive : styles.link)}
       >
         {t('nav.issue')}
+      </NavLink>
+      <NavLink
+        to="/issue/bulk"
+        className={({ isActive }) => (isActive ? styles.linkActive : styles.link)}
+      >
+        {t('nav.issueBulk')}
       </NavLink>
       <NavLink
         to="/schemas"

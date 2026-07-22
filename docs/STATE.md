@@ -4,11 +4,102 @@
 
 ## Current phase / task
 
-- Phase 2b — C2b consuming-party management + consume simulator — **DONE. PR #5**
-  (`feat/C2b-consuming-parties-and-consume-sim`) merged into `main` on 2026-07-22 after Majd's
-  manual walkthrough on the local Docker stack (branch deleted post-merge).
+- Phase 3+4 — C3 bulk issuance wizard + C4 dashboard v1 — **implementation complete,
+  PR open against `main` on 2026-07-22** (`feat/C3-C4-bulk-wizard-and-dashboard`), not yet
+  merged. Per the session brief this is deliberately one merged session (Majd's call) and
+  **the last planned console session of V1** — merge is gated on Majd's manual EN/AR + RTL
+  walkthrough (see PR body / DoD below), same as every prior session's real-stack pass.
 
 ## Last completed
+
+- 2026-07-22: C3+C4 session — bulk issuance wizard + dashboard v1, plus the V1 closing sweep.
+  Hard gate checked first as always: `npm run contract:update` + `npm run gen:api` — both
+  `POST /api/v1/credentials/bulk` (`BulkIssueRequest/Response`, KH-1.1.3-BE) and
+  `GET /api/v1/stats` (`StatsResponse`, KH-1.5.3-BE) were already present in the refreshed
+  contract, so the session proceeded without a pause this time. Delivered:
+  - **Bulk issuance wizard** (`/issue/bulk`, `RequireScope('issue')` — self-gated inside
+    `BulkIssuePage` itself, matching `schemaManagement`/`consumingParties`'s convention rather
+    than `IssuePage`'s App.tsx-level wrapping; the two conventions coexist in this codebase,
+    noted below). `src/features/bulkIssuance/`: a 4-step flow (schema → upload & map →
+    validate & preview → report) mirroring the single-issue flow's visual language. Reused
+    rather than duplicated: the schema picker was extracted out of `IssuePage` into
+    `issuance/components/SchemaPicker.tsx` so both flows share the exact same component, and
+    `usePublishedSchemas`/`useIssueSchema` are re-exported from `issuance/hooks` as-is.
+    - CSV parsing is client-side via **papaparse** (approved dependency per the brief,
+      `@types/papaparse` added alongside it) — `csv.ts` reads the file via `FileReader`
+      rather than `Blob#text()`/`arrayBuffer()`; jsdom's `File` implements neither in this
+      toolchain (Node 24, jsdom 25.0.1), so the original `file.text()` approach passed a
+      real-browser smoke check but failed every test until switched to `FileReader`. Worth
+      remembering for any future file-upload feature tested under vitest+jsdom.
+    - Template download generates one CSV column per claim field plus a trailing `pseudoRef`
+      column (no bilingual hint row — judged not worth the parsing complexity it would add on
+      re-upload, since the brief marked the hint row optional).
+    - Column mapping auto-matches by exact then case-insensitive header name; per-row
+      validation (`rowValidation.ts`) mirrors `IssueForm`'s rules exactly (required = the
+      already-server-derived `!selective`, text/number/date patterns) but never replaces the
+      server's own validation — the per-item `error.code` in the report is always the
+      displayed truth for a `FAILED` row.
+    - **>200 rows are rejected client-side with a clear bilingual message** (mirroring the
+      server's own `KH-CRD-0400` cap); chunking into sequential batches was explicitly judged
+      not trivial enough to do cleanly in this session (would need sequential submission,
+      partial-failure-across-chunks UX, and a different report-alignment model) and is left as
+      a documented follow-up per the brief's own fallback language.
+    - Report rows align every original CSV row — including rows excluded client-side as
+      invalid — back to the server's per-item result by submission-order position
+      (`report.ts`'s `buildReportRows`), since invalid rows are never sent and the server only
+      indexes what it received. Claim codes are shown exactly once in the report table (never
+      persisted, no re-fetch path) with an explicit bilingual "export now or lose them forever"
+      warning shown both before submission (when the mint toggle is on) and again on the report
+      itself; CSV export (`generateReportCsv`) is the only way to carry them out, and — per the
+      P1 proofs-not-content rule — the export and the report table both omit the original claim
+      values, listing only index/status/ref/claimCode/error (the operator already reviewed their
+      own uploaded values in the preview step).
+    - Sidebar: "Bulk Issue" under Issue (issue-scope-gated, same visibility rule as the
+      Issue entry itself).
+  - **Dashboard v1** (`/dashboard`, any authenticated operator, `src/features/dashboard/`) is
+    now the **post-login landing page** — `/` now redirects to `/dashboard` instead of
+    `/schemas`, and "Dashboard" is the sidebar's first entry. Counter cards from
+    `GET /api/v1/stats`, grouped as Lifecycle (issued, claims redeemed, consumed, verifications
+    passed) vs. Needs attention (revoked, consume denied, verifications failed); a 7/30-day
+    window toggle maps to the `from`/`to` query params (`windows.ts`'s `computeWindow`), a
+    manual refresh button, and `staleTime`/`refetchInterval` both at 60s — no websockets, per
+    the brief. Every counter is read through `resolveCounterValue` (`counters.ts`), which
+    defaults an absent or contract-optional field to `0` and can never crash the page — the
+    same defensive stance as the C1 status-list fields. No new chart dependency, per the brief.
+  - **V1 closing sweep**: re-ran the RTL logical-properties grep across every stylesheet in
+    `src/` (`(margin|padding|border)-(left|right)`, bare `left:`/`right:`, physical
+    `text-align`, `float: left/right`) — zero matches anywhere, including the C2b screens
+    (`/consumers`, `/consume-sim`). i18n parity (`src/i18n/parity.test.ts`) green with the new
+    `dashboard.*`, `issueBulk.*`, and `nav.dashboard`/`nav.issueBulk` keys added to both
+    `en.json` and `ar.json` in the same commit. Full-repo `eslint .` clean (zero
+    `i18next/no-literal-string` violations in the new code).
+  - Tests: 141 total now (was 107) — 34 new: `bulkIssuance` (23: `csv.test.ts`,
+    `columnMapping.test.ts`, `rowValidation.test.ts` incl. an Arabic-content round-trip,
+    `request.test.ts` byte-for-byte DTO fixture, `report.test.ts` index-alignment incl.
+    client-excluded rows, `BulkIssuePage.test.tsx` end-to-end incl. scope gating, the >200-row
+    cap, and the one-time claim-code/export flow) and `dashboard` (11: `windows.test.ts`,
+    `counters.test.ts` incl. absent-counter and absent-`counters`-object defensive cases,
+    `DashboardPage.test.tsx` incl. both-locale number formatting, window-toggle query
+    construction, and refresh re-fetch).
+  - `npm run check` and `npm run build` both clean.
+  - Noted, not fixed (pre-existing, out of scope): a dev-only `npm audit` advisory
+    (`@redocly/openapi-core`'s vendored `js-yaml`, transitive via `openapi-typescript`) appeared
+    after installing papaparse's peers refreshed the lockfile graph — same category as the
+    already-noted esbuild/vitest advisory, a dev-toolchain issue with no runtime/prod exposure.
+
+- 2026-07-22 (follow-up): Majd's manual pass against the running Docker stack (via the
+  `khatm-console` container, rebuilt with `docker compose up -d --build` to pick up the PR #5
+  changes). First attempt to consume via the simulator got `KH-RBC-0403` ("forbidden"). Diagnosed
+  as **not a console bug**: the audit log showed zero trace of any API-key auth attempt at that
+  timestamp (no `API_KEY_AUTH_FAILED`, nothing) — meaning the pasted key field never reached the
+  server as a real `khk_...` key, so the request fell back to the admin session, which
+  `/api/v1/credentials/consume` explicitly rejects regardless of scope (only a `CONSUMING_PARTY`
+  key is accepted there, by design). Confirmed by reproducing the exact browser request (session
+  cookie + `Authorization: Bearer` header) through the live `khatm-console` container with a
+  freshly minted `probe-party` key — succeeded (`consumed: true`) on the first try, proving the
+  request pipeline is correct end-to-end. Root cause on the user side (empty/incomplete key
+  paste), not the app. Majd re-tested with a fresh credential + freshly minted key, confirmed the
+  full flow, and approved. PR #5 merged.
 
 - 2026-07-22 (follow-up): Majd's manual pass against the running Docker stack (via the
   `khatm-console` container, rebuilt with `docker compose up -d --build` to pick up the PR #5
@@ -189,8 +280,14 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 - Design tokens (`src/styles/tokens.css`) reuse the POC's neutral palette pending a real
   visual-identity file from the stakeholder.
 - No browser-automation tool is available in this environment unless a future session gains one.
-  For C1/C1b/C2/C2b, automated checks cover type/lint/format/unit tests; a real manual visual/RTL
-  pass should still happen before merge.
+  For C1/C1b/C2/C2b/C3/C4, automated checks cover type/lint/format/unit tests; a real manual
+  visual/RTL pass should still happen before merge — for C3+C4 specifically, Majd's walkthrough
+  (PR body) is the actual gate, not just a nicety.
+- **jsdom's `File` implements neither `Blob#text()` nor `#arrayBuffer()`** (Node 24, jsdom 25.0.1,
+  this toolchain) — a real browser supports both fine, but any vitest+jsdom test around a
+  `File`/`Blob` upload will throw `file.text is not a function`. Read via `FileReader.readAsText`
+  instead (see `bulkIssuance/csv.ts`'s `readFileText`), which jsdom does implement correctly.
+  Worth remembering before the next file-upload feature.
 - The vendored OpenAPI contract declares no `securitySchemes` at all — it cannot answer "what
   header does an API key go in." The authoritative answer lives in the platform source
   (`rbac/security/ApiKeyAuthFilter.java`, present in the local `khatm-platform` checkout on this
@@ -243,14 +340,36 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 - Dev-only `esbuild`/vitest-toolchain `npm audit` advisory (moderate, dev-server request forgery)
   — inherent to the current vitest 3.x → vite 6 chain, not a runtime/prod risk. No fix available
   without an unreleased vitest bump; revisit on next dependency update.
+- **Scope-gating placement is inconsistent across the codebase — noted, not fixed.**
+  `schemaManagement`, `consumingParties`, and now `bulkIssuance` self-gate with `RequireScope`
+  inside the page component itself (so the page's own test file can exercise scope gating
+  directly, per `SchemaManagementPage.test.tsx`'s pattern); `issuance`'s `IssuePage` instead
+  relies on an external `<RequireScope>` wrapper written at the `App.tsx` route level, with no
+  scope-gating test of its own. `BulkIssuePage` followed the more common (self-gating) pattern
+  specifically so the brief's required "scope gating (`/issue/bulk` needs `issue`)" test could
+  exist. Both patterns work correctly today; unifying them is a small, low-risk cleanup worth
+  doing in a future session but out of scope for this one.
+- **CSV bulk-upload chunking (>200 rows) — deferred by explicit judgment call, per the brief's
+  own fallback language.** Files over the server's 200-row cap (`KH-CRD-0400`) are rejected
+  client-side with a clear bilingual message rather than chunked into sequential batches;
+  chunking would need sequential submission, a partial-failure-across-chunks UX, and a different
+  report-alignment model than the current single-batch one, none of which seemed "trivial to do
+  cleanly" within this session. Revisit if a pilot tenant actually needs single-file uploads over
+  200 rows.
+- Design tokens / visual identity file — pending from stakeholder (use neutral tokens meanwhile).
+- `khatm-platform`'s CI publishing step for `docs/api/openapi.json` (KH-1.6) should eventually
+  make the raw URL work without the `gh` fallback — worth revisiting once that lands.
 
-## Next up (ordered per Majd)
+## Next up (post-V1, ordered per Majd)
 
-1. C3: bulk issuance wizard (CSV upload → validate → preview → issue → report) — needs
-   KH-1.1.3-BE first.
-2. Dashboard v1 (issues/verifies/consumes/failures counters).
-3. API-key revocation UI (KH-2.2-era, out of scope for C2b — the platform endpoint already exists,
+1. API-key revocation UI (KH-2.2-era — the platform endpoint already exists,
    `POST /api/v1/admin/api-keys/{id}/revoke`).
-4. A real visual/RTL pass over every screen — partially done via live manual round-trips each
-   session (no browser-automation tool in this environment); a full EN/AR + RTL click-through
-   across all screens including the two C2b ones (`/consumers`, `/consume-sim`) still worth doing.
+2. Visual identity: swap the neutral placeholder design tokens for the real stakeholder palette
+   once it lands, and revisit whether a real charting library belongs in the dashboard then.
+3. KH-2.2-era RBAC changes, whatever those turn out to require.
+4. Unify the scope-gating placement convention (self-gating vs. App.tsx-level wrapping — see
+   "Open decisions" above) across every gated page.
+5. A full EN/AR + RTL click-through across **every** screen as one continuous pass (each session
+   has done a partial live round-trip; this is the first time all of console V1 exists at once to
+   walk end-to-end) — this is exactly what the C3+C4 PR asks Majd to do before merging, so it may
+   already be done by the time this list is read.

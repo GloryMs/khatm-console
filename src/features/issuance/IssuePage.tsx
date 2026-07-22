@@ -5,10 +5,11 @@ import { ApiErrorBanner } from '@/components/ui/ApiErrorBanner';
 import { useLocalizedText } from '@/hooks/useLocalizedText';
 import { parseClaimsDef } from './claimsDef';
 import { IssueForm, type IssueFormValues } from './components/IssueForm';
+import { SchemaPicker } from './components/SchemaPicker';
 import { minutesToFormValue, parseIsoDurationMinutes } from './duration';
 import { useIssueAndMintCredential, useIssueSchema, usePublishedSchemas } from './hooks';
 import { getQrApiBase, isLocalhostOrigin, serializeQrPayload } from './qrPayload';
-import type { IssueRequest, SchemaDetail, SchemaSummary } from './api';
+import type { IssueRequest, SchemaDetail } from './api';
 import styles from './IssuePage.module.css';
 
 interface SuccessState {
@@ -64,38 +65,6 @@ function buildIssueRequest(detail: SchemaDetail, values: IssueFormValues): Issue
     validMinutes: toNumber(values.validMinutes),
     sdFields: detail.sdFields,
   };
-}
-
-function SchemaPicker({
-  schemas,
-  onPick,
-}: {
-  schemas: SchemaSummary[];
-  onPick: (schema: SchemaSummary) => void;
-}) {
-  const { t } = useTranslation();
-  const localize = useLocalizedText();
-
-  if (schemas.length === 0) return <p className={styles.help}>{t('issue.noSchemas')}</p>;
-
-  return (
-    <ul className={styles.schemaList}>
-      {schemas.map((schema) => {
-        const label = localize(schema.nameI18n) || schema.code || schema.id || '';
-        return (
-          <li key={schema.id}>
-            <button type="button" className={styles.schemaButton} onClick={() => onPick(schema)}>
-              <span className={styles.schemaName}>{label}</span>
-              <span className={`${styles.schemaMeta} ltr-embed`}>
-                <span>{schema.code}</span>
-                <span>{t('schemas.version', { version: schema.version })}</span>
-              </span>
-            </button>
-          </li>
-        );
-      })}
-    </ul>
-  );
 }
 
 function CopyButton({ value, label }: { value: string; label: string }) {

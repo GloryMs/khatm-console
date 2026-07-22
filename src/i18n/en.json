@@ -7,7 +7,9 @@
     "schemas": "Schemas",
     "schemaManage": "Manage Schemas",
     "credentials": "Credentials",
+    "dashboard": "Dashboard",
     "issue": "Issue",
+    "issueBulk": "Bulk Issue",
     "verify": "Verify",
     "revoke": "Revoke",
     "consumingParties": "Consuming Parties",
@@ -21,6 +23,26 @@
     "switcherLabel": "Language",
     "english": "English",
     "arabic": "العربية"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "windowLabel": "Time window",
+    "windowDays": "Last {{count}} days",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…",
+    "groups": {
+      "lifecycle": "Lifecycle",
+      "attention": "Needs attention"
+    },
+    "counters": {
+      "issued": "Issued",
+      "claimsRedeemed": "Claim codes redeemed",
+      "consumed": "Consumed",
+      "verifyOk": "Verifications passed",
+      "revoked": "Revoked",
+      "consumeDenied": "Consume denied",
+      "verifyFailed": "Verifications failed"
+    }
   },
   "auth": {
     "login": {
@@ -320,6 +342,53 @@
       "successTitle": "API key minted",
       "shownOnce": "This key is shown once. Copy it now; the platform cannot reveal it again.",
       "done": "Done"
+    }
+  },
+  "issueBulk": {
+    "title": "Bulk Issue Credentials",
+    "stepSchema": "1. Schema",
+    "stepUpload": "2. Upload & map",
+    "stepPreview": "3. Validate & preview",
+    "stepReport": "4. Report",
+    "templateHeading": "Download a template",
+    "templateHelp": "Download a CSV template for this schema, fill it in, then upload it in the next step.",
+    "downloadTemplate": "Download template CSV",
+    "upload": {
+      "fileLabel": "CSV file",
+      "rowCount": "{{count}} rows detected",
+      "noRows": "No data rows were found in this file.",
+      "tooManyRows": "This file has more than {{max}} rows. Split it into smaller batches and upload separately.",
+      "unmapped": "— not mapped —",
+      "pseudoRefColumn": "Holder reference (pseudoRef)",
+      "continue": "Continue"
+    },
+    "preview": {
+      "totalRows": "{{count}} rows total",
+      "validRows": "{{count}} valid",
+      "invalidRows": "{{count}} invalid — excluded from submission",
+      "mintClaimCodes": "Mint claim codes",
+      "claimCodesShownOnce": "Claim codes are shown once, in the report after issuing. Export the report before leaving that page — the platform cannot reveal them again.",
+      "columnRow": "Row",
+      "columnStatus": "Status",
+      "valid": "Valid",
+      "invalid": "Invalid",
+      "submitting": "Issuing…",
+      "submit": "Issue {{count}} credentials"
+    },
+    "report": {
+      "total": "{{count}} total",
+      "succeeded": "{{count}} issued",
+      "failed": "{{count}} failed",
+      "excluded": "{{count}} excluded before submission",
+      "claimCodesWarning": "These claim codes are shown once. Export this report now — leaving this page loses them forever.",
+      "columnStatus": "Status",
+      "columnError": "Error",
+      "statusIssued": "Issued",
+      "statusFailed": "Failed",
+      "statusExcluded": "Excluded (invalid)",
+      "statusUnknown": "Unknown",
+      "exportCsv": "Export report (CSV)",
+      "startOver": "Start another batch"
     }
   },
   "consumeSim": {

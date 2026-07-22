@@ -7,9 +7,11 @@ import { AuthProvider } from '@/features/auth/AuthProvider';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { RequireAuth } from '@/features/auth/RequireAuth';
 import { RequireScope } from '@/features/auth/RequireScope';
+import { BulkIssuePage } from '@/features/bulkIssuance/BulkIssuePage';
 import { ConsumeSimPage } from '@/features/consumeSim/ConsumeSimPage';
 import { ConsumingPartiesPage } from '@/features/consumingParties/ConsumingPartiesPage';
 import { CredentialsPage } from '@/features/credentials/CredentialsPage';
+import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { IssuePage } from '@/features/issuance/IssuePage';
 import { RevokePage } from '@/features/revoke/RevokePage';
 import { SchemaBuilderPage } from '@/features/schemaManagement/SchemaBuilderPage';
@@ -28,7 +30,8 @@ export function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route element={<RequireAuth />}>
                 <Route element={<AppShell />}>
-                  <Route path="/" element={<Navigate to="/schemas" replace />} />
+                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                  <Route path="/dashboard" element={<DashboardPage />} />
                   <Route
                     path="/issue"
                     element={
@@ -37,6 +40,7 @@ export function App() {
                       </RequireScope>
                     }
                   />
+                  <Route path="/issue/bulk" element={<BulkIssuePage />} />
                   <Route path="/schemas" element={<SchemasPage />} />
                   <Route path="/schemas/manage" element={<SchemaManagementPage />} />
                   <Route path="/schemas/manage/new" element={<SchemaBuilderPage mode="create" />} />

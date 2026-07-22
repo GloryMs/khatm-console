@@ -292,6 +292,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/credentials/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue a batch of credentials against one schema
+         * @description The C3 console wizard's CSV-per-schema flow (KH-1.1.3) — up to 200 items, one schema per batch, each issued independently through the same single-issue path (no parallel issuance logic, no bypass of any single-issue guard). One bad row never rolls back the batch: the response reports every item's outcome by index, ISSUED or FAILED with its own error. Setting mintClaimCodes:true mints a one-time wallet claim code for every successfully issued item (the existing POST /{id}/claim-code path) and returns it in that item's result — shown here exactly once. Requires the same scope as /issue: session or TENANT API key (a CONSUMING_PARTY key is always 403 here).
+         */
+        post: operations["bulkIssue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/credentials/consume": {
         parameters: {
             query?: never;
@@ -524,6 +544,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fetch pilot-metrics counters
+         * @description A plain GROUP BY action aggregation over audit_log for the requested window — counters only, never claim content (P1). Defaults to the last 30 days when from/to are omitted. Requires a console session — no API key of any kind works here (see rbac.security.SecurityConfig's Javadoc).
+         */
+        get: operations["stats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/sl/{tenantSlug}/{listCode}": {
         parameters: {
             query?: never;
@@ -556,6 +596,56 @@ export interface components {
             schemaCode?: string;
             /** Format: uuid */
             schemaId?: string;
+        };
+        /** @description Batch-wide defaults, overridable per item */
+        BulkIssueDefaults: {
+            /** Format: int32 */
+            maxUses?: number;
+            /** Format: int32 */
+            validMinutes?: number;
+        };
+        /** @description One credential to issue within a bulk batch */
+        BulkIssueItem: {
+            claims?: {
+                [key: string]: Record<string, never>;
+            };
+            /** Format: int32 */
+            maxUses?: number;
+            pseudoRef?: string;
+            /** Format: int32 */
+            validMinutes?: number;
+        };
+        /** @description Why one bulk-issue item failed */
+        BulkIssueItemError: {
+            code?: string;
+            message?: string;
+        };
+        /** @description One bulk-issue row's outcome */
+        BulkIssueItemResult: {
+            claimCode?: string;
+            error?: components["schemas"]["BulkIssueItemError"];
+            id?: string;
+            /** Format: int32 */
+            index?: number;
+            ref?: string;
+            status?: string;
+        };
+        /** @description Request to issue a batch of credentials against one schema */
+        BulkIssueRequest: {
+            defaults?: components["schemas"]["BulkIssueDefaults"];
+            items?: components["schemas"]["BulkIssueItem"][];
+            mintClaimCodes?: boolean;
+            schemaCode: string;
+        };
+        /** @description Full per-item report of a bulk issuance batch */
+        BulkIssueResponse: {
+            /** Format: int32 */
+            failed?: number;
+            results?: components["schemas"]["BulkIssueItemResult"][];
+            /** Format: int32 */
+            succeeded?: number;
+            /** Format: int32 */
+            total?: number;
         };
         /** @description Request to mint a fresh wallet claim code for an already-issued credential */
         ClaimCodeMintRequest: {
@@ -771,6 +861,35 @@ export interface components {
             status?: string;
             /** Format: int32 */
             version?: number;
+        };
+        /** @description Pilot-metrics counters for the requested window */
+        StatsCounters: {
+            /** Format: int64 */
+            claimsRedeemed?: number;
+            /** Format: int64 */
+            consumeDenied?: number;
+            /** Format: int64 */
+            consumed?: number;
+            /** Format: int64 */
+            issued?: number;
+            /** Format: int64 */
+            revoked?: number;
+            /** Format: int64 */
+            verifyFailed?: number;
+            /** Format: int64 */
+            verifyOk?: number;
+        };
+        /** @description Pilot-metrics counters for a time window */
+        StatsResponse: {
+            counters?: components["schemas"]["StatsCounters"];
+            window?: components["schemas"]["StatsWindow"];
+        };
+        /** @description The time window counters were aggregated over */
+        StatsWindow: {
+            /** Format: date-time */
+            from?: string;
+            /** Format: date-time */
+            to?: string;
         };
         /** @description Request to verify an SD-JWT credential presentation */
         VerifyRequest: {
@@ -1384,6 +1503,57 @@ export interface operations {
                 };
             };
             /** @description Authenticated with an API key instead of a console session */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    bulkIssue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkIssueRequest"];
+            };
+        };
+        responses: {
+            /** @description Per-item report (always 200) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BulkIssueResponse"];
+                };
+            };
+            /** @description The batch itself is invalid — empty items, or more than 200 (KH-CRD-0400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the issue scope, or called with a CONSUMING_PARTY API key instead of a console session or TENANT API key */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2040,6 +2210,56 @@ export interface operations {
             };
             /** @description The source schema is not PUBLISHED (KH-SCH-1409) */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    stats: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Counters for the resolved window */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["StatsResponse"];
+                };
+            };
+            /** @description from/to was present but not a valid ISO-8601 instant */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No valid session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Authenticated with an API key instead of a console session */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
