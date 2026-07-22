@@ -4,11 +4,10 @@
 
 ## Current phase / task
 
-- Phase 3+4 — C3 bulk issuance wizard + C4 dashboard v1 — **implementation complete,
-  PR open against `main` on 2026-07-22** (`feat/C3-C4-bulk-wizard-and-dashboard`), not yet
-  merged. Per the session brief this is deliberately one merged session (Majd's call) and
-  **the last planned console session of V1** — merge is gated on Majd's manual EN/AR + RTL
-  walkthrough (see PR body / DoD below), same as every prior session's real-stack pass.
+- Phase 3+4 — C3 bulk issuance wizard + C4 dashboard v1 — **DONE. PR #6**
+  (`feat/C3-C4-bulk-wizard-and-dashboard`) merged into `main` on 2026-07-22 after Majd's manual
+  EN/AR + RTL walkthrough on the local Docker stack (branch deleted post-merge). **This closes
+  console V1** — see "Next up" for the post-V1 backlog.
 
 ## Last completed
 
@@ -87,7 +86,13 @@
     after installing papaparse's peers refreshed the lockfile graph — same category as the
     already-noted esbuild/vitest advisory, a dev-toolchain issue with no runtime/prod exposure.
 
-- 2026-07-22 (follow-up): Majd's manual pass against the running Docker stack (via the
+- 2026-07-22 (follow-up, PR #6): rebuilt the `khatm-console` container
+  (`docker compose up -d --build`, the prior container was stale from before this session) against
+  the already-running `khatm-api`/`khatm-worker`/`khatm-postgres`/`khatm-redis` stack on
+  `khatm-net`. Majd confirmed the Arabic layout and messages read correctly across the app on the
+  rebuilt container. PR #6 merged into `main` (`--delete-branch`), closing **console V1**.
+
+- 2026-07-22 (follow-up, PR #5): Majd's manual pass against the running Docker stack (via the
   `khatm-console` container, rebuilt with `docker compose up -d --build` to pick up the PR #5
   changes). First attempt to consume via the simulator got `KH-RBC-0403` ("forbidden"). Diagnosed
   as **not a console bug**: the audit log showed zero trace of any API-key auth attempt at that
@@ -369,7 +374,6 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 3. KH-2.2-era RBAC changes, whatever those turn out to require.
 4. Unify the scope-gating placement convention (self-gating vs. App.tsx-level wrapping — see
    "Open decisions" above) across every gated page.
-5. A full EN/AR + RTL click-through across **every** screen as one continuous pass (each session
-   has done a partial live round-trip; this is the first time all of console V1 exists at once to
-   walk end-to-end) — this is exactly what the C3+C4 PR asks Majd to do before merging, so it may
-   already be done by the time this list is read.
+
+Closed: the full EN/AR + RTL click-through across every screen — Majd confirmed the Arabic
+layout and messages read correctly across the rebuilt container before merging PR #6.
