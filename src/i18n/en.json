@@ -9,7 +9,9 @@
     "credentials": "Credentials",
     "issue": "Issue",
     "verify": "Verify",
-    "revoke": "Revoke"
+    "revoke": "Revoke",
+    "consumingParties": "Consuming Parties",
+    "consumeSim": "Consume Simulator"
   },
   "shell": {
     "sidebarLabel": "Primary navigation",
@@ -44,6 +46,16 @@
     "boundary": {
       "title": "Something went wrong.",
       "reload": "Reload"
+    },
+    "consumer": {
+      "invalid-code": "That code isn't a valid slug. Use lowercase letters, digits, hyphens or underscores, 2-63 characters, starting with a letter or digit.",
+      "duplicate-code": "A consuming party with this code already exists.",
+      "schema-not-allowed": "This consuming party isn't allowed to consume credentials of this schema — its allowlist is deny-by-default. Add the schema to the party's allowlist first."
+    },
+    "error": {
+      "rbc": {
+        "api_key_invalid": "This API key is invalid, unknown, or the consuming party has been suspended."
+      }
     }
   },
   "schemas": {
@@ -218,6 +230,7 @@
     "title": "Credentials",
     "empty": "No credentials match these filters.",
     "rowRevoke": "Revoke",
+    "rowConsume": "Consume…",
     "filters": {
       "ref": "Reference",
       "pseudoRef": "Holder reference",
@@ -242,6 +255,101 @@
       "prev": "Previous",
       "next": "Next",
       "pageInfo": "Page {{page}} of {{totalPages}}"
+    }
+  },
+  "consumingParties": {
+    "title": "Consuming Parties",
+    "empty": "No consuming parties registered yet.",
+    "createCta": "Register consuming party",
+    "columnName": "Name",
+    "columnCode": "Code",
+    "columnStatus": "Status",
+    "columnAllowedSchemas": "Allowed schemas",
+    "columnCreatedAt": "Registered",
+    "columnActions": "Actions",
+    "statusActive": "Active",
+    "statusSuspended": "Suspended",
+    "noAllowedSchemas": "None — this party can consume nothing (deny-by-default).",
+    "actionSuspend": "Suspend",
+    "actionActivate": "Activate",
+    "actionAllowlist": "Manage allowlist",
+    "actionMintKey": "Mint key",
+    "create": {
+      "title": "Register consuming party",
+      "code": "Code",
+      "codeHelp": "A lowercase slug (letters, digits, hyphen, underscore), 2-63 characters, starting with a letter or digit. Immutable once created.",
+      "codeRequired": "Code is required",
+      "codeInvalid": "Use a lowercase slug (letters, digits, hyphen, underscore), 2 to 63 characters, starting with a letter or digit.",
+      "nameEn": "Name (English)",
+      "nameAr": "Name (Arabic)",
+      "nameRequired": "Both English and Arabic names are required",
+      "cancel": "Cancel",
+      "submit": "Register",
+      "submitting": "Registering…"
+    },
+    "suspendConfirm": {
+      "title": "Suspend this consuming party?",
+      "body": "Its API keys stop authenticating immediately — the same outcome as revoking them. You can reactivate the party at any time.",
+      "confirm": "Suspend now",
+      "suspending": "Suspending…",
+      "cancel": "Cancel"
+    },
+    "activateConfirm": {
+      "title": "Reactivate this consuming party?",
+      "body": "Its API keys will authenticate again.",
+      "confirm": "Activate now",
+      "activating": "Activating…",
+      "cancel": "Cancel"
+    },
+    "allowlist": {
+      "title": "Allowlist — {{code}}",
+      "help": "Deny-by-default: this party can only consume credentials of schemas checked below.",
+      "empty": "No schemas are registered yet.",
+      "cancel": "Cancel",
+      "save": "Save allowlist",
+      "saving": "Saving…"
+    },
+    "mintConfirm": {
+      "title": "Mint a new API key?",
+      "body": "The key is shown exactly once and cannot be retrieved again. Any previously minted keys for this party remain valid until individually revoked.",
+      "confirm": "Mint key",
+      "minting": "Minting…",
+      "cancel": "Cancel"
+    },
+    "mint": {
+      "successTitle": "API key minted",
+      "shownOnce": "This key is shown once. Copy it now; the platform cannot reveal it again.",
+      "done": "Done"
+    }
+  },
+  "consumeSim": {
+    "title": "Consume Simulator",
+    "banner": "Testing/demo tool: this simulates a consuming party's own consume call, authenticated with a pasted API key. It is not a production consumption channel.",
+    "form": {
+      "credentialId": "Credential ID",
+      "credentialIdRequired": "Credential ID is required",
+      "apiKey": "Consuming-party API key",
+      "apiKeyRequired": "An API key is required",
+      "apiKeyHelp": "Pasted key lives only in this page's memory — never stored, logged, or put in the URL. Cleared when you navigate away.",
+      "revealKey": "Reveal",
+      "hideKey": "Hide",
+      "idempotencyKey": "Idempotency key",
+      "idempotencyKeyHelp": "Re-sending the same key demonstrates idempotent replay — the platform returns the first outcome without consuming again.",
+      "regenerate": "Regenerate",
+      "submit": "Consume",
+      "submitting": "Consuming…"
+    },
+    "result": {
+      "consumed": "Consumed",
+      "consumedYes": "Yes",
+      "consumedNo": "No",
+      "reason": "Reason",
+      "reasonConsumed": "Consumed",
+      "reasonAlreadyConsumed": "Already consumed",
+      "reasonNotConsumable": "Not consumable",
+      "reasonIdempotentReplay": "Idempotent replay — same outcome as the first call",
+      "usesRemaining": "Uses remaining",
+      "usesRemainingUnknown": "—"
     }
   }
 }
