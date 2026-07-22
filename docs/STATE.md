@@ -4,12 +4,25 @@
 
 ## Current phase / task
 
-- Phase 2b — C2b consuming-party management + consume simulator — session delivered, **PR open,
-  not yet merged** (per the session brief: Majd merges after his own manual EN/AR + RTL pass and
-  the live-stack walkthrough listed in the PR body). Branch
-  `feat/C2b-consuming-parties-and-consume-sim`.
+- Phase 2b — C2b consuming-party management + consume simulator — **DONE. PR #5**
+  (`feat/C2b-consuming-parties-and-consume-sim`) merged into `main` on 2026-07-22 after Majd's
+  manual walkthrough on the local Docker stack (branch deleted post-merge).
 
 ## Last completed
+
+- 2026-07-22 (follow-up): Majd's manual pass against the running Docker stack (via the
+  `khatm-console` container, rebuilt with `docker compose up -d --build` to pick up the PR #5
+  changes). First attempt to consume via the simulator got `KH-RBC-0403` ("forbidden"). Diagnosed
+  as **not a console bug**: the audit log showed zero trace of any API-key auth attempt at that
+  timestamp (no `API_KEY_AUTH_FAILED`, nothing) — meaning the pasted key field never reached the
+  server as a real `khk_...` key, so the request fell back to the admin session, which
+  `/api/v1/credentials/consume` explicitly rejects regardless of scope (only a `CONSUMING_PARTY`
+  key is accepted there, by design). Confirmed by reproducing the exact browser request (session
+  cookie + `Authorization: Bearer` header) through the live `khatm-console` container with a
+  freshly minted `probe-party` key — succeeded (`consumed: true`) on the first try, proving the
+  request pipeline is correct end-to-end. Root cause on the user side (empty/incomplete key
+  paste), not the app. Majd re-tested with a fresh credential + freshly minted key, confirmed the
+  full flow, and approved. PR #5 merged.
 
 - 2026-07-22: C2b session. Hard gate held once at the very start: the first `npm run
 contract:update` + `npm run gen:api` pass showed the vendored contract still had no
@@ -233,14 +246,11 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 
 ## Next up (ordered per Majd)
 
-1. Majd's manual walkthrough of the C2b PR (see the PR body's checklist: create party → allow
-   schema → mint key → issue → simulator-consume → replay → exhaust → deny-by-default → suspend)
-   plus an EN/AR + RTL click-through, then merge `feat/C2b-consuming-parties-and-consume-sim`.
-2. C3: bulk issuance wizard (CSV upload → validate → preview → issue → report) — needs
+1. C3: bulk issuance wizard (CSV upload → validate → preview → issue → report) — needs
    KH-1.1.3-BE first.
-3. Dashboard v1 (issues/verifies/consumes/failures counters).
-4. API-key revocation UI (KH-2.2-era, out of scope for C2b — the platform endpoint already exists,
+2. Dashboard v1 (issues/verifies/consumes/failures counters).
+3. API-key revocation UI (KH-2.2-era, out of scope for C2b — the platform endpoint already exists,
    `POST /api/v1/admin/api-keys/{id}/revoke`).
-5. A real visual/RTL pass over every screen — partially done via live manual round-trips each
+4. A real visual/RTL pass over every screen — partially done via live manual round-trips each
    session (no browser-automation tool in this environment); a full EN/AR + RTL click-through
-   across all screens including the two new C2b ones still worth doing before merge.
+   across all screens including the two C2b ones (`/consumers`, `/consume-sim`) still worth doing.
