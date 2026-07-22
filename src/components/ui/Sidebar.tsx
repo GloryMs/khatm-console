@@ -47,6 +47,20 @@ export function Sidebar() {
       >
         {t('nav.revoke')}
       </NavLink>
+      {hasScope('admin') && (
+        <NavLink
+          to="/consumers"
+          className={({ isActive }) => (isActive ? styles.linkActive : styles.link)}
+        >
+          {t('nav.consumingParties')}
+        </NavLink>
+      )}
+      <NavLink
+        to="/consume-sim"
+        className={({ isActive }) => (isActive ? styles.linkActive : styles.link)}
+      >
+        {t('nav.consumeSim')}
+      </NavLink>
     </nav>
   );
 }

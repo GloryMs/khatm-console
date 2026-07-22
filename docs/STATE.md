@@ -4,11 +4,71 @@
 
 ## Current phase / task
 
-- Phase 2 — C2 schema management + credential search — DONE. PR #4
-  (`feat/C2-schema-mgmt-and-search`) merged into `main` on 2026-07-21 after Majd's manual
-  create → publish → issue → redeem → verify → revoke round-trip against the live Docker stack.
+- Phase 2b — C2b consuming-party management + consume simulator — session delivered, **PR open,
+  not yet merged** (per the session brief: Majd merges after his own manual EN/AR + RTL pass and
+  the live-stack walkthrough listed in the PR body). Branch
+  `feat/C2b-consuming-parties-and-consume-sim`.
 
 ## Last completed
+
+- 2026-07-22: C2b session. Hard gate held once at the very start: the first `npm run
+contract:update` + `npm run gen:api` pass showed the vendored contract still had no
+  `/api/v1/admin/consuming-parties` surface at all (paused, reported, no code written — same
+  protocol as the C2 pause). Resumed once Majd reported khatm-platform PR #27 (KH-1.4.4-BE) had
+  merged (`d4e0c47`) with the local Docker stack already up and a seeded demo consuming party +
+  key. Re-ran the contract refresh: the full `consuming-parties-admin` tag is now present — `GET
+/api/v1/admin/consuming-parties`, `POST .../consuming-parties`, `.../{id}/activate`,
+  `.../{id}/suspend`, `.../{id}/allowed-schemas` (POST + DELETE), `.../{id}/api-keys` (mint).
+  Delivered:
+  - **Consuming-party admin plane** (`/consumers`, `RequireScope('admin')`,
+    `src/features/consumingParties/`): list (code, localized name, status badge, allowed-schema
+    chips, createdAt), a create dialog (both-language name + slug-validated code, mirroring the
+    server's `^[a-z0-9][a-z0-9_-]{1,62}$` pattern client-side and surfacing `KH-CNS-0400`/
+    `KH-CNS-0409` cleanly server-side), an allowlist editor (multi-select over the existing
+    `useSchemas` catalog, diffed client-side by `allowlistDiff.ts` into the matching
+    allow/disallow calls), suspend/activate via the shared `ConfirmDialog`, and a mint-key flow
+    (confirm → mint → `MintedKeyModal`, the same one-time-display contract as the C1b claim
+    code — copy button, bilingual "shown once" warning, no re-fetch path, key never enters the
+    TanStack Query cache). Every mutation invalidates the parties list.
+  - **Consume simulator** (`/consume-sim`, any authenticated operator,
+    `src/features/consumeSim/`): credential UUID id (deep-linkable), a `type=password` API-key
+    field with a reveal toggle, and an auto-generated regenerate-able idempotency key. Submits to
+    `POST /api/v1/credentials/consume` authenticated with the **pasted key** via `Authorization:
+Bearer khk_...` — confirmed to be the platform's actual API-key header by reading
+    `ApiKeyAuthFilter.java` in the local `khatm-platform` checkout (the vendored OpenAPI contract
+    declares no `securitySchemes` at all, so this could not be confirmed from the contract alone;
+    a naive `X-API-Key` guess was tried first against the live stack and correctly got nowhere).
+    Renders the full `ConsumeResponse` envelope, including the platform's exact four `reason`
+    values (`consumed`/`already_consumed`/`not_consumable`/`idempotent_replay` — read from
+    `CredentialService.java` and independently reproduced live). `KH-CNS-0403` (deny-by-default)
+    and a suspended/invalid key's `KH-RBC-1401` each get their own localized `errors.<messageKey>`
+    entry so they read as clear, specific messages rather than the generic fallback. The pasted
+    key is local component state only — cleared on unmount and on every navigation event
+    (`location.key`-keyed effect), never logged, never in the URL. Credential search rows gained a
+    "Consume…" deep-link (`/consume-sim?id=<id>`), mirroring C2's revoke deep-link.
+  - Every consume-related request/response shape and error path (create/duplicate/invalid code,
+    allow/disallow, mint, suspend blocking a key with `KH-RBC-1401`, deny-by-default
+    `KH-CNS-0403`, and all four consume `reason`s) was verified by hand against the live Docker
+    stack before writing any UI code, not just inferred from the contract — see the API-key header
+    finding above for why that mattered here specifically.
+  - Sidebar: "Consuming Parties" (admin-gated) and "Consume Simulator" (all operators).
+  - EN/AR i18n parity green; RTL-correct (logical properties only, grep-verified — no physical
+    left/right properties introduced in the new CSS).
+  - Tests (107 total in the suite now): `allowlistDiff.test.ts` (diff logic), consumingParties
+    `hooks.test.tsx` (mutation → list invalidation), `ConsumingPartiesPage.test.tsx` (scope gating,
+    both-language + code-format create validation, one-time key modal renders exactly once per
+    mint with the raw key absent from the TanStack Query cache), consumeSim `api.test.ts` (request
+    construction — header + body shape), `ConsumeSimPage.test.tsx` (idempotency regenerate, all
+    four result reasons, `KH-CNS-0403` and `KH-RBC-1401` friendly messages, deep-link preload, key
+    cleared on unmount via a `localStorage.setItem` spy that's never called, key cleared on an
+    in-place navigation event), plus a new `CredentialsPage` assertion for the consume deep-link.
+  - `npm run check` and `npm run build` both clean.
+  - Closes the "why doesn't the console do consume" open question as **resolved by design**: the
+    consume act stays a consuming-party act authenticated by its own key (KH-1.4.3 deny-by-default,
+    never a console-session act) — the console now covers the admin side of that (registering
+    parties, scoping their allowlist, minting their keys) plus a clearly-labeled testing/demo
+    channel to exercise the actual consume call end-to-end, without ever blurring session auth and
+    API-key auth into the same channel.
 
 - 2026-07-21 (follow-up 2): Full manual round-trip against the running stack — create draft
   (with a `full_name`/`birth_date`/`national_id` schema) → publish → issue → redeem the claim
@@ -116,11 +176,32 @@
 - Design tokens (`src/styles/tokens.css`) reuse the POC's neutral palette pending a real
   visual-identity file from the stakeholder.
 - No browser-automation tool is available in this environment unless a future session gains one.
-  For C1/C1b/C2, automated checks cover type/lint/format/unit tests; a real manual visual/RTL
+  For C1/C1b/C2/C2b, automated checks cover type/lint/format/unit tests; a real manual visual/RTL
   pass should still happen before merge.
+- The vendored OpenAPI contract declares no `securitySchemes` at all — it cannot answer "what
+  header does an API key go in." The authoritative answer lives in the platform source
+  (`rbac/security/ApiKeyAuthFilter.java`, present in the local `khatm-platform` checkout on this
+  machine): `Authorization: Bearer khk_...`, not `X-API-Key`. Confirmed empirically against the
+  live Docker stack (a bad-header guess correctly 401s the same as no header at all; the right
+  header gets past authentication to a scope-based 403). Worth checking that file first next time
+  a console feature needs to authenticate as an API key rather than a console session.
+- `khatm-platform` runs locally via Docker Desktop for manual/live verification during a session
+  (containers `khatm-api`/`khatm-worker`/`khatm-postgres`/`khatm-redis`; API at
+  `localhost:8080`; Swagger UI at `/swagger-ui.html`). Login as `admin` /
+  `khatm-local-dev-admin-change-me` for a console session; the seed data includes a demo
+  consuming party with a `CriminalRecordExtract/v1` allowlist entry and a working API key from the
+  seeder log — useful for reproducing consume-flow error codes by hand before trusting them in UI
+  copy.
 
 ## Open decisions / blockers
 
+- **"Why doesn't the console do consume?" — resolved by design, C2b.** Consumption stays a
+  consuming-party act authenticated by that party's own API key (KH-1.4.3 deny-by-default), never
+  a console-session act — the two auth channels must never blur. C2b closes the resulting gap
+  without breaking that separation: an admin plane to register/allowlist/suspend parties and mint
+  their keys (`/consumers`), and a clearly-labeled testing/demo simulator that calls the real
+  consume endpoint authenticated as a pasted party key (`/consume-sim`) so the full lifecycle can
+  be demoed end-to-end without a real integration.
 - Revoke's lookup-by-id vs. the brief's lookup-by-`ref` is a brief/contract mismatch, not a gap —
   built to the contract (UUID `id`) per "path/type authority: the generated types, not this brief."
   **Closed as a UX gap** by C2: credential search now surfaces the id up front and deep-links
@@ -152,10 +233,14 @@
 
 ## Next up (ordered per Majd)
 
-1. C3: bulk issuance wizard (CSV upload → validate → preview → issue → report) — needs
+1. Majd's manual walkthrough of the C2b PR (see the PR body's checklist: create party → allow
+   schema → mint key → issue → simulator-consume → replay → exhaust → deny-by-default → suspend)
+   plus an EN/AR + RTL click-through, then merge `feat/C2b-consuming-parties-and-consume-sim`.
+2. C3: bulk issuance wizard (CSV upload → validate → preview → issue → report) — needs
    KH-1.1.3-BE first.
-2. Dashboard v1 (issues/verifies/consumes/failures counters).
-3. A real visual/RTL pass over Verify, Revoke, Issue, schema management, and credential search —
-   partially done this session via Majd's manual create→publish→issue→redeem→verify→revoke
-   round-trip against the live Docker stack (no browser-automation tool in this environment); a
-   full EN/AR + RTL click-through still worth doing before merge.
+3. Dashboard v1 (issues/verifies/consumes/failures counters).
+4. API-key revocation UI (KH-2.2-era, out of scope for C2b — the platform endpoint already exists,
+   `POST /api/v1/admin/api-keys/{id}/revoke`).
+5. A real visual/RTL pass over every screen — partially done via live manual round-trips each
+   session (no browser-automation tool in this environment); a full EN/AR + RTL click-through
+   across all screens including the two new C2b ones still worth doing before merge.

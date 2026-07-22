@@ -65,9 +65,17 @@ export function ResultsTable({ rows }: ResultsTableProps) {
               <td>{usesText}</td>
               <td>
                 {row.id && (
-                  <Link className={styles.action} to={`/revoke?id=${encodeURIComponent(row.id)}`}>
-                    {t('credentials.rowRevoke')}
-                  </Link>
+                  <div className={styles.actions}>
+                    <Link className={styles.action} to={`/revoke?id=${encodeURIComponent(row.id)}`}>
+                      {t('credentials.rowRevoke')}
+                    </Link>
+                    <Link
+                      className={styles.action}
+                      to={`/consume-sim?id=${encodeURIComponent(row.id)}`}
+                    >
+                      {t('credentials.rowConsume')}
+                    </Link>
+                  </div>
                 )}
               </td>
             </tr>

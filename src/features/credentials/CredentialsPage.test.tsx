@@ -66,6 +66,8 @@ describe('CredentialsPage', () => {
     expect(within(row).getByText('Criminal record')).toBeInTheDocument();
     const revokeLink = screen.getByRole('link', { name: i18n.t('credentials.rowRevoke') });
     expect(revokeLink).toHaveAttribute('href', '/revoke?id=cred-1');
+    const consumeLink = screen.getByRole('link', { name: i18n.t('credentials.rowConsume') });
+    expect(consumeLink).toHaveAttribute('href', '/consume-sim?id=cred-1');
   });
 
   it('re-queries with the typed ref filter and resets to page 0', async () => {

@@ -7,6 +7,8 @@ import { AuthProvider } from '@/features/auth/AuthProvider';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { RequireAuth } from '@/features/auth/RequireAuth';
 import { RequireScope } from '@/features/auth/RequireScope';
+import { ConsumeSimPage } from '@/features/consumeSim/ConsumeSimPage';
+import { ConsumingPartiesPage } from '@/features/consumingParties/ConsumingPartiesPage';
 import { CredentialsPage } from '@/features/credentials/CredentialsPage';
 import { IssuePage } from '@/features/issuance/IssuePage';
 import { RevokePage } from '@/features/revoke/RevokePage';
@@ -50,6 +52,8 @@ export function App() {
                   <Route path="/credentials" element={<CredentialsPage />} />
                   <Route path="/verify" element={<VerifyPage />} />
                   <Route path="/revoke" element={<RevokePage />} />
+                  <Route path="/consumers" element={<ConsumingPartiesPage />} />
+                  <Route path="/consume-sim" element={<ConsumeSimPage />} />
                 </Route>
               </Route>
               <Route path="*" element={<Navigate to="/" replace />} />
