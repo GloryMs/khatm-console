@@ -7,7 +7,9 @@
     "schemas": "المخططات",
     "schemaManage": "إدارة المخططات",
     "credentials": "بيانات الاعتماد",
+    "dashboard": "لوحة المعلومات",
     "issue": "إصدار",
+    "issueBulk": "إصدار جماعي",
     "verify": "تحقق",
     "revoke": "إبطال",
     "consumingParties": "أطراف الاستهلاك",
@@ -21,6 +23,26 @@
     "switcherLabel": "اللغة",
     "english": "English",
     "arabic": "العربية"
+  },
+  "dashboard": {
+    "title": "لوحة المعلومات",
+    "windowLabel": "النطاق الزمني",
+    "windowDays": "آخر {{count}} يومًا",
+    "refresh": "تحديث",
+    "refreshing": "جارٍ التحديث…",
+    "groups": {
+      "lifecycle": "دورة الحياة",
+      "attention": "يتطلب الانتباه"
+    },
+    "counters": {
+      "issued": "تم الإصدار",
+      "claimsRedeemed": "رموز المطالبة المستبدلة",
+      "consumed": "تم الاستهلاك",
+      "verifyOk": "عمليات تحقق ناجحة",
+      "revoked": "تم الإبطال",
+      "consumeDenied": "استهلاك مرفوض",
+      "verifyFailed": "عمليات تحقق فاشلة"
+    }
   },
   "auth": {
     "login": {
@@ -320,6 +342,53 @@
       "successTitle": "تم سك مفتاح واجهة برمجة التطبيقات",
       "shownOnce": "يظهر هذا المفتاح مرة واحدة فقط. انسخه الآن؛ لا تستطيع المنصة إظهاره مرة أخرى.",
       "done": "تم"
+    }
+  },
+  "issueBulk": {
+    "title": "إصدار جماعي لبيانات الاعتماد",
+    "stepSchema": "١. المخطط",
+    "stepUpload": "٢. الرفع والمطابقة",
+    "stepPreview": "٣. التحقق والمعاينة",
+    "stepReport": "٤. التقرير",
+    "templateHeading": "تنزيل نموذج",
+    "templateHelp": "نزّل نموذج CSV لهذا المخطط، واملأه، ثم ارفعه في الخطوة التالية.",
+    "downloadTemplate": "تنزيل نموذج CSV",
+    "upload": {
+      "fileLabel": "ملف CSV",
+      "rowCount": "تم اكتشاف {{count}} صف",
+      "noRows": "لم يتم العثور على صفوف بيانات في هذا الملف.",
+      "tooManyRows": "يحتوي هذا الملف على أكثر من {{max}} صف. قسّمه إلى دفعات أصغر وارفعها بشكل منفصل.",
+      "unmapped": "— غير مُطابَق —",
+      "pseudoRefColumn": "مرجع الحامل (pseudoRef)",
+      "continue": "متابعة"
+    },
+    "preview": {
+      "totalRows": "{{count}} صف إجمالاً",
+      "validRows": "{{count}} صالح",
+      "invalidRows": "{{count}} غير صالح — مستبعد من الإرسال",
+      "mintClaimCodes": "سك رموز المطالبة",
+      "claimCodesShownOnce": "تظهر رموز المطالبة مرة واحدة فقط، في التقرير بعد الإصدار. صدّر التقرير قبل مغادرة تلك الصفحة — لا تستطيع المنصة إظهارها مرة أخرى.",
+      "columnRow": "الصف",
+      "columnStatus": "الحالة",
+      "valid": "صالح",
+      "invalid": "غير صالح",
+      "submitting": "جارٍ الإصدار…",
+      "submit": "إصدار {{count}} بيانات اعتماد"
+    },
+    "report": {
+      "total": "{{count}} إجمالاً",
+      "succeeded": "{{count}} تم إصدارها",
+      "failed": "{{count}} فشلت",
+      "excluded": "{{count}} مستبعد قبل الإرسال",
+      "claimCodesWarning": "تظهر رموز المطالبة هذه مرة واحدة فقط. صدّر هذا التقرير الآن — مغادرة هذه الصفحة تفقدها للأبد.",
+      "columnStatus": "الحالة",
+      "columnError": "الخطأ",
+      "statusIssued": "تم الإصدار",
+      "statusFailed": "فشل",
+      "statusExcluded": "مستبعد (غير صالح)",
+      "statusUnknown": "غير معروف",
+      "exportCsv": "تصدير التقرير (CSV)",
+      "startOver": "بدء دفعة أخرى"
     }
   },
   "consumeSim": {

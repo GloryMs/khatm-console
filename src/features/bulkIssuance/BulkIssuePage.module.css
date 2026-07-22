@@ -9,6 +9,19 @@
   font-size: 1.3rem;
 }
 
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.stepCurrent {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
 .help {
   color: var(--color-text-muted);
   margin: 0;
@@ -37,9 +50,16 @@
   gap: var(--space-3);
 }
 
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
 .changeButton,
-.copyButton,
-.secondaryButton {
+.secondaryButton,
+.primaryButton {
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -49,12 +69,19 @@
   cursor: pointer;
 }
 
-.successGrid {
-  display: grid;
-  gap: var(--space-4);
+.primaryButton {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  border: none;
 }
 
-.onceNote {
+.primaryButton:disabled,
+.secondaryButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.warning {
   padding: var(--space-3);
   border: 1px solid var(--color-accent);
   border-radius: var(--radius-md);
@@ -63,41 +90,7 @@
   font-weight: 600;
 }
 
-.valueRow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.valueLabel {
-  font-weight: 600;
-}
-
-.codeValue {
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  overflow-wrap: anywhere;
-}
-
-.qrBox {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-2);
-}
-
-.qrCode {
-  padding: var(--space-3);
-  background: #fff;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-
-.warning {
+.error {
   color: var(--color-danger);
   font-weight: 600;
 }
