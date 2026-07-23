@@ -116,7 +116,9 @@ function SuccessView({
           {t('issue.qrApiBase')}: {success.qrApiBase}
         </p>
         {isLocalhostOrigin(success.qrApiBase) && (
-          <p className={styles.warning}>{t('issue.qrLocalhostHint')}</p>
+          <p className={styles.warning} role="alert">
+            {t('issue.qrLocalhostHint')}
+          </p>
         )}
       </div>
       <button type="button" className={styles.secondaryButton} onClick={onIssueAnother}>

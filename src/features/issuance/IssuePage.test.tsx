@@ -61,9 +61,17 @@ function renderPage() {
 }
 
 describe('IssuePage', () => {
-  afterEach(() => {
+  const originalLocation = window.location;
+
+  afterEach(async () => {
     vi.restoreAllMocks();
     vi.unstubAllEnvs();
+    Object.defineProperty(window, 'location', {
+      value: originalLocation,
+      writable: true,
+      configurable: true,
+    });
+    await i18n.changeLanguage('en');
   });
 
   it('filters to published schemas and displays localized name, code, and version', async () => {
@@ -120,9 +128,10 @@ describe('IssuePage', () => {
     expect(screen.getByTestId('qr-code')).toHaveTextContent(
       '{"v":1,"api":"https://khatm.example.com","code":"CLAIM-ABC"}',
     );
+    expect(screen.queryByText(i18n.t('issue.qrLocalhostHint'))).not.toBeInTheDocument();
   });
 
-  it('shows the localhost warning when the QR API base is local', async () => {
+  it('shows the localhost warning when VITE_QR_API_BASE is explicitly set to a local address', async () => {
     vi.stubEnv('VITE_QR_API_BASE', 'http://localhost:5173');
     vi.spyOn(api, 'listPublishedSchemas').mockResolvedValue([schemas[0]]);
     vi.spyOn(api, 'getIssueSchema').mockResolvedValue(detail);
@@ -144,8 +153,96 @@ describe('IssuePage', () => {
     await user.click(screen.getByRole('button', { name: i18n.t('issue.submit') }));
 
     const qrBox = await screen.findByText(i18n.t('issue.qrLocalhostHint'));
+    expect(qrBox).toHaveAttribute('role', 'alert');
     expect(within(qrBox.parentElement as HTMLElement).getByTestId('qr-code')).toHaveTextContent(
       '{"v":1,"api":"http://localhost:5173","code":"LOCAL"}',
     );
+  });
+
+  it('shows the localhost warning when VITE_QR_API_BASE is unset and the console origin is localhost', async () => {
+    // No stubEnv call: VITE_QR_API_BASE is unset, so getQrApiBase() falls back
+    // to window.location.origin — jsdom's default test origin is localhost,
+    // reproducing exactly the "browsing via localhost" bug report.
+    vi.spyOn(api, 'listPublishedSchemas').mockResolvedValue([schemas[0]]);
+    vi.spyOn(api, 'getIssueSchema').mockResolvedValue(detail);
+    vi.spyOn(api, 'issueCredential').mockResolvedValue({
+      id: 'credential-1',
+      ref: 'CRD-1',
+      sdJwt: 'sd.jwt',
+    });
+    vi.spyOn(api, 'mintClaimCode').mockResolvedValue({
+      code: 'LOCAL',
+      expiresAt: '2026-07-20T12:15:00Z',
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: /Criminal record/ }));
+    await user.type(await screen.findByLabelText(i18n.t('issue.holderRef')), 'holder-001');
+    await user.type(screen.getByLabelText('Result'), 'NO_RECORD');
+    await user.click(screen.getByRole('button', { name: i18n.t('issue.submit') }));
+
+    expect(await screen.findByText(i18n.t('issue.qrLocalhostHint'))).toBeInTheDocument();
+  });
+
+  it('hides the localhost warning when VITE_QR_API_BASE is unset and the console origin is a real host', async () => {
+    Object.defineProperty(window, 'location', {
+      value: new URL('https://console.khatm.example.com/'),
+      writable: true,
+      configurable: true,
+    });
+    vi.spyOn(api, 'listPublishedSchemas').mockResolvedValue([schemas[0]]);
+    vi.spyOn(api, 'getIssueSchema').mockResolvedValue(detail);
+    vi.spyOn(api, 'issueCredential').mockResolvedValue({
+      id: 'credential-1',
+      ref: 'CRD-1',
+      sdJwt: 'sd.jwt',
+    });
+    vi.spyOn(api, 'mintClaimCode').mockResolvedValue({
+      code: 'DEPLOYED',
+      expiresAt: '2026-07-20T12:15:00Z',
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: /Criminal record/ }));
+    await user.type(await screen.findByLabelText(i18n.t('issue.holderRef')), 'holder-001');
+    await user.type(screen.getByLabelText('Result'), 'NO_RECORD');
+    await user.click(screen.getByRole('button', { name: i18n.t('issue.submit') }));
+
+    expect(await screen.findByTestId('qr-code')).toHaveTextContent(
+      '{"v":1,"api":"https://console.khatm.example.com","code":"DEPLOYED"}',
+    );
+    expect(screen.queryByText(i18n.t('issue.qrLocalhostHint'))).not.toBeInTheDocument();
+  });
+
+  it('renders the localhost warning in Arabic when the UI language is Arabic', async () => {
+    vi.stubEnv('VITE_QR_API_BASE', 'http://localhost:5173');
+    vi.spyOn(api, 'listPublishedSchemas').mockResolvedValue([schemas[0]]);
+    vi.spyOn(api, 'getIssueSchema').mockResolvedValue(detail);
+    vi.spyOn(api, 'issueCredential').mockResolvedValue({
+      id: 'credential-1',
+      ref: 'CRD-1',
+      sdJwt: 'sd.jwt',
+    });
+    vi.spyOn(api, 'mintClaimCode').mockResolvedValue({
+      code: 'LOCAL-AR',
+      expiresAt: '2026-07-20T12:15:00Z',
+    });
+    await i18n.changeLanguage('ar');
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: /السجل الجنائي/ }));
+    await user.type(
+      await screen.findByLabelText(i18n.t('issue.holderRef', { lng: 'ar' })),
+      'holder-001',
+    );
+    await user.type(screen.getByLabelText('النتيجة'), 'NO_RECORD');
+    await user.click(screen.getByRole('button', { name: i18n.t('issue.submit', { lng: 'ar' }) }));
+
+    expect(
+      await screen.findByText(i18n.t('issue.qrLocalhostHint', { lng: 'ar' })),
+    ).toBeInTheDocument();
   });
 });

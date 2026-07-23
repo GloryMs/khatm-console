@@ -61,3 +61,45 @@ describe('getQrApiBase', () => {
     expect(getQrApiBase()).toBe('https://khatm.example.com');
   });
 });
+
+// The "no silent QR api-base fallback" guard: getQrApiBase()'s silent
+// window.location.origin fallback is only a real bug when that origin is
+// localhost (meaningless to a scanning phone). A non-localhost same-origin
+// fallback — the normal deployed case — must stay unflagged.
+describe('QR api-base misconfiguration guard (env unset / localhost / real host)', () => {
+  const originalLocation = window.location;
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    Object.defineProperty(window, 'location', {
+      value: originalLocation,
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  it('env set to a real base: resolved base is not flagged as localhost', () => {
+    vi.stubEnv('VITE_QR_API_BASE', 'https://khatm.example.com');
+    expect(isLocalhostOrigin(getQrApiBase())).toBe(false);
+  });
+
+  it('env unset, origin is localhost: resolved base is flagged', () => {
+    vi.stubEnv('VITE_QR_API_BASE', '');
+    Object.defineProperty(window, 'location', {
+      value: new URL('http://localhost:5173/'),
+      writable: true,
+      configurable: true,
+    });
+    expect(isLocalhostOrigin(getQrApiBase())).toBe(true);
+  });
+
+  it('env unset, origin is a real deployed host: resolved base is not flagged', () => {
+    vi.stubEnv('VITE_QR_API_BASE', '');
+    Object.defineProperty(window, 'location', {
+      value: new URL('https://console.khatm.example.com/'),
+      writable: true,
+      configurable: true,
+    });
+    expect(isLocalhostOrigin(getQrApiBase())).toBe(false);
+  });
+});

@@ -119,7 +119,7 @@
     "defaultValidity": "الصلاحية الافتراضية",
     "qrTitle": "رمز الاستجابة السريعة للمحفظة",
     "qrApiBase": "أساس واجهة برمجة التطبيقات للرمز",
-    "qrLocalhostHint": "لا يمكن لجهاز محفظة فعلي الوصول إلى localhost — اضبط VITE_QR_API_BASE على عنوان IP الشبكي المحلي لجهازك.",
+    "qrLocalhostHint": "يتضمّن هذا الرمز عنوان localhost ولن يعمل عند مسحه من هاتف — اضبط VITE_QR_API_BASE على عنوان IP الشبكي المحلي لجهازك.",
     "issueAnother": "إصدار آخر"
   },
   "verify": {

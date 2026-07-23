@@ -35,7 +35,12 @@ export function getQrApiBase(): string {
   return window.location.origin;
 }
 
-/** True when the resolved base cannot be reached by a physical wallet device. */
+/**
+ * True when the resolved base cannot be reached by a physical wallet device.
+ * Callers MUST surface a visible warning when this is true — an unflagged
+ * localhost base is the exact "meaningless QR on a scanning phone" bug this
+ * guards against. See `IssuePage`'s success view for the required banner.
+ */
 export function isLocalhostOrigin(apiBase: string): boolean {
   try {
     const host = new URL(apiBase).hostname;

@@ -4,12 +4,50 @@
 
 ## Current phase / task
 
-- Phase 3+4 — C3 bulk issuance wizard + C4 dashboard v1 — **DONE. PR #6**
-  (`feat/C3-C4-bulk-wizard-and-dashboard`) merged into `main` on 2026-07-22 after Majd's manual
-  EN/AR + RTL walkthrough on the local Docker stack (branch deleted post-merge). **This closes
-  console V1** — see "Next up" for the post-V1 backlog.
+- Post-V1 chore — **no silent QR api-base fallback** — `chore/qr-api-base-guard`, PR open
+  against `main`, not yet merged (standing protocol: session ends with an open PR, not a merge).
 
 ## Last completed
+
+- 2026-07-23: chore session, `getQrApiBase()` silent-localhost-fallback bug (confirmed live on a
+  phone: a QR minted while browsing the console via `localhost` embeds `api:
+  "http://localhost:8080"`, meaningless to a scanning phone). **Verified first, per the session
+  brief — the guard already existed** from C1b: `isLocalhostOrigin()` (`qrPayload.ts`) plus a
+  `t('issue.qrLocalhostHint')` paragraph in `IssuePage`'s success view already correctly
+  distinguished the three cases (env set → hidden; env unset + localhost origin → shown; env
+  unset + real host → hidden, since a deployed same-origin fallback is legitimate) — no logic
+  change needed. What was genuinely weak: the warning rendered as a small colored line of text,
+  easy to miss, not the "prominent" banner a phone-scanning operator actually needs to notice.
+  Delivered:
+  - Restyled `IssuePage.module.css`'s `.warning` into a bordered/background banner (reusing
+    `ApiErrorBanner`'s danger-box visual language via `color-mix` against `--color-danger`) and
+    added `role="alert"` to the element.
+  - Tightened both `issue.qrLocalhostHint` strings (`en.json`/`ar.json`, same commit) to name the
+    concrete failure ("will not work when scanned from a phone") rather than the more abstract
+    "a physical wallet device cannot reach localhost."
+  - Strengthened `isLocalhostOrigin`'s TSDoc into an explicit caller contract ("callers MUST
+    surface a visible warning when this is true") so a future caller of `getQrApiBase()` can't
+    silently reintroduce the bug by skipping the check.
+  - Tests: `qrPayload.test.ts` gained a dedicated "misconfiguration guard" describe block
+    exercising `isLocalhostOrigin(getQrApiBase())` across all three env/origin combinations
+    (env set to a real base; env unset + jsdom-default-localhost origin; env unset +
+    `window.location` overridden to a real deployed host via `Object.defineProperty`, restored in
+    `afterEach`). `IssuePage.test.tsx` gained: an explicit "warning absent" assertion on the
+    existing env-set test, a new env-unset-defaults-to-localhost case, a new
+    env-unset-real-host-via-location-override case, a `role="alert"` assertion on the existing
+    explicit-env-localhost case, and an Arabic-locale render of the same banner
+    (`i18n.changeLanguage('ar')`, mirroring `DashboardPage.test.tsx`'s pattern). 147 tests total
+    now (was 141) — 6 new, all in `issuance`.
+  - i18n parity green (both keys already existed in both files; only values changed, same
+    commit). RTL grep re-run across `src/features/issuance/*.css` — zero physical left/right
+    matches, the new banner styling uses only shorthand `padding`/`border`/`border-radius`.
+  - `npm run typecheck`, `npm run lint`, and `npm run test` all clean individually. **Note:**
+    `npm run check`'s `format:check` step currently fails on `.vscode/extensions.json` — an
+    untracked, pre-existing file from before this session (present in the working tree at
+    session start, unrelated to this branch's diff, never staged or committed). Not fixed as
+    part of this chore since it's outside the branch's scope; flagged below under "Open
+    decisions" for whoever owns local editor config.
+  - `npm run build` clean.
 
 - 2026-07-22: C3+C4 session — bulk issuance wizard + dashboard v1, plus the V1 closing sweep.
   Hard gate checked first as always: `npm run contract:update` + `npm run gen:api` — both
@@ -310,6 +348,12 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 
 ## Open decisions / blockers
 
+- **`npm run check`'s `format:check` step fails on an untracked `.vscode/extensions.json`** —
+  noticed 2026-07-23 during the qr-api-base-guard chore, pre-existing (not introduced by that
+  branch or any tracked commit; present in the working tree, never staged). `typecheck`/`lint`/
+  `test` all pass individually and were used to gate that session instead. Worth either adding
+  the file to `.gitignore` (if it's meant to stay a local-only editor preference) or committing
+  it pre-formatted (if it's meant to be shared) — whichever the repo owner intends.
 - **"Why doesn't the console do consume?" — resolved by design, C2b.** Consumption stays a
   consuming-party act authenticated by that party's own API key (KH-1.4.3 deny-by-default), never
   a console-session act — the two auth channels must never blur. C2b closes the resulting gap

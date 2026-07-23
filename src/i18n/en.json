@@ -119,7 +119,7 @@
     "defaultValidity": "Default validity",
     "qrTitle": "Wallet QR",
     "qrApiBase": "QR API base",
-    "qrLocalhostHint": "A physical wallet device cannot reach localhost — set VITE_QR_API_BASE to your machine's LAN IP.",
+    "qrLocalhostHint": "This QR embeds a localhost address and will not work when scanned from a phone — set VITE_QR_API_BASE to your machine's LAN IP.",
     "issueAnother": "Issue another"
   },
   "verify": {
