@@ -4,10 +4,24 @@
 
 ## Current phase / task
 
-- Post-V1 chore — **no silent QR api-base fallback** — `chore/qr-api-base-guard`, PR open
-  against `main`, not yet merged (standing protocol: session ends with an open PR, not a merge).
+- Post-V1 chore — **no silent QR api-base fallback** — **DONE. PR #7**
+  (`chore/qr-api-base-guard`) squash-merged into `main` on 2026-07-23 (branch deleted
+  post-merge). Container rebuilt; Majd's manual EN/AR + RTL walkthrough of the new banner is
+  pending (not yet run as of this entry).
 
 ## Last completed
+
+- 2026-07-23 (follow-up, PR #7): CI's `format:check` caught a prettier break in the `docs/STATE.md`
+  edit from the same session — an inline code span (`` `api: "http://localhost:8080"` ``) had been
+  hand-wrapped across a line break with leading indentation, which prettier normalizes but which
+  didn't match on first write. Fixed with a follow-up commit (content unchanged, reflow only), CI
+  went green, then PR #7 squash-merged into `main` (`--delete-branch`). Rebuilt the `khatm-console`
+  container (`docker compose up -d --build`, the prior container was stale from before this
+  session) against the already-running `khatm-api`/`khatm-worker`/`khatm-postgres`/`khatm-redis`
+  stack on `khatm-net`; confirmed serving `HTTP 200` with the correct `<title>` at
+  `http://localhost:3000/`. Majd's manual EN/AR + RTL + navigation walkthrough of the new
+  localhost-warning banner against the rebuilt container is the next step, not yet done as of this
+  entry.
 
 - 2026-07-23: chore session, `getQrApiBase()` silent-localhost-fallback bug (confirmed live on a
   phone: a QR minted while browsing the console via `localhost` embeds
