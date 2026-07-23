@@ -10,9 +10,9 @@
 ## Last completed
 
 - 2026-07-23: chore session, `getQrApiBase()` silent-localhost-fallback bug (confirmed live on a
-  phone: a QR minted while browsing the console via `localhost` embeds `api:
-  "http://localhost:8080"`, meaningless to a scanning phone). **Verified first, per the session
-  brief — the guard already existed** from C1b: `isLocalhostOrigin()` (`qrPayload.ts`) plus a
+  phone: a QR minted while browsing the console via `localhost` embeds
+  `api: "http://localhost:8080"`, meaningless to a scanning phone). **Verified first, per the
+  session brief — the guard already existed** from C1b: `isLocalhostOrigin()` (`qrPayload.ts`) plus a
   `t('issue.qrLocalhostHint')` paragraph in `IssuePage`'s success view already correctly
   distinguished the three cases (env set → hidden; env unset + localhost origin → shown; env
   unset + real host → hidden, since a deployed same-origin fallback is legitimate) — no logic
