@@ -24,6 +24,11 @@
     "english": "English",
     "arabic": "العربية"
   },
+  "theme": {
+    "switcherLabel": "المظهر",
+    "light": "فاتح",
+    "dark": "داكن"
+  },
   "dashboard": {
     "title": "لوحة المعلومات",
     "windowLabel": "النطاق الزمني",

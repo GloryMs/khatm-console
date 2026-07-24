@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useLocalizedText } from '@/hooks/useLocalizedText';
+import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge';
+import tableStyles from '@/components/ui/Table.module.css';
 import type { ConsumingPartyView } from '../api';
 import styles from './PartyList.module.css';
 
@@ -21,14 +23,16 @@ export function PartyList({
   const { t, i18n } = useTranslation();
   const localize = useLocalizedText();
 
-  if (parties.length === 0) return <p>{t('consumingParties.empty')}</p>;
+  if (parties.length === 0) {
+    return <div className="emptyState">{t('consumingParties.empty')}</div>;
+  }
 
   return (
-    <table className={styles.table}>
+    <table className={tableStyles.table}>
       <thead>
         <tr>
           <th>{t('consumingParties.columnName')}</th>
-          <th className="ltr-embed">{t('consumingParties.columnCode')}</th>
+          <th className={tableStyles.codeCell}>{t('consumingParties.columnCode')}</th>
           <th>{t('consumingParties.columnStatus')}</th>
           <th>{t('consumingParties.columnAllowedSchemas')}</th>
           <th>{t('consumingParties.columnCreatedAt')}</th>
@@ -39,6 +43,7 @@ export function PartyList({
         {parties.map((party) => {
           const id = party.id ?? '';
           const isActive = party.status === 'ACTIVE';
+          const partyTone: StatusTone = isActive ? 'success' : 'warning';
           const createdAt = party.createdAt
             ? new Intl.DateTimeFormat(i18n.language, {
                 dateStyle: 'medium',
@@ -48,15 +53,13 @@ export function PartyList({
           return (
             <tr key={id}>
               <td>{localize(party.nameI18n) || party.code}</td>
-              <td className="ltr-embed">{party.code}</td>
+              <td className={tableStyles.codeCell}>{party.code}</td>
               <td>
-                <span
-                  className={`${styles.status} ${isActive ? styles.statusActive : styles.statusSuspended}`}
-                >
+                <StatusBadge tone={partyTone}>
                   {isActive
                     ? t('consumingParties.statusActive')
                     : t('consumingParties.statusSuspended')}
-                </span>
+                </StatusBadge>
               </td>
               <td>
                 <div className={styles.chips}>

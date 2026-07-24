@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/Button';
 import { copyToClipboard } from '@/components/ui/clipboard';
 import styles from './MintedKeyModal.module.css';
 
@@ -28,19 +29,19 @@ export function MintedKeyModal({ rawKey, onClose }: MintedKeyModalProps) {
         </h2>
         <p className={styles.warning}>{t('consumingParties.mint.shownOnce')}</p>
         <div className={styles.valueRow}>
-          <span className={`${styles.value} ltr-embed`}>{rawKey}</span>
-          <button
-            type="button"
+          <code className={`${styles.value} ltr-embed`}>{rawKey}</code>
+          <Button
+            variant="secondary"
             className={styles.copyButton}
             onClick={() => void copyToClipboard(rawKey)}
           >
             {t('common.copy')}
-          </button>
+          </Button>
         </div>
         <div className={styles.actions}>
-          <button type="button" className={styles.confirm} onClick={onClose}>
+          <Button variant="primary" onClick={onClose}>
             {t('consumingParties.mint.done')}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
 import { ApiErrorBanner } from '@/components/ui/ApiErrorBanner';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useSimulateConsume } from './hooks';
 import { generateIdempotencyKey } from './idempotencyKey';
 import type { ConsumeResponse } from './api';
@@ -32,9 +33,9 @@ function ResultPanel({ result }: { result: ConsumeResponse }) {
     <div className={styles.resultPanel} data-testid="consume-result">
       <div className={styles.resultRow}>
         <span className={styles.resultLabel}>{t('consumeSim.result.consumed')}</span>
-        <span className={result.consumed ? styles.badgeSuccess : styles.badgeNeutral}>
+        <StatusBadge tone={result.consumed ? 'success' : 'neutral'}>
           {result.consumed ? t('consumeSim.result.consumedYes') : t('consumeSim.result.consumedNo')}
-        </span>
+        </StatusBadge>
       </div>
       <div className={styles.resultRow}>
         <span className={styles.resultLabel}>{t('consumeSim.result.reason')}</span>

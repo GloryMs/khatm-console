@@ -4,6 +4,9 @@
 
 ## Current phase / task
 
+- Design-system update — **DONE.** New stakeholder visual identity (verdigris-green palette,
+  light/dark theme + toggle, shared Button/StatusBadge/Table primitives) applied across the
+  console; squash-merged into `main` on 2026-07-24. Container rebuilt.
 - Post-V1 bugfix — **LAN-IP secure-context crashes (consume-sim idempotency key, copy buttons)**
   — **DONE. PR #8** (`fix/lan-ip-secure-context-crypto-clipboard`) squash-merged into `main` on
   2026-07-24 (branch deleted post-merge). Container rebuilt; Majd manually confirmed both bugs
@@ -14,6 +17,10 @@
   pending (not yet run as of this entry).
 
 ## Last completed
+
+- 2026-07-24 (design-system update): applied the new stakeholder design system (verdigris-green
+  palette, light/dark theme + toggle, shared Button/StatusBadge/Table primitives) across the
+  console — see the "Current phase" line above for the one-line summary.
 
 - 2026-07-24 (PR #8, bugfix): Majd reported live — `ConsumeSimPage` (`/consume-sim`) rendered
   "Something went wrong" (the `ErrorBoundary` fallback) when opened via a LAN IP over plain HTTP
@@ -379,8 +386,9 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 - `khatm-platform` is a **private** repo — `npm run contract:update` falls back to `gh api`
   (works with the caller's own `gh` credentials). The contract, not platform source, is now
   sufficient for Issue request construction.
-- Design tokens (`src/styles/tokens.css`) reuse the POC's neutral palette pending a real
-  visual-identity file from the stakeholder.
+- Design tokens (`src/styles/tokens.css`) are the stakeholder design system (verdigris-green
+  oklch hue 158, light `:root` + `[data-theme="dark"]`) applied 2026-07-24; the neutral POC
+  palette is retired.
 - No browser-automation tool is available in this environment unless a future session gains one.
   For C1/C1b/C2/C2b/C3/C4, automated checks cover type/lint/format/unit tests; a real manual
   visual/RTL pass should still happen before merge — for C3+C4 specifically, Majd's walkthrough
@@ -442,7 +450,18 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
   free-text render hint. `fromSchemaDetail` normalizes any stored `"string"` to `"text"` on
   prefill. Fixed and covered by a new test (`claimsBuilder.test.ts` — normalizes legacy
   "string" to "text").
-- Design tokens / visual identity file — pending from stakeholder (use neutral tokens meanwhile).
+- **Design tokens / visual identity — RESOLVED 2026-07-24.** The stakeholder design guide
+  arrived (Claude Design project `fd7b727b-…`, file `Khatm Console Design System.dc.html`) and
+  was applied to `src/styles/tokens.css` (verdigris-green oklch hue 158, light + dark) plus the
+  shared primitives, dark-mode toggle, and app-wide token rename — see the design-system-update
+  entry under "Last completed". The neutral placeholder palette is gone.
+- **Remaining design-system migration — deferred, low-risk.** The shared `Button`,
+  `StatusBadge`, `Table.module.css`, `.khatm-input`, and `.emptyState` primitives exist and the
+  highest-duplication call sites are on them, but ~12 duplicated feature-dialog/form button
+  blocks still use their own per-feature `.submit`/`.cancel`/`.confirm` CSS (they already
+  consume the new tokens, so they look right) and most forms haven't adopted `.khatm-input`
+  (the global `:focus-visible` ring already covers them). Migrating the rest is mechanical
+  CSS/JSX and the natural follow-up to this session.
 - `khatm-platform`'s CI publishing step for `docs/api/openapi.json` (KH-1.6) should eventually
   make the raw URL work without the `gh` fallback — worth revisiting once that lands.
 - Dev-only `esbuild`/vitest-toolchain `npm audit` advisory (moderate, dev-server request forgery)
@@ -464,7 +483,18 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
   report-alignment model than the current single-batch one, none of which seemed "trivial to do
   cleanly" within this session. Revisit if a pilot tenant actually needs single-file uploads over
   200 rows.
-- Design tokens / visual identity file — pending from stakeholder (use neutral tokens meanwhile).
+- **Design tokens / visual identity — RESOLVED 2026-07-24.** The stakeholder design guide
+  arrived (Claude Design project `fd7b727b-…`, file `Khatm Console Design System.dc.html`) and
+  was applied to `src/styles/tokens.css` (verdigris-green oklch hue 158, light + dark) plus the
+  shared primitives, dark-mode toggle, and app-wide token rename — see the design-system-update
+  entry under "Last completed". The neutral placeholder palette is gone.
+- **Remaining design-system migration — deferred, low-risk.** The shared `Button`,
+  `StatusBadge`, `Table.module.css`, `.khatm-input`, and `.emptyState` primitives exist and the
+  highest-duplication call sites are on them, but ~12 duplicated feature-dialog/form button
+  blocks still use their own per-feature `.submit`/`.cancel`/`.confirm` CSS (they already
+  consume the new tokens, so they look right) and most forms haven't adopted `.khatm-input`
+  (the global `:focus-visible` ring already covers them). Migrating the rest is mechanical
+  CSS/JSX and the natural follow-up to this session.
 - `khatm-platform`'s CI publishing step for `docs/api/openapi.json` (KH-1.6) should eventually
   make the raw URL work without the `gh` fallback — worth revisiting once that lands.
 
@@ -472,8 +502,10 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 
 1. API-key revocation UI (KH-2.2-era — the platform endpoint already exists,
    `POST /api/v1/admin/api-keys/{id}/revoke`).
-2. Visual identity: swap the neutral placeholder design tokens for the real stakeholder palette
-   once it lands, and revisit whether a real charting library belongs in the dashboard then.
+2. Visual identity — **DONE 2026-07-24** (design-system update on `feat/design-system-update`).
+   Remainder: finish migrating the last ~12 duplicated button blocks onto `Button` and adopt
+   `.khatm-input` across the remaining forms (see Open decisions), and revisit whether a real
+   charting library belongs in the dashboard now that the palette is finalized.
 3. KH-2.2-era RBAC changes, whatever those turn out to require.
 4. Unify the scope-gating placement convention (self-gating vs. App.tsx-level wrapping — see
    "Open decisions" above) across every gated page.

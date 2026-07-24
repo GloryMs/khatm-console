@@ -15,7 +15,8 @@
   padding: var(--space-3) var(--space-4);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
 }
 
 .name {
@@ -24,12 +25,8 @@
 
 .meta {
   display: flex;
+  align-items: center;
   gap: var(--space-2);
   color: var(--color-text-muted);
-  font-size: 0.85rem;
-}
-
-.status::before {
-  content: '·';
-  margin-inline-end: var(--space-2);
+  font-size: var(--fs-sm);
 }

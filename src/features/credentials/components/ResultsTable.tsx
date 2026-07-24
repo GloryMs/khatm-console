@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useLocalizedText } from '@/hooks/useLocalizedText';
+import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge';
+import tableStyles from '@/components/ui/Table.module.css';
 import type { CredentialSummary } from '../api';
 import styles from './ResultsTable.module.css';
 
@@ -18,6 +20,12 @@ const STATUS_KEY: Record<DerivedStatus, string> = {
   expired: 'revoke.statusExpired',
 };
 
+const STATUS_TONE: Record<DerivedStatus, StatusTone> = {
+  active: 'success',
+  revoked: 'danger',
+  expired: 'warning',
+};
+
 interface ResultsTableProps {
   rows: CredentialSummary[];
 }
@@ -27,13 +35,15 @@ export function ResultsTable({ rows }: ResultsTableProps) {
   const localize = useLocalizedText();
   const now = Date.now();
 
-  if (rows.length === 0) return <p>{t('credentials.empty')}</p>;
+  if (rows.length === 0) {
+    return <div className="emptyState">{t('credentials.empty')}</div>;
+  }
 
   return (
-    <table className={styles.table}>
+    <table className={tableStyles.table}>
       <thead>
         <tr>
-          <th className="ltr-embed">{t('credentials.table.ref')}</th>
+          <th className={tableStyles.codeCell}>{t('credentials.table.ref')}</th>
           <th>{t('credentials.table.schema')}</th>
           <th>{t('credentials.table.issuedAt')}</th>
           <th>{t('credentials.table.status')}</th>
@@ -56,11 +66,11 @@ export function ResultsTable({ rows }: ResultsTableProps) {
               : t('revoke.usesUnlimited');
           return (
             <tr key={row.id}>
-              <td className="ltr-embed">{row.ref}</td>
+              <td className={tableStyles.codeCell}>{row.ref}</td>
               <td>{localize(row.schemaName) || row.schemaCode}</td>
               <td>{issuedAt}</td>
               <td>
-                <span className={styles.status}>{t(STATUS_KEY[status])}</span>
+                <StatusBadge tone={STATUS_TONE[status]}>{t(STATUS_KEY[status])}</StatusBadge>
               </td>
               <td>{usesText}</td>
               <td>

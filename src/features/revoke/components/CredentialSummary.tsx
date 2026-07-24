@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge';
 import type { CredentialView } from '../api';
 import styles from './CredentialSummary.module.css';
 
@@ -9,6 +10,12 @@ function deriveStatus(view: CredentialView, now: number): DerivedStatus {
   if (view.validTo && new Date(view.validTo).getTime() < now) return 'expired';
   return 'active';
 }
+
+const STATUS_TONE: Record<DerivedStatus, StatusTone> = {
+  active: 'success',
+  revoked: 'danger',
+  expired: 'warning',
+};
 
 function useFormattedDate(): (iso: string | undefined) => string | null {
   const { i18n } = useTranslation();
@@ -29,12 +36,6 @@ export function CredentialSummary({ view }: { view: CredentialView }) {
   const status = deriveStatus(view, Date.now());
 
   const statusLabel = t(`revoke.status${status[0].toUpperCase()}${status.slice(1)}`);
-  const statusClass =
-    status === 'active'
-      ? styles.statusActive
-      : status === 'revoked'
-        ? styles.statusRevoked
-        : styles.statusExpired;
 
   const validToText = formatDate(view.validTo);
 
@@ -59,7 +60,7 @@ export function CredentialSummary({ view }: { view: CredentialView }) {
       </div>
       <div className={styles.row}>
         <span className={styles.label}>{t('revoke.status')}</span>
-        <span className={`${styles.status} ${statusClass}`}>{statusLabel}</span>
+        <StatusBadge tone={STATUS_TONE[status]}>{statusLabel}</StatusBadge>
       </div>
       <div className={styles.row}>
         <span className={styles.label}>{t('revoke.uses')}</span>

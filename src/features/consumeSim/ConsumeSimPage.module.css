@@ -15,7 +15,7 @@
   padding: var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  background: var(--color-code-bg);
+  background: var(--color-surface-2);
   font-size: 0.85rem;
 }
 
@@ -80,11 +80,11 @@
 
 .submit {
   align-self: flex-start;
-  padding: var(--space-2) var(--space-5);
+  padding: var(--space-2) var(--space-6);
   border: none;
   border-radius: var(--radius-sm);
-  background: var(--color-accent);
-  color: var(--color-accent-contrast);
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
@@ -101,7 +101,7 @@
   gap: var(--space-2);
   padding: var(--space-4);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius);
   background: var(--color-surface);
 }
 
@@ -114,23 +114,5 @@
 .resultLabel {
   min-inline-size: 140px;
   color: var(--color-text-muted);
-  font-size: 0.85rem;
-}
-
-.badgeSuccess {
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  background: var(--color-accent);
-  color: var(--color-accent-contrast);
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.badgeNeutral {
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  background: var(--color-border);
-  color: var(--color-text);
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: var(--fs-sm);
 }

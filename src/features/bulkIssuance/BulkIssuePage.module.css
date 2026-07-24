@@ -18,7 +18,7 @@
 }
 
 .stepCurrent {
-  color: var(--color-accent);
+  color: var(--color-primary);
   font-weight: 600;
 }
 
@@ -33,7 +33,7 @@
   gap: var(--space-3);
   padding: var(--space-4);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius);
   background: var(--color-surface);
 }
 
@@ -70,8 +70,8 @@
 }
 
 .primaryButton {
-  background: var(--color-accent);
-  color: var(--color-accent-contrast);
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
   border: none;
 }
 
@@ -83,9 +83,9 @@
 
 .warning {
   padding: var(--space-3);
-  border: 1px solid var(--color-accent);
-  border-radius: var(--radius-md);
-  color: var(--color-accent);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius);
+  color: var(--color-primary);
   background: var(--color-bg);
   font-weight: 600;
 }
