@@ -44,8 +44,8 @@
 
 .lookup {
   padding: var(--space-2) var(--space-4);
-  background: var(--color-accent);
-  color: var(--color-accent-contrast);
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
   border: none;
   border-radius: var(--radius-sm);
   font: inherit;
@@ -80,5 +80,5 @@
 .revokedTitle {
   margin: 0;
   font-size: 1.05rem;
-  color: var(--color-accent);
+  color: var(--color-primary);
 }

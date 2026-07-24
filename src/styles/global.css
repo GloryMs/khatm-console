@@ -17,15 +17,88 @@ body {
   color: var(--color-text);
 }
 
+/* Arabic gets its own font stack when the document is RTL. */
+html[dir='rtl'] body {
+  font-family: var(--font-arabic);
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+}
+
+::selection {
+  background: var(--color-primary-tint);
+}
+
 code {
-  font-family: ui-monospace, Menlo, monospace;
-  background: var(--color-code-bg);
+  font-family: var(--font-mono);
+  background: var(--color-surface-2);
   padding: 2px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
 }
 
 /* API refs/codes/enum values stay left-to-right even inside RTL text. */
 .ltr-embed {
   unicode-bidi: embed;
   direction: ltr;
+}
+
+/* Shared keyboard focus ring — one place, every interactive element. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-focus) 22%, transparent);
+  border-radius: var(--radius);
+}
+
+/*
+ * Shared form-field control. Adopt via className="khatm-input" (+ --error / --valid).
+ * Matches the design guide's default / focus / error / valid field states.
+ */
+.khatm-input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--fs-body);
+}
+
+.khatm-input::placeholder {
+  color: var(--color-text-subtle);
+}
+
+.khatm-input:focus {
+  border-color: var(--color-focus);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-focus) 22%, transparent);
+  outline: none;
+}
+
+.khatm-input--error {
+  border-color: var(--color-danger);
+  background: var(--color-danger-tint);
+}
+
+.khatm-input--valid {
+  border-color: var(--color-success);
+}
+
+/* Shared empty state — dashed, centered. Adopt via className="emptyState". */
+.emptyState {
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  padding: var(--space-8) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
 }

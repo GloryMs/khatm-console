@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { ApiErrorBanner } from '@/components/ui/ApiErrorBanner';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import tableStyles from '@/components/ui/Table.module.css';
 import type { ClaimField } from '@/features/issuance/claimsDef';
 import { useLocalizedText } from '@/hooks/useLocalizedText';
 import type { BatchOptionsValues } from '../request';
@@ -99,7 +101,7 @@ export function PreviewStep({
         )}
 
         <div className={styles.tableWrap}>
-          <table className={styles.table}>
+          <table className={tableStyles.table}>
             <thead>
               <tr>
                 <th>{t('issueBulk.preview.columnRow')}</th>
@@ -116,18 +118,16 @@ export function PreviewStep({
                 return (
                   <tr key={row.rowIndex} className={valid ? undefined : styles.rowInvalid}>
                     <td>{row.rowIndex + 1}</td>
-                    <td className="ltr-embed">{row.pseudoRef}</td>
+                    <td className={tableStyles.codeCell}>{row.pseudoRef}</td>
                     {fields.map((field) => (
                       <td key={field.name}>{row.claims[field.name]}</td>
                     ))}
                     <td>
                       {valid ? (
-                        <span className={styles.statusValid}>{t('issueBulk.preview.valid')}</span>
+                        <StatusBadge tone="success">{t('issueBulk.preview.valid')}</StatusBadge>
                       ) : (
                         <>
-                          <span className={styles.statusInvalid}>
-                            {t('issueBulk.preview.invalid')}
-                          </span>
+                          <StatusBadge tone="danger">{t('issueBulk.preview.invalid')}</StatusBadge>
                           <ul className={styles.errorList}>
                             {row.errors.map((rowError) => (
                               <li key={`${rowError.fieldName}-${rowError.kind}`}>

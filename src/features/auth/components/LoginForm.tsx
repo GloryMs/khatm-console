@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { z } from 'zod';
 import { ApiErrorBanner } from '@/components/ui/ApiErrorBanner';
+import { Button } from '@/components/ui/Button';
 import { ApiError } from '@/api/errors';
 import { useAuth } from '../useAuth';
 import styles from './LoginForm.module.css';
@@ -51,18 +52,28 @@ export function LoginForm() {
     <form className={styles.form} onSubmit={onSubmit} noValidate>
       <label className={styles.field}>
         <span>{t('auth.login.username')}</span>
-        <input type="text" autoComplete="username" {...register('username')} />
+        <input
+          type="text"
+          autoComplete="username"
+          className={`khatm-input${errors.username ? ' khatm-input--error' : ''}`}
+          {...register('username')}
+        />
         {errors.username && <span className={styles.fieldError}>{errors.username.message}</span>}
       </label>
       <label className={styles.field}>
         <span>{t('auth.login.password')}</span>
-        <input type="password" autoComplete="current-password" {...register('password')} />
+        <input
+          type="password"
+          autoComplete="current-password"
+          className={`khatm-input${errors.password ? ' khatm-input--error' : ''}`}
+          {...register('password')}
+        />
         {errors.password && <span className={styles.fieldError}>{errors.password.message}</span>}
       </label>
       <ApiErrorBanner error={submitError} />
-      <button type="submit" className={styles.submit} disabled={isSubmitting}>
+      <Button type="submit" variant="primary" disabled={isSubmitting}>
         {isSubmitting ? t('auth.login.submitting') : t('auth.login.submit')}
-      </button>
+      </Button>
     </form>
   );
 }

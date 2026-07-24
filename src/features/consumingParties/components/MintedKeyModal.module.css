@@ -14,23 +14,28 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  padding: var(--space-5);
+  padding: var(--space-6);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
 }
 
 .title {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--fs-h2);
+  font-weight: 700;
 }
 
 .warning {
   margin: 0;
   padding: var(--space-3);
-  background: var(--color-code-bg);
-  border-radius: var(--radius-sm);
-  font-size: 0.85rem;
+  background: var(--color-warning-tint);
+  border: 1px solid color-mix(in oklch, var(--color-warning) 40%, transparent);
+  border-radius: var(--radius);
+  color: var(--color-warning);
+  font-size: var(--fs-sm);
+  font-weight: 600;
 }
 
 .valueRow {
@@ -38,43 +43,25 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-surface-2);
 }
 
 .value {
   flex: 1;
   min-inline-size: 0;
   word-break: break-all;
-  font-family: 'SFMono-Regular', 'Consolas', monospace;
-  font-size: 0.85rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  color: var(--color-text);
 }
 
 .copyButton {
   flex-shrink: 0;
-  padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font: inherit;
-  font-size: 0.85rem;
-  cursor: pointer;
 }
 
 .actions {
   display: flex;
   justify-content: flex-end;
-}
-
-.confirm {
-  padding: var(--space-2) var(--space-4);
-  background: var(--color-accent);
-  color: var(--color-accent-contrast);
-  border: none;
-  border-radius: var(--radius-sm);
-  font: inherit;
-  font-size: 0.95rem;
-  cursor: pointer;
 }

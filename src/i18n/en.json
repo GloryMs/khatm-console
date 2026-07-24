@@ -24,6 +24,11 @@
     "english": "English",
     "arabic": "العربية"
   },
+  "theme": {
+    "switcherLabel": "Appearance",
+    "light": "Light",
+    "dark": "Dark"
+  },
   "dashboard": {
     "title": "Dashboard",
     "windowLabel": "Time window",

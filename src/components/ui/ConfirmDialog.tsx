@@ -1,3 +1,4 @@
+import { Button } from './Button';
 import styles from './ConfirmDialog.module.css';
 
 interface ConfirmDialogProps {
@@ -37,12 +38,12 @@ export function ConfirmDialog({
         <p className={styles.body}>{body}</p>
         {errorMessage && <p className={styles.error}>{errorMessage}</p>}
         <div className={styles.actions}>
-          <button type="button" className={styles.cancel} onClick={onCancel} disabled={isBusy}>
+          <Button variant="secondary" onClick={onCancel} disabled={isBusy}>
             {cancelLabel}
-          </button>
-          <button type="button" className={styles.confirm} onClick={onConfirm} disabled={isBusy}>
+          </Button>
+          <Button variant="primary" onClick={onConfirm} disabled={isBusy}>
             {confirmLabel}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

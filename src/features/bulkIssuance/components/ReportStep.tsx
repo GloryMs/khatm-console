@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next';
+import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge';
+import tableStyles from '@/components/ui/Table.module.css';
 import { copyToClipboard } from '@/components/ui/clipboard';
 import type { BulkIssueItemError, BulkIssueResponse } from '../api';
 import { deriveReportStatus, type ReportRowView } from '../report';
@@ -26,12 +28,12 @@ const STATUS_KEY = {
   UNKNOWN: 'issueBulk.report.statusUnknown',
 } as const;
 
-const STATUS_CLASS = {
-  ISSUED: 'statusIssued',
-  FAILED: 'statusFailed',
-  EXCLUDED: 'statusExcluded',
-  UNKNOWN: 'statusExcluded',
-} as const;
+const STATUS_TONE = {
+  ISSUED: 'success',
+  FAILED: 'danger',
+  EXCLUDED: 'neutral',
+  UNKNOWN: 'neutral',
+} as const satisfies Record<string, StatusTone>;
 
 /** Step 4: the per-row report — the only place claim codes are ever shown, and only once. */
 export function ReportStep({ reportRows, response, onExport, onStartOver }: ReportStepProps) {
@@ -63,7 +65,7 @@ export function ReportStep({ reportRows, response, onExport, onStartOver }: Repo
       {hasClaimCodes && <p className={styles.warning}>{t('issueBulk.report.claimCodesWarning')}</p>}
 
       <div className={styles.tableWrap}>
-        <table className={styles.table}>
+        <table className={tableStyles.table}>
           <thead>
             <tr>
               <th>{t('issueBulk.preview.columnRow')}</th>
@@ -80,10 +82,12 @@ export function ReportStep({ reportRows, response, onExport, onStartOver }: Repo
               return (
                 <tr key={row.rowIndex}>
                   <td>{row.rowIndex + 1}</td>
-                  <td className="ltr-embed">{row.pseudoRef}</td>
-                  <td className={styles[STATUS_CLASS[status]]}>{t(STATUS_KEY[status])}</td>
-                  <td className="ltr-embed">{row.result?.ref}</td>
-                  <td className="ltr-embed">
+                  <td className={tableStyles.codeCell}>{row.pseudoRef}</td>
+                  <td>
+                    <StatusBadge tone={STATUS_TONE[status]}>{t(STATUS_KEY[status])}</StatusBadge>
+                  </td>
+                  <td className={tableStyles.codeCell}>{row.result?.ref}</td>
+                  <td className={tableStyles.codeCell}>
                     {row.result?.claimCode && (
                       <>
                         <span className={styles.codeValue}>{row.result.claimCode}</span>

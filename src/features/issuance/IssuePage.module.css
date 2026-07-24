@@ -20,8 +20,9 @@
   gap: var(--space-3);
   padding: var(--space-4);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
+  box-shadow: var(--shadow);
 }
 
 .panelTitle {
@@ -56,10 +57,10 @@
 
 .onceNote {
   padding: var(--space-3);
-  border: 1px solid var(--color-accent);
-  border-radius: var(--radius-md);
-  color: var(--color-accent);
-  background: var(--color-bg);
+  border: 1px solid color-mix(in oklch, var(--color-warning) 40%, transparent);
+  border-radius: var(--radius);
+  color: var(--color-warning);
+  background: var(--color-warning-tint);
   font-weight: 600;
 }
 
@@ -75,11 +76,11 @@
 }
 
 .codeValue {
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  font-family: var(--font-mono);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius);
+  background: var(--color-surface-2);
+  border: 1px dashed var(--color-border-strong);
   overflow-wrap: anywhere;
 }
 
@@ -94,7 +95,7 @@
   padding: var(--space-3);
   background: #fff;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius);
 }
 
 .warning {

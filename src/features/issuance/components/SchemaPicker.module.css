@@ -19,7 +19,7 @@
   gap: var(--space-1);
   padding: var(--space-3);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius);
   background: var(--color-bg);
   color: var(--color-text);
   font: inherit;
@@ -29,7 +29,7 @@
 
 .schemaButton:hover,
 .schemaButton:focus-visible {
-  border-color: var(--color-accent);
+  border-color: var(--color-primary);
 }
 
 .schemaName {

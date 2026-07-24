@@ -40,8 +40,8 @@
   letter-spacing: 0.03em;
   padding: 0 var(--space-2);
   border-radius: var(--radius-sm);
-  border: 1px solid var(--color-accent);
-  color: var(--color-accent);
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
   background: var(--color-bg);
 }
 
@@ -68,8 +68,8 @@
 }
 
 .primaryButton {
-  background: var(--color-accent);
-  color: var(--color-accent-contrast);
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
   border: none;
 }
 
