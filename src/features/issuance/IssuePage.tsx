@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QRCodeSVG } from 'qrcode.react';
 import { ApiErrorBanner } from '@/components/ui/ApiErrorBanner';
+import { copyToClipboard } from '@/components/ui/clipboard';
 import { useLocalizedText } from '@/hooks/useLocalizedText';
 import { parseClaimsDef } from './claimsDef';
 import { IssueForm, type IssueFormValues } from './components/IssueForm';
@@ -69,11 +70,7 @@ function buildIssueRequest(detail: SchemaDetail, values: IssueFormValues): Issue
 
 function CopyButton({ value, label }: { value: string; label: string }) {
   return (
-    <button
-      type="button"
-      className={styles.copyButton}
-      onClick={() => navigator.clipboard.writeText(value)}
-    >
+    <button type="button" className={styles.copyButton} onClick={() => void copyToClipboard(value)}>
       {label}
     </button>
   );

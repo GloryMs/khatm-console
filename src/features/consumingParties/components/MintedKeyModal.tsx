@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { copyToClipboard } from '@/components/ui/clipboard';
 import styles from './MintedKeyModal.module.css';
 
 interface MintedKeyModalProps {
@@ -31,7 +32,7 @@ export function MintedKeyModal({ rawKey, onClose }: MintedKeyModalProps) {
           <button
             type="button"
             className={styles.copyButton}
-            onClick={() => navigator.clipboard.writeText(rawKey)}
+            onClick={() => void copyToClipboard(rawKey)}
           >
             {t('common.copy')}
           </button>
