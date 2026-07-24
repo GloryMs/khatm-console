@@ -4,12 +4,57 @@
 
 ## Current phase / task
 
+- Post-V1 bugfix — **LAN-IP secure-context crashes (consume-sim idempotency key, copy buttons)**
+  — **DONE. PR #8** (`fix/lan-ip-secure-context-crypto-clipboard`) squash-merged into `main` on
+  2026-07-24 (branch deleted post-merge). Container rebuilt; Majd manually confirmed both bugs
+  fixed in-browser via the LAN IP.
 - Post-V1 chore — **no silent QR api-base fallback** — **DONE. PR #7**
   (`chore/qr-api-base-guard`) squash-merged into `main` on 2026-07-23 (branch deleted
   post-merge). Container rebuilt; Majd's manual EN/AR + RTL walkthrough of the new banner is
   pending (not yet run as of this entry).
 
 ## Last completed
+
+- 2026-07-24 (PR #8, bugfix): Majd reported live — `ConsumeSimPage` (`/consume-sim`) rendered
+  "Something went wrong" (the `ErrorBoundary` fallback) when opened via a LAN IP over plain HTTP
+  (`http://10.222.39.176:3000/...`), but worked fine via `http://localhost:3000/...`. Root cause:
+  `crypto.randomUUID()` requires a secure context (HTTPS, or the special-cased
+  `localhost`/`127.0.0.1`) and is `undefined` otherwise; the page called it directly while
+  building the form's default `idempotencyKey`, so it threw during render on a bare-HTTP LAN
+  origin. Fixed with `generateIdempotencyKey()` (new `consumeSim/idempotencyKey.ts`), which uses
+  `crypto.randomUUID()` when available and otherwise falls back to a manual UUIDv4 built from
+  `crypto.getRandomValues()` (no secure-context restriction). Both call sites in
+  `ConsumeSimPage.tsx` (initial default value, "regenerate" button) switched to it.
+  Same session, same root-cause family: Majd then reported the copy button on a freshly minted
+  consuming-party API key (`/consumers`) silently did nothing under the same
+  localhost-vs-LAN-IP split. `navigator.clipboard` has the identical secure-context restriction;
+  unlike the render-time crash above, the resulting throw happens inside an `onClick` handler,
+  which React error boundaries don't catch — so the button just failed silently instead of
+  showing any error UI. Three call sites had the same direct
+  `navigator.clipboard.writeText(...)`: `MintedKeyModal` (`/consumers`), `ReportStep`
+  (bulk-issuance report), and `IssuePage`'s success-view `CopyButton` (single issue). Fixed with a
+  shared `copyToClipboard()` (new `components/ui/clipboard.ts`) that uses
+  `navigator.clipboard.writeText` when available and otherwise falls back to the legacy
+  `document.execCommand('copy')` path (hidden textarea), which carries no secure-context
+  restriction; all three sites now call it instead of touching `navigator.clipboard` directly.
+  Tests: `idempotencyKey.test.ts` (3 tests: secure-context path, insecure-context fallback,
+  distinct-keys-on-repeat) and `clipboard.test.ts` (4 tests: secure-context path, fallback when
+  `navigator.clipboard` is absent, fallback when `writeText` rejects, fallback-also-unsupported
+  case — jsdom doesn't implement `execCommand` at all, so it's stubbed via
+  `Object.defineProperty` rather than `vi.spyOn`). 154 tests total now (was 147) — 8 new, plus
+  existing `ConsumeSimPage`/`IssuePage`/`MintedKeyModal`/`ReportStep` suites unchanged and still
+  green. `npm run typecheck`, `npm run lint`, and `npm run test` all clean; `format:check` clean
+  on tracked `src/` files (the pre-existing untracked-`.vscode/extensions.json` warning noted
+  under "Open decisions" is unrelated and still present). Rebuilt the `khatm-console` Docker image
+  twice this session (once per bug) via `docker compose build khatm-console` +
+  `docker compose up -d --force-recreate khatm-console` against the already-running
+  `khatm-api`/`khatm-worker`/`khatm-postgres`/`khatm-redis` stack on `khatm-net`; confirmed `HTTP
+200` on both `http://localhost:3000/...` and `http://10.222.39.176:3000/...` after each rebuild,
+  and grepped the built bundle for the new fallback guards
+  (`typeof crypto.randomUUID === 'function'`, `execCommand`) as a static sanity check since no
+  browser-automation tool was available in-session to exercise the JS at runtime directly. Majd
+  then manually verified both fixes in an actual browser via the LAN IP and confirmed both bugs
+  resolved. PR #8 opened, CI green, squash-merged with `--delete-branch`.
 
 - 2026-07-23 (follow-up, PR #7): CI's `format:check` caught a prettier break in the `docs/STATE.md`
   edit from the same session — an inline code span (`` `api: "http://localhost:8080"` ``) had been
