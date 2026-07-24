@@ -6,6 +6,7 @@ import { useLocation, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
 import { ApiErrorBanner } from '@/components/ui/ApiErrorBanner';
 import { useSimulateConsume } from './hooks';
+import { generateIdempotencyKey } from './idempotencyKey';
 import type { ConsumeResponse } from './api';
 import styles from './ConsumeSimPage.module.css';
 
@@ -81,7 +82,7 @@ export function ConsumeSimPage() {
     defaultValues: {
       credentialId: presetId ?? '',
       apiKey: '',
-      idempotencyKey: crypto.randomUUID(),
+      idempotencyKey: generateIdempotencyKey(),
     },
   });
 
@@ -95,7 +96,7 @@ export function ConsumeSimPage() {
   }, [location.key, setValue]);
 
   const onRegenerateIdempotencyKey = () => {
-    setValue('idempotencyKey', crypto.randomUUID());
+    setValue('idempotencyKey', generateIdempotencyKey());
   };
 
   const onSubmit = handleSubmit((values) => {

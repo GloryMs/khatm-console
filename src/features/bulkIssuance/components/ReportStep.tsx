@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { copyToClipboard } from '@/components/ui/clipboard';
 import type { BulkIssueItemError, BulkIssueResponse } from '../api';
 import { deriveReportStatus, type ReportRowView } from '../report';
 import styles from './ReportStep.module.css';
@@ -12,11 +13,7 @@ interface ReportStepProps {
 
 function CopyButton({ value, label }: { value: string; label: string }) {
   return (
-    <button
-      type="button"
-      className={styles.copyButton}
-      onClick={() => navigator.clipboard.writeText(value)}
-    >
+    <button type="button" className={styles.copyButton} onClick={() => void copyToClipboard(value)}>
       {label}
     </button>
   );
