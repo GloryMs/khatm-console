@@ -15,6 +15,22 @@ export function computeWindow(days: StatsWindowOption, now: Date = new Date()): 
   };
 }
 
+/**
+ * A window spanning twice `days`, ending now — one request that covers both
+ * the KPI cards' "current period" and "previous period" (for the delta) and
+ * the chart/sparkline's per-day series, instead of two separate fetches.
+ * Split with `dailyStats.ts`'s `splitDailyEntries`.
+ */
+export function computeComparisonWindow(
+  days: StatsWindowOption,
+  now: Date = new Date(),
+): WindowRange {
+  return {
+    from: new Date(now.getTime() - 2 * days * DAY_MS).toISOString(),
+    to: now.toISOString(),
+  };
+}
+
 /** Localized "from – to" date range for a stats window, for KPI-card footers and the toolbar. Empty when either bound is missing. */
 export function formatWindowRange(
   window: { from?: string; to?: string } | undefined,

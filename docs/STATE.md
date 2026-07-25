@@ -4,9 +4,11 @@
 
 ## Current phase / task
 
-- No active task. Design system (tokens + component library + Issuance/Credentials/Verify/
-  Revoke restyle + Dashboard restyle) is fully merged into `main`, Majd-verified EN/AR + RTL +
-  light/dark on the rebuilt container as of 2026-07-25. Brief history in "Last completed" below.
+- Dashboard live-data wiring (`feat/dashboard-v2-live-data`, no WBS ticket number) — **DONE,
+  PR not yet opened as of this entry** (rest of this session). khatm-platform shipped
+  KH-1.1.5-BE (5 new endpoints) on an unmerged branch; contract pulled directly from the live
+  local backend instead of GitHub `main` since the platform PR isn't merged yet — re-run
+  `npm run contract:update` once it is, to confirm nothing drifted. See "Last completed" below.
 - Post-V1 bugfix — LAN-IP secure-context crashes (consume-sim idempotency key, copy buttons) —
   DONE. PR #8 merged 2026-07-24.
 - Post-V1 chore — no silent QR api-base fallback — DONE. PR #7 merged 2026-07-23; Majd's
@@ -14,13 +16,21 @@
 
 ## Last completed
 
-- 2026-07-25 (design system v3 — Dashboard redesign, PR #11): restyled `/dashboard` onto the
-  existing tokens/primitives. KPI cards and the signing-keys panel are wired to real data
-  (`GET /api/v1/stats`, `GET /.well-known/jwks.json`); the lifecycle chart, recent-activity,
-  needs-attention, and top-parties panels have no backing API data, so they ship as real card
-  shells with an empty state rather than fabricated numbers — see
-  `docs/specs/dashboard-v2-backend-needs.md` for what khatm-platform would need to add. Majd
-  confirmed EN/AR + RTL + light/dark on the rebuilt container. Merged into `main`.
+- 2026-07-25 (Dashboard wired to real backend data): khatm-platform's KH-1.1.5-BE shipped the 5
+  endpoints `docs/specs/dashboard-v2-backend-needs.md` asked for
+  (`/api/v1/stats/daily`, `/api/v1/activity`, `/api/v1/attention`,
+  `/api/v1/admin/signing-keys`, `/api/v1/stats/consuming-parties`). Pulled the OpenAPI contract
+  from the live local `khatm-api` (its GitHub branch isn't merged yet) and wired all four
+  previously-placeholder panels to real data: lifecycle chart (real daily bars),
+  recent-activity table (real events + working tabs), needs-attention (real
+  `SCHEMA_DENIED` items with a safe generic fallback for any other `type`), top consuming
+  parties (real call volume + success rate). Signing-keys panel upgraded from public JWKS to
+  the richer admin endpoint (real `state`/`validFrom`/`validTo`, admin-scope-gated with a
+  fallback message for non-admin operators). KPI cards gained a real period-over-period delta
+  and sparkline, both derived from the new daily endpoint (`dailyStats.ts`) — previously
+  omitted for lack of data. No panel shows fabricated numbers anywhere on the page anymore.
+  184 tests total (was 170); `npm run check` and `npm run build` clean; RTL grep clean;
+  container rebuilt and reachable. Not yet committed/PR'd as of this entry.
 
 - 2026-07-25 (design system v2 — component library + screen restyle, PR #10): built the shared
   CSS-Module primitives (`DataTable`, `FormField`, `SecretReveal`, `EmptyState`, `Banner`,
@@ -491,10 +501,11 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 3. KH-2.2-era RBAC changes, whatever those turn out to require.
 4. Unify the scope-gating placement convention (self-gating vs. App.tsx-level wrapping — see
    "Open decisions" above) across every gated page.
-5. Dashboard v2's four data-less panels (lifecycle chart, recent activity, needs attention, top
-   consuming parties) — wire them up for real once khatm-platform implements any of the
-   endpoints in `docs/specs/dashboard-v2-backend-needs.md`. Not urgent; the console-side card
-   shells are already built and just need their `EmptyState` swapped for a real query per panel.
+5. Once khatm-platform's KH-1.1.5-BE branch merges to `main`, re-run `npm run contract:update`
+   (normal GitHub-fetch path) and confirm `contracts/openapi.json` matches what was pulled
+   directly from the live local backend this session — low risk, just a sanity check.
 
-Closed: the full EN/AR + RTL click-through across every screen — Majd confirmed the Arabic
+Closed: Dashboard v2's four data-less panels — all wired to real khatm-platform data
+(KH-1.1.5-BE) 2026-07-25; see "Last completed". Closed: the full EN/AR + RTL click-through
+across every screen — Majd confirmed the Arabic
 layout and messages read correctly across the rebuilt container before merging PR #6.
