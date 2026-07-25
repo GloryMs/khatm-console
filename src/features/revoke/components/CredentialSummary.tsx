@@ -30,13 +30,19 @@ function useFormattedDate(): (iso: string | undefined) => string | null {
   };
 }
 
+/**
+ * Credential result card for the lookup/verify/revoke flow: a header row
+ * (coded ref + status badge) over a meta grid (schema / uses / valid-until —
+ * the fields the contract's `CredentialView` actually exposes; there is no
+ * `issuedAt` or consuming-party field on this shape, unlike `CredentialSummary`
+ * from the search list).
+ */
 export function CredentialSummary({ view }: { view: CredentialView }) {
   const { t } = useTranslation();
   const formatDate = useFormattedDate();
   const status = deriveStatus(view, Date.now());
 
   const statusLabel = t(`revoke.status${status[0].toUpperCase()}${status.slice(1)}`);
-
   const validToText = formatDate(view.validTo);
 
   let usesText: string;
@@ -50,25 +56,23 @@ export function CredentialSummary({ view }: { view: CredentialView }) {
 
   return (
     <div className={styles.summary} data-testid="credential-summary">
-      <div className={styles.row}>
-        <span className={styles.label}>{t('revoke.schema')}</span>
-        <span className={`${styles.value} ltr-embed`}>{view.schemaCode}</span>
-      </div>
-      <div className={styles.row}>
-        <span className={styles.label}>{t('revoke.ref')}</span>
-        <span className={`${styles.value} ltr-embed`}>{view.ref}</span>
-      </div>
-      <div className={styles.row}>
-        <span className={styles.label}>{t('revoke.status')}</span>
+      <div className={styles.head}>
+        <span className={`${styles.ref} ltr-embed`}>{view.ref}</span>
         <StatusBadge tone={STATUS_TONE[status]}>{statusLabel}</StatusBadge>
       </div>
-      <div className={styles.row}>
-        <span className={styles.label}>{t('revoke.uses')}</span>
-        <span className={`${styles.value} ltr-embed`}>{usesText}</span>
-      </div>
-      <div className={styles.row}>
-        <span className={styles.label}>{t('revoke.validTo')}</span>
-        <span className={styles.value}>{validToText ?? t('revoke.noExpiry')}</span>
+      <div className={styles.grid}>
+        <div className={styles.metaItem}>
+          <span className={styles.metaLabel}>{t('revoke.schema')}</span>
+          <span className={`${styles.metaValue} ltr-embed`}>{view.schemaCode}</span>
+        </div>
+        <div className={styles.metaItem}>
+          <span className={styles.metaLabel}>{t('revoke.uses')}</span>
+          <span className={`${styles.metaValue} ltr-embed`}>{usesText}</span>
+        </div>
+        <div className={styles.metaItem}>
+          <span className={styles.metaLabel}>{t('revoke.validTo')}</span>
+          <span className={styles.metaValue}>{validToText ?? t('revoke.noExpiry')}</span>
+        </div>
       </div>
       {view.revoked && <p className={styles.note}>{t('revoke.alreadyRevokedNote')}</p>}
     </div>

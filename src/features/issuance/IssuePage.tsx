@@ -2,6 +2,10 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QRCodeSVG } from 'qrcode.react';
 import { ApiErrorBanner } from '@/components/ui/ApiErrorBanner';
+import { Button } from '@/components/ui/Button';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { SecretReveal } from '@/components/ui/SecretReveal';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import { copyToClipboard } from '@/components/ui/clipboard';
 import { useLocalizedText } from '@/hooks/useLocalizedText';
 import { parseClaimsDef } from './claimsDef';
@@ -68,14 +72,6 @@ function buildIssueRequest(detail: SchemaDetail, values: IssueFormValues): Issue
   };
 }
 
-function CopyButton({ value, label }: { value: string; label: string }) {
-  return (
-    <button type="button" className={styles.copyButton} onClick={() => void copyToClipboard(value)}>
-      {label}
-    </button>
-  );
-}
-
 function SuccessView({
   success,
   onIssueAnother,
@@ -87,25 +83,37 @@ function SuccessView({
   const countdown = formatCountdown(success.expiresAt, i18n.language);
   return (
     <div className={styles.successGrid}>
-      <h2 className={styles.panelTitle}>{t('issue.successTitle')}</h2>
-      <p className={styles.onceNote}>{t('issue.codeShownOnce')}</p>
+      <div className={styles.successHead}>
+        <StatusBadge tone="success">{t('issue.issuedBadge')}</StatusBadge>
+        <h2 className={styles.panelTitle}>{t('issue.successTitle')}</h2>
+      </div>
       <div className={styles.valueRow}>
         <span className={styles.valueLabel}>{t('issue.refLabel')}</span>
         <span className={`${styles.codeValue} ltr-embed`}>{success.ref}</span>
-        <CopyButton value={success.ref} label={t('common.copy')} />
+        <Button variant="ghost" type="button" onClick={() => void copyToClipboard(success.ref)}>
+          {t('common.copy')}
+        </Button>
       </div>
       <p className={styles.help}>{t('issue.refHelp')}</p>
-      <div className={styles.valueRow}>
-        <span className={styles.valueLabel}>{t('issue.claimCodeLabel')}</span>
-        <span className={`${styles.codeValue} ltr-embed`}>{success.code}</span>
-        <CopyButton value={success.code} label={t('common.copy')} />
-      </div>
-      <p className={styles.help}>{t('issue.claimCodeHelp')}</p>
+
+      <SecretReveal
+        label={t('issue.claimCodeLabel')}
+        value={success.code}
+        onceLabel={t('common.shownOnce')}
+        revealLabel={t('common.reveal')}
+        hideLabel={t('common.hide')}
+        helperText={t('issue.codeShownOnce')}
+        copyLabel={t('common.copy')}
+        onCopy={(value) => void copyToClipboard(value)}
+        copiedMessage={t('common.copied')}
+      />
+
       <div className={styles.valueRow}>
         <span className={styles.valueLabel}>{t('issue.codeExpiresAt')}</span>
         <span>{formatExpiresAt(success.expiresAt, i18n.language)}</span>
         {countdown && <span>{countdown}</span>}
       </div>
+
       <div className={styles.qrBox}>
         <h3 className={styles.panelTitle}>{t('issue.qrTitle')}</h3>
         <QRCodeSVG value={success.qrPayload} size={220} className={styles.qrCode} />
@@ -118,9 +126,14 @@ function SuccessView({
           </p>
         )}
       </div>
-      <button type="button" className={styles.secondaryButton} onClick={onIssueAnother}>
+      <Button
+        variant="secondary"
+        type="button"
+        className={styles.issueAnotherButton}
+        onClick={onIssueAnother}
+      >
         {t('issue.issueAnother')}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -172,54 +185,68 @@ export function IssuePage() {
     <section className={styles.page}>
       <h1 className={styles.title}>{t('issue.title')}</h1>
 
-      {success ? (
-        <section className={styles.panel}>
-          <SuccessView success={success} onIssueAnother={resetFlow} />
-        </section>
-      ) : (
-        <>
-          <section className={styles.panel}>
-            <h2 className={styles.panelTitle}>{t('issue.stepPick')}</h2>
-            <p className={styles.help}>{t('issue.pickPrompt')}</p>
-            {schemas.isPending && <p>{t('common.loading')}</p>}
-            {schemas.isError && <ApiErrorBanner error={schemas.error} />}
-            {schemas.data && (
-              <SchemaPicker
-                schemas={schemas.data}
-                onPick={(schema) => {
-                  if (schema.id) setSelectedId(schema.id);
-                }}
-              />
-            )}
-          </section>
+      <section className={styles.panel}>
+        <h2 className={styles.panelTitle}>{t('issue.stepPick')}</h2>
+        <p className={styles.help}>{t('issue.pickPrompt')}</p>
+        {schemas.isPending && <p>{t('common.loading')}</p>}
+        {schemas.isError && <ApiErrorBanner error={schemas.error} />}
+        {schemas.data && (
+          <SchemaPicker
+            schemas={schemas.data}
+            onPick={(schema) => {
+              if (schema.id) {
+                setSelectedId(schema.id);
+                setSuccess(null);
+              }
+            }}
+          />
+        )}
+      </section>
 
-          {selectedId && (
-            <section className={styles.panel}>
-              <div className={styles.selectedSchema}>
-                <div>
-                  <h2 className={styles.panelTitle}>{t('issue.stepForm')}</h2>
-                  {selectedName && <p className={styles.help}>{selectedName}</p>}
-                </div>
-                <button type="button" className={styles.changeButton} onClick={resetFlow}>
-                  {t('issue.changeSchema')}
-                </button>
+      {selectedId && (
+        <section className={styles.formPanel}>
+          <div className={styles.formPanelHead}>
+            <div className={styles.selectedSchema}>
+              <div>
+                <h2 className={styles.panelTitle}>{t('issue.stepForm')}</h2>
+                {selectedName && <p className={styles.help}>{selectedName}</p>}
               </div>
-              {detail.isPending && <p>{t('common.loading')}</p>}
-              {detail.isError && <ApiErrorBanner error={detail.error} />}
-              {detail.data && (
+              <Button variant="ghost" type="button" onClick={resetFlow}>
+                {t('issue.changeSchema')}
+              </Button>
+            </div>
+
+            {detail.isPending && <p>{t('common.loading')}</p>}
+            {detail.isError && <ApiErrorBanner error={detail.error} />}
+          </div>
+
+          {detail.data && (
+            <div className={styles.grid}>
+              <div className={styles.left}>
                 <IssueForm
                   key={detail.data.id}
                   fields={fields}
                   defaults={defaults}
                   sdFields={detail.data.sdFields ?? []}
                   onSubmit={onSubmit}
+                  onBack={resetFlow}
                   isSubmitting={issueAndMint.isPending}
                   error={issueAndMint.error}
                 />
-              )}
-            </section>
+              </div>
+              <div className={styles.right}>
+                {success ? (
+                  <SuccessView success={success} onIssueAnother={resetFlow} />
+                ) : (
+                  <EmptyState
+                    title={t('issue.resultEmptyTitle')}
+                    body={t('issue.resultEmptyBody')}
+                  />
+                )}
+              </div>
+            </div>
           )}
-        </>
+        </section>
       )}
     </section>
   );

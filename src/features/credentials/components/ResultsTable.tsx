@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useLocalizedText } from '@/hooks/useLocalizedText';
+import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge';
-import tableStyles from '@/components/ui/Table.module.css';
 import type { CredentialSummary } from '../api';
 import styles from './ResultsTable.module.css';
 
@@ -35,63 +36,69 @@ export function ResultsTable({ rows }: ResultsTableProps) {
   const localize = useLocalizedText();
   const now = Date.now();
 
-  if (rows.length === 0) {
-    return <div className="emptyState">{t('credentials.empty')}</div>;
-  }
+  const columns: DataTableColumn<CredentialSummary>[] = [
+    {
+      key: 'ref',
+      header: t('credentials.table.ref'),
+      code: true,
+      cell: (row) => row.ref,
+    },
+    {
+      key: 'schema',
+      header: t('credentials.table.schema'),
+      cell: (row) => localize(row.schemaName) || row.schemaCode,
+    },
+    {
+      key: 'issuedAt',
+      header: t('credentials.table.issuedAt'),
+      code: true,
+      cell: (row) =>
+        row.issuedAt
+          ? new Intl.DateTimeFormat(i18n.language, {
+              dateStyle: 'medium',
+              timeStyle: 'short',
+            }).format(new Date(row.issuedAt))
+          : '',
+    },
+    {
+      key: 'status',
+      header: t('credentials.table.status'),
+      cell: (row) => {
+        const status = deriveStatus(row, now);
+        return <StatusBadge tone={STATUS_TONE[status]}>{t(STATUS_KEY[status])}</StatusBadge>;
+      },
+    },
+    {
+      key: 'uses',
+      header: t('credentials.table.uses'),
+      cell: (row) =>
+        row.usesRemaining !== undefined && row.maxUses !== undefined
+          ? t('revoke.usesValue', { remaining: row.usesRemaining, max: row.maxUses })
+          : t('revoke.usesUnlimited'),
+    },
+    {
+      key: 'actions',
+      header: t('credentials.table.actions'),
+      cell: (row) =>
+        row.id && (
+          <div className={styles.actions}>
+            <Link className={styles.action} to={`/revoke?id=${encodeURIComponent(row.id)}`}>
+              {t('credentials.rowRevoke')}
+            </Link>
+            <Link className={styles.action} to={`/consume-sim?id=${encodeURIComponent(row.id)}`}>
+              {t('credentials.rowConsume')}
+            </Link>
+          </div>
+        ),
+    },
+  ];
 
   return (
-    <table className={tableStyles.table}>
-      <thead>
-        <tr>
-          <th className={tableStyles.codeCell}>{t('credentials.table.ref')}</th>
-          <th>{t('credentials.table.schema')}</th>
-          <th>{t('credentials.table.issuedAt')}</th>
-          <th>{t('credentials.table.status')}</th>
-          <th>{t('credentials.table.uses')}</th>
-          <th>{t('credentials.table.actions')}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => {
-          const status = deriveStatus(row, now);
-          const issuedAt = row.issuedAt
-            ? new Intl.DateTimeFormat(i18n.language, {
-                dateStyle: 'medium',
-                timeStyle: 'short',
-              }).format(new Date(row.issuedAt))
-            : '';
-          const usesText =
-            row.usesRemaining !== undefined && row.maxUses !== undefined
-              ? t('revoke.usesValue', { remaining: row.usesRemaining, max: row.maxUses })
-              : t('revoke.usesUnlimited');
-          return (
-            <tr key={row.id}>
-              <td className={tableStyles.codeCell}>{row.ref}</td>
-              <td>{localize(row.schemaName) || row.schemaCode}</td>
-              <td>{issuedAt}</td>
-              <td>
-                <StatusBadge tone={STATUS_TONE[status]}>{t(STATUS_KEY[status])}</StatusBadge>
-              </td>
-              <td>{usesText}</td>
-              <td>
-                {row.id && (
-                  <div className={styles.actions}>
-                    <Link className={styles.action} to={`/revoke?id=${encodeURIComponent(row.id)}`}>
-                      {t('credentials.rowRevoke')}
-                    </Link>
-                    <Link
-                      className={styles.action}
-                      to={`/consume-sim?id=${encodeURIComponent(row.id)}`}
-                    >
-                      {t('credentials.rowConsume')}
-                    </Link>
-                  </div>
-                )}
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+    <DataTable
+      columns={columns}
+      rows={rows}
+      rowKey={(row) => row.id ?? ''}
+      emptyState={<EmptyState title={t('credentials.empty')} />}
+    />
   );
 }

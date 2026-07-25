@@ -4,7 +4,17 @@
 
 ## Current phase / task
 
-- Design-system update — **DONE.** New stakeholder visual identity (verdigris-green palette,
+- Design handoff v2 (component library + Issuance/Credential-search-verify-revoke wiring)
+  — **DONE.** See "Last completed" below for the full breakdown. Branched as
+  `feat/design-handoff-v2` (no WBS ticket number was ever attached to this task, so no
+  `KH-x.y.z` prefix) and committed on 2026-07-25 per Majd's go-ahead; PR opened same day.
+- Follow-up same day: Majd screenshotted the live container and reported **every button
+  looked wrong** (tiny, unpadded, native-browser-chrome look) across Issue, Credentials,
+  Verify and Revoke — **DONE, root-caused and fixed**, see "Last completed" below. This is
+  the first real evidence of the "no browser-automation tool" gap actually biting: the bug
+  was invisible to `tsc`/`eslint`/`vitest`+jsdom and only showed up in an actual rendered
+  browser.
+- Design-system update (v1) — **DONE.** New stakeholder visual identity (verdigris-green palette,
   light/dark theme + toggle, shared Button/StatusBadge/Table primitives) applied across the
   console; squash-merged into `main` on 2026-07-24. Container rebuilt.
 - Post-V1 bugfix — **LAN-IP secure-context crashes (consume-sim idempotency key, copy buttons)**
@@ -17,6 +27,151 @@
   pending (not yet run as of this entry).
 
 ## Last completed
+
+- 2026-07-25 (follow-up: every button rendered broken — root cause + fix): Majd reviewed
+  the rebuilt container and screenshotted the Issue screen — every button (Sign in, Issue
+  credential, Cancel, Search, Reset, Verify, Look up, Reveal/Hide, Copy, Issue another) looked
+  like an unstyled native browser button: tight to the text, ~18px tall, no visible
+  padding — instead of the intended padded, rounded, 34px-tall pills. Root-caused with a
+  throwaway Playwright script (`playwright-core`, installed standalone in the scratchpad, not
+  added to the project) driving the real running container and reading `getComputedStyle` —
+  no browser-automation tool is available as a first-class tool in this environment, but a
+  disposable local script was enough here. Found: `Button.module.css`'s base `.button` rule
+  set `padding: var(--space-2) var(--space-5)`, and **`--space-5` was never defined** in
+  `tokens.css` (the scale jumps `--space-4` → `--space-6`) — a pre-existing bug from the
+  2026-07-24 design-system-update session (that file was never touched this session before
+  now). An unresolvable `var()` with no fallback invalidates the whole shorthand at
+  computed-value time, so `padding` silently fell back to `0` for **every** `Button`
+  instance in the app — invisible to `tsc`/`eslint`/`vitest`+jsdom (jsdom doesn't compute
+  real layout), only visible in an actual rendered browser. This session's own work happened
+  to multiply the bug's visible surface area (many more call sites now route through the
+  shared `Button`), which is what made it obvious. Fixed by changing the reference to
+  `var(--space-4)` (8px 16px — the padding convention already used elsewhere in this
+  codebase's hand-written button CSS, and close to the design handoff's literal "9px 18px").
+  Verified computed padding is now `8px 16px` (`8px 12px` for `ghost`) and height `34.1875px`
+  consistently across every button on Issue/Credentials/Verify/Revoke, via the same
+  Playwright script.
+  - **Second, related bug found in the same pass**: `IssuePage`'s "Issue another" button and
+    `VerifyPage`'s "Verify" button were stretching to fill their entire container width
+    instead of sizing to their content — a `justify-items`/`align-items: stretch` default
+    (CSS Grid's and Flexbox's default, respectively) applying to a `Button` that was a direct
+    child of a `display: grid`/`flex-direction: column` container with no explicit
+    self-alignment. Fixed with targeted `justify-self: start` (`.issueAnotherButton`,
+    `IssuePage.module.css`) and `align-self: flex-start` (`.submit`, `VerifyPage.module.css`)
+    on just those two buttons — both are logical/writing-mode-relative keywords (`start`/
+    `flex-start` are not `left`/`right`), so they stay RTL-correct. `RevokePage`/`FilterBar`/
+    `IssueForm`/`SecretReveal`'s buttons were already safe (nested inside a row flex container,
+    or given `flex: none`), confirmed by grepping every `display: grid`/`flex-direction: column`
+    container in the touched files for a `Button` as a _direct_ child.
+  - Also **empirically verified real click behavior** (per Majd's explicit ask, not just
+    look-and-feel), against the live container with a real authenticated session: Reveal/Hide
+    genuinely toggles the DOM between the masked placeholder and the real claim code (not just
+    a label swap); both Copy buttons genuinely write the correct value to
+    `navigator.clipboard` (read back and asserted); Search genuinely filters the credentials
+    table (20 rows → 1 on an exact ref match) and Reset genuinely restores it; Verify's submit
+    genuinely shows a validation error on empty input without crashing.
+  - Full suite re-verified after both fixes: **162/162 tests, `tsc` clean, `eslint` clean**
+    (same one pre-existing HMR-only warning). Rebuilt and redeployed the `khatm-console`
+    container twice this follow-up (once per fix) via `docker compose build` +
+    `docker compose up -d --force-recreate`, against the already-running `khatm-api`/
+    `khatm-worker`/`khatm-postgres`/`khatm-redis` stack.
+  - **Still not done**: a real EN/AR + RTL + dark-mode manual pass — this follow-up only
+    exercised English/light/LTR via the throwaway script. `--space-5` is worth grep-ing for
+    before trusting any future design-token change; more generally, an undefined `var()` with
+    no fallback is a silent, test-invisible failure mode worth remembering.
+
+- 2026-07-24 (design handoff v2 — component library + two-screen wiring): a second design
+  handoff arrived (`design_handoff_khatm_console/`: `tokens.css`, `README.md`, an interactive
+  `.dc.html` reference) with the same verdigris-green token set as the v1 design-system update
+  below plus explicit component patterns (StatusBadge, Button, compact DataTable, FormField,
+  shown-once SecretReveal, EmptyState, Banner/Toast) and two fully-worked screens (Issuance —
+  single, Credential search/verify/revoke). Delivered:
+  - **`tokens.css` merge** — verified, not re-applied: `src/styles/tokens.css` already carried
+    every token in the handoff file (from the 2026-07-24 v1 session) plus two extras
+    (`color-scheme`, `--color-danger-contrast`) neither present in nor conflicting with the
+    handoff. No diff needed.
+  - **New CSS-Module primitives in `src/components/ui/`**, all `var(--token)` + logical
+    properties only (RTL grep-verified, zero physical left/right matches across every file
+    touched this session):
+    - `DataTable` — generic `columns`/`rows`/`rowKey` table, compact rows via `--row-height`
+      (32px, set on `tr`, mirroring the handoff's own `<tr style="height:var(--row-height)">`
+      pattern), `code` column flag for the mono/tabular/forced-LTR treatment, an `emptyState`
+      slot. Renders real `<table>/<tr>/<td>` (not a div-grid) — kept `ResultsTable`'s existing
+      `closest('tr')` test assumption intact.
+    - `FormField` + `khatmInputClass(state)` — label/badge/help/error/valid shell around a
+      control the caller registers itself (doesn't own the `<input>`, so `react-hook-form`'s
+      `register()` spread keeps working unchanged); `khatmInputClass` composes the existing
+      global `.khatm-input`/`--error`/`--valid` classes from `global.css` rather than
+      duplicating that CSS.
+    - `SecretReveal` — the one shown-once pattern for claim codes and API keys: masked by
+      default (dot-grouped placeholder, never leaks exact length precisely), a "Shown once"
+      pill, reveal/hide toggle, optional copy action wired to the existing `copyToClipboard()`
+      helper, and a `Toast` confirmation on copy.
+    - `EmptyState` — dashed card, decorative seal-ring glyph (kept to a pure CSS ring, no
+      hardcoded "ختم" glyph text — the app's existing brand mark already localizes that via
+      `t('app.brand')`, and a shared "dumb" UI component shouldn't hardcode either language).
+    - `Banner` (tone-based alert, replaces `ApiErrorBanner`'s internals — same public API,
+      `role="alert"`, message/meta content unchanged) and `Toast` (floating confirmation,
+      fixed + logical insets so it mirrors correctly in RTL).
+  - **Issuance — single (`/issue`) rewired**: `IssuePage` now renders the schema-detail step as
+    the design guide's two-column panel (`.grid`/`.left`/`.right`, `border-inline-end` divider,
+    right column bg `--color-surface-2`) — left is the live `IssueForm`, right is an `EmptyState`
+    until a credential is minted, then the success view. The claim code renders through
+    `SecretReveal` (masked by default — a real behavior change from the previous always-visible
+    code; `IssuePage.test.tsx`'s mint test now clicks "Reveal" before asserting the code text).
+    `IssueForm` now builds every field through `FormField`/`khatmInputClass` and uses the shared
+    `Button` for submit/cancel; a new `onBack` wire (labelled `issue.cancel`, not the previous
+    unused prop) gives the mock's "Mint (primary) + Cancel (secondary)" pair. Kept the
+    schema-picker step as its own card-list panel rather than collapsing it into the mock's
+    plain `<select>` — `SchemaPicker` is shared with `BulkIssuePage` and has its own tests; this
+    was judged a legitimate, lower-risk deviation from pixel-fidelity, not a shortcut.
+  - **Credential search (`/credentials`) rewired**: `FilterBar` uses `FormField`, `khatmInputClass`
+    and `Button`; `ResultsTable` now renders through `DataTable` with `EmptyState` for no matches;
+    `CredentialsPage`'s pagination controls use `Button`.
+  - **Verify (`/verify`) rewired**: `VerifyPage`'s form uses `FormField`, `khatmInputClass` and
+    `Button`; `VerifyResult`'s valid/invalid verdict now uses the shared `StatusBadge`
+    (success/danger) instead of bespoke `.valid`/`.invalid` CSS.
+  - **Revoke (`/revoke`) rewired** — closest of the four to the handoff's literal "search →
+    result card → revoke panel" screen 2 mock: lookup form uses `FormField`, `khatmInputClass`
+    and `Button`; `CredentialSummary` restyled to the mock's result-card look (coded ref and
+    `StatusBadge` header row over a `repeat(auto-fit,minmax(150px,1fr))` meta grid, bg
+    `--color-surface-2`) using the fields the real `CredentialView` contract actually exposes
+    (schema/uses/valid-until — **no `issuedAt` or consuming-party field on this shape**, unlike
+    the search list's `CredentialSummary` type, so the mock's "issued date / consuming party"
+    columns were not fabricated); the revoke action now sits in its own danger-bordered panel
+    (`border: color-mix(... var(--color-danger) 35% ...)`, per the mock). The mock's "Reason"
+    `<select>` was **not** added — the real `POST .../revoke` endpoint takes no request body at
+    all, so a reason field would have nothing to submit to (contract discipline: "the generated
+    types, not this brief/mock, are authoritative"). `RevokeConfirmDialog` now uses `Button` and
+    `khatmInputClass` for its type-to-confirm input.
+  - **i18n**: added `common.reveal`/`hide`/`shownOnce`, `issue.cancel`/`issuedBadge`/
+    `resultEmptyTitle`/`resultEmptyBody`, `revoke.revokePanelHint` to both `en.json` and
+    `ar.json` in the same commit-to-be; parity test green.
+  - **`.prettierignore`** gained `design_handoff_khatm_console` (the handoff bundle itself —
+    reference material, not maintained source; was failing `format:check` otherwise).
+  - Tests: updated `IssuePage.test.tsx`'s mint-flow test to reveal the now-masked claim code
+    before asserting its value; no other test files needed behavioral changes (verified every
+    other assertion targets text/role, not the specific DOM shape that changed). Full suite:
+    **162 passed**, 0 failed. `typecheck` clean. `lint` clean except one pre-existing-pattern
+    warning (`react-refresh/only-export-components` on `FormField.tsx`, since it exports both
+    the component and the `khatmInputClass` helper — judged not worth a file split for one
+    HMR-only warning). `format:check` clean except the **pre-existing, out-of-scope**
+    `.vscode/extensions.json` issue (see "Open decisions" — unrelated to this session, same
+    caveat as prior sessions). `npm run build` clean.
+  - **Not done this session**: no browser-automation tool is available in this environment (see
+    "Environment facts"), so the visual/RTL result was verified by grep (zero physical
+    left/right properties) and by the component/page test suite (which exercises real rendered
+    DOM), not by an actual browser screenshot. A manual EN/AR + RTL + light/dark walkthrough
+    against the live container is still the real gate before merge, same as every prior
+    UI-visible session. Also not done: applying `SecretReveal` to `MintedKeyModal`'s API-key
+    display (the design handoff's other named use case) — out of this session's explicit scope
+    (Issuance + Credential search/verify/revoke only); worth a quick follow-up since the
+    component already supports it as-is.
+  - **Branched and committed 2026-07-25** as `feat/design-handoff-v2` (no WBS ticket number
+    was ever given for this task, so no `KH-x.y.z` prefix) per Majd's explicit go-ahead; full
+    suite re-verified green immediately before commit (162/162 tests, `tsc` clean, `eslint`
+    clean bar the one pre-existing HMR warning, `format:check` clean bar the pre-existing
+    untracked `.vscode/extensions.json`). PR opened same session.
 
 - 2026-07-24 (design-system update): applied the new stakeholder design system (verdigris-green
   palette, light/dark theme + toggle, shared Button/StatusBadge/Table primitives) across the

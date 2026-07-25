@@ -2,6 +2,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
+import { Button } from '@/components/ui/Button';
+import { FormField, khatmInputClass } from '@/components/ui/FormField';
 import { useLocalizedText } from '@/hooks/useLocalizedText';
 import type { SchemaSummary } from '@/features/schemas/api';
 import { BLANK_FILTERS, type FilterFormValues } from '../queryParams';
@@ -34,23 +36,26 @@ export function FilterBar({ schemas, onSearch }: FilterBarProps) {
 
   return (
     <form className={styles.bar} onSubmit={handleSubmit(onSearch)} noValidate>
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="cred-ref">
-          {t('credentials.filters.ref')}
-        </label>
-        <input id="cred-ref" type="text" autoComplete="off" {...register('ref')} />
-      </div>
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="cred-pseudoRef">
-          {t('credentials.filters.pseudoRef')}
-        </label>
-        <input id="cred-pseudoRef" type="text" autoComplete="off" {...register('pseudoRef')} />
-      </div>
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="cred-schema">
-          {t('credentials.filters.schema')}
-        </label>
-        <select id="cred-schema" {...register('schemaId')}>
+      <FormField label={t('credentials.filters.ref')} htmlFor="cred-ref">
+        <input
+          id="cred-ref"
+          type="text"
+          autoComplete="off"
+          className={khatmInputClass()}
+          {...register('ref')}
+        />
+      </FormField>
+      <FormField label={t('credentials.filters.pseudoRef')} htmlFor="cred-pseudoRef">
+        <input
+          id="cred-pseudoRef"
+          type="text"
+          autoComplete="off"
+          className={khatmInputClass()}
+          {...register('pseudoRef')}
+        />
+      </FormField>
+      <FormField label={t('credentials.filters.schema')} htmlFor="cred-schema">
+        <select id="cred-schema" className={khatmInputClass()} {...register('schemaId')}>
           <option value="">{t('credentials.filters.schemaAny')}</option>
           {schemas.map((schema) => (
             <option key={schema.id} value={schema.id}>
@@ -58,24 +63,21 @@ export function FilterBar({ schemas, onSearch }: FilterBarProps) {
             </option>
           ))}
         </select>
-      </div>
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="cred-revoked">
-          {t('credentials.filters.revoked')}
-        </label>
-        <select id="cred-revoked" {...register('revoked')}>
+      </FormField>
+      <FormField label={t('credentials.filters.revoked')} htmlFor="cred-revoked">
+        <select id="cred-revoked" className={khatmInputClass()} {...register('revoked')}>
           <option value="any">{t('credentials.filters.revokedAny')}</option>
           <option value="yes">{t('credentials.filters.revokedYes')}</option>
           <option value="no">{t('credentials.filters.revokedNo')}</option>
         </select>
-      </div>
+      </FormField>
       <div className={styles.actions}>
-        <button type="submit" className={styles.searchButton}>
+        <Button type="submit" variant="primary">
           {t('credentials.filters.search')}
-        </button>
-        <button type="button" className={styles.resetButton} onClick={onReset}>
+        </Button>
+        <Button type="button" variant="secondary" onClick={onReset}>
           {t('credentials.filters.reset')}
-        </button>
+        </Button>
       </div>
     </form>
   );

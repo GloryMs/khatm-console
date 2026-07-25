@@ -15,3 +15,7 @@ one-time claim code to a wallet.
 - Success renders credential ref, one-time claim code, expiry, and QR v1.
 - QR payload uses `qrPayload.ts`: exact `{v:1,api,code}` JSON plus
   `VITE_QR_API_BASE` localhost warning.
+- Layout follows the design guide's two-column Issuance screen (`IssuePage.module.css`'s
+  `.grid`/`.left`/`.right`): form left, result right (bg `--color-surface-2`, `EmptyState`
+  until minted). The claim code renders via the shared `SecretReveal` (masked by default);
+  `IssueForm` fields use the shared `FormField`/`khatmInputClass`.

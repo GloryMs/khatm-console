@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { z } from 'zod';
 import { ApiErrorBanner } from '@/components/ui/ApiErrorBanner';
+import { Button } from '@/components/ui/Button';
+import { FormField, khatmInputClass } from '@/components/ui/FormField';
 import { useLocalizedText } from '@/hooks/useLocalizedText';
 import { isKnownFieldType, isSelective, type ClaimField } from '../claimsDef';
 import styles from './IssueForm.module.css';
@@ -119,42 +121,44 @@ export function IssueForm({
   return (
     <form className={styles.form} onSubmit={handleSubmit(onSubmit)} noValidate>
       <div className={styles.staticFields}>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="issue-holderRef">
-            {t('issue.holderRef')}
-          </label>
-          <span className={styles.help}>{t('issue.holderRefHelp')}</span>
-          <input id="issue-holderRef" type="text" autoComplete="off" {...register('holderRef')} />
-          {errors.holderRef && (
-            <span className={styles.fieldError}>{errors.holderRef.message}</span>
-          )}
-        </div>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="issue-maxUses">
-            {t('issue.maxUses')}
-          </label>
-          <span className={styles.help}>{t('issue.maxUsesHelp')}</span>
+        <FormField
+          label={t('issue.holderRef')}
+          htmlFor="issue-holderRef"
+          help={t('issue.holderRefHelp')}
+          error={errors.holderRef?.message}
+        >
+          <input
+            id="issue-holderRef"
+            type="text"
+            autoComplete="off"
+            className={khatmInputClass(errors.holderRef ? 'error' : 'default')}
+            {...register('holderRef')}
+          />
+        </FormField>
+        <FormField label={t('issue.maxUses')} htmlFor="issue-maxUses" help={t('issue.maxUsesHelp')}>
           <input
             id="issue-maxUses"
             type="number"
             min={1}
             autoComplete="off"
+            className={khatmInputClass()}
             {...register('maxUses')}
           />
-        </div>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="issue-validMinutes">
-            {t('issue.validMinutes')}
-          </label>
-          <span className={styles.help}>{t('issue.validMinutesHelp')}</span>
+        </FormField>
+        <FormField
+          label={t('issue.validMinutes')}
+          htmlFor="issue-validMinutes"
+          help={t('issue.validMinutesHelp')}
+        >
           <input
             id="issue-validMinutes"
             type="number"
             min={1}
             autoComplete="off"
+            className={khatmInputClass()}
             {...register('validMinutes')}
           />
-        </div>
+        </FormField>
       </div>
 
       {fields.map((field) => {
@@ -162,48 +166,50 @@ export function IssueForm({
         const inputType =
           field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text';
         const inputId = `issue-claim-${field.name}`;
-        return (
-          <div key={field.name} className={styles.field}>
-            <span className={styles.fieldHead}>
-              <label className={styles.label} htmlFor={inputId}>
-                {label}
-              </label>
-              <span className={styles.badges}>
-                {field.required && (
-                  <span className={`${styles.badge} ${styles.badgeRequired}`}>
-                    {t('issue.requiredField')}
-                  </span>
-                )}
-                {isSelective(field, sdFields) && (
-                  <span className={`${styles.badge} ${styles.badgeSelective}`}>
-                    {t('issue.selectiveDisclosure')}
-                  </span>
-                )}
+        const fieldError = errors.claims?.[field.name]?.message;
+        const badge = (
+          <span className={styles.badges}>
+            {field.required && (
+              <span className={`${styles.badge} ${styles.badgeRequired}`}>
+                {t('issue.requiredField')}
               </span>
-            </span>
+            )}
+            {isSelective(field, sdFields) && (
+              <span className={`${styles.badge} ${styles.badgeSelective}`}>
+                {t('issue.selectiveDisclosure')}
+              </span>
+            )}
+          </span>
+        );
+        return (
+          <FormField
+            key={field.name}
+            label={label}
+            htmlFor={inputId}
+            badge={badge}
+            error={fieldError}
+          >
             <input
               id={inputId}
               type={inputType}
               autoComplete="off"
+              className={khatmInputClass(fieldError ? 'error' : 'default')}
               {...register(`claims.${field.name}`)}
             />
-            {errors.claims?.[field.name] && (
-              <span className={styles.fieldError}>{errors.claims[field.name]?.message}</span>
-            )}
-          </div>
+          </FormField>
         );
       })}
 
       <ApiErrorBanner error={error} />
       <div className={styles.actions}>
         {onBack && (
-          <button type="button" onClick={onBack} disabled={isSubmitting}>
-            {t('common.back')}
-          </button>
+          <Button variant="secondary" type="button" onClick={onBack} disabled={isSubmitting}>
+            {t('issue.cancel')}
+          </Button>
         )}
-        <button type="submit" className={styles.submit} disabled={isSubmitting}>
+        <Button variant="primary" type="submit" disabled={isSubmitting}>
           {isSubmitting ? t('issue.submitting') : t('issue.submit')}
-        </button>
+        </Button>
       </div>
     </form>
   );

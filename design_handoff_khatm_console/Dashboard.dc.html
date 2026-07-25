@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0}
+  a{color:var(--color-primary);text-decoration:none}
+  a:hover{color:var(--color-primary-hover);text-decoration:underline}
+  ::selection{background:var(--color-primary-tint)}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:var(--color-border-strong);border-radius:8px}
+  ::-webkit-scrollbar-track{background:transparent}
+</style>
+</helmet>
+<div dir="{{ dir }}" style="{{ rootStyle }}">
+
+  <!-- SIDEBAR -->
+  <aside style="grid-area:side;background:var(--color-surface);border-inline-end:1px solid var(--color-border);display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:11px;padding:18px 20px;border-block-end:1px solid var(--color-border)">
+      <div style="position:relative;width:36px;height:36px;border-radius:50%;border:2px solid var(--color-primary);display:flex;align-items:center;justify-content:center;flex:none">
+        <div style="position:absolute;inset:4px;border-radius:50%;border:1px solid var(--color-primary);opacity:.45"></div>
+        <span style="font-family:var(--font-arabic);font-size:14px;font-weight:700;color:var(--color-primary);line-height:1">ختم</span>
+      </div>
+      <div style="display:flex;flex-direction:column;min-width:0;line-height:1.15">
+        <span style="font-size:14px;font-weight:700;letter-spacing:-.01em">{{ t.brand }}</span>
+        <span style="font-size:10.5px;color:var(--color-text-subtle);letter-spacing:.06em;text-transform:uppercase">{{ t.console }}</span>
+      </div>
+    </div>
+    <nav style="padding:10px 8px;display:flex;flex-direction:column;gap:1px;flex:1">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="9">
+        <a href="#" style="{{ n.style }}">
+          <span aria-hidden="true" style="flex:none;width:16px;display:inline-flex;justify-content:center;color:{{ n.iconColor }};font-family:var(--font-mono);font-size:13px">{{ n.icon }}</span>
+          <span style="flex:1">{{ n.label }}</span>
+          <sc-if value="{{ n.badge }}" hint-placeholder-val="{{ true }}">
+            <span style="padding:1px 7px;border-radius:var(--radius-pill);font-size:10.5px;font-weight:600;background:var(--color-warning-tint);color:var(--color-warning)">{{ n.badge }}</span>
+          </sc-if>
+        </a>
+      </sc-for>
+    </nav>
+    <div style="padding:12px 16px;border-block-start:1px solid var(--color-border);display:flex;align-items:center;gap:10px">
+      <div style="width:28px;height:28px;border-radius:50%;background:var(--color-primary-tint);color:var(--color-primary);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none">BA</div>
+      <div style="display:flex;flex-direction:column;min-width:0;line-height:1.2;flex:1">
+        <span style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.user }}</span>
+        <span style="font-size:10.5px;color:var(--color-text-subtle)">{{ t.tenant }} · {{ t.env }}</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- TOPBAR -->
+  <header style="grid-area:top;display:flex;align-items:center;gap:14px;padding:0 24px;background:color-mix(in oklch, var(--color-surface) 86%, transparent);backdrop-filter:blur(10px);border-block-end:1px solid var(--color-border)">
+    <div style="display:flex;flex-direction:column;line-height:1.2;flex:1;min-width:0">
+      <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--color-text-subtle)">
+        <span>{{ t.crumb1 }}</span><span>›</span><span>{{ t.crumb2 }}</span>
+      </div>
+      <h1 style="margin:2px 0 0;font-size:18px;font-weight:700;letter-spacing:-.01em">{{ t.dash }}</h1>
+    </div>
+    <div style="position:relative;flex:1;max-width:340px">
+      <input placeholder="{{ t.search }}" style="width:100%;padding:8px 12px 8px 34px;padding-inline-start:34px;padding-inline-end:52px;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-surface-2);color:var(--color-text);font:inherit;font-size:12.5px" style-focus="border-color:var(--color-focus);box-shadow:0 0 0 3px color-mix(in oklch, var(--color-focus) 22%, transparent);outline:none;background:var(--color-surface)"/>
+      <span aria-hidden="true" style="position:absolute;inset-inline-start:11px;top:50%;transform:translateY(-50%);color:var(--color-text-subtle);font-size:13px">⌕</span>
+      <span aria-hidden="true" style="position:absolute;inset-inline-end:10px;top:50%;transform:translateY(-50%);font-family:var(--font-mono);font-size:10px;color:var(--color-text-subtle);padding:2px 6px;border:1px solid var(--color-border);border-radius:4px;background:var(--color-surface)">⌘K</span>
+    </div>
+    <div style="display:inline-flex;border-radius:var(--radius);overflow:hidden;border:1px solid var(--color-border-strong)">
+      <button onClick="{{ setLight }}" style="{{ segLight }}">☀ {{ t.light }}</button>
+      <button onClick="{{ setDark }}" style="{{ segDark }}">☾ {{ t.dark }}</button>
+    </div>
+    <div style="display:inline-flex;border-radius:var(--radius);overflow:hidden;border:1px solid var(--color-border-strong)">
+      <button onClick="{{ setEn }}" style="{{ segEn }}">EN</button>
+      <button onClick="{{ setAr }}" style="{{ segAr }}">ع</button>
+    </div>
+    <button style="position:relative;padding:8px;border:1px solid var(--color-border-strong);border-radius:var(--radius);background:var(--color-surface);color:var(--color-text);font:inherit;font-size:13px;cursor:pointer;width:36px;height:34px" style-hover="background:var(--color-surface-2)">
+      <span aria-hidden="true">◔</span>
+      <span style="position:absolute;top:-4px;inset-inline-end:-4px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--color-danger);color:#fff;font-size:9.5px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;border:2px solid var(--color-surface)">3</span>
+    </button>
+    <button style="padding:8px 14px;border:1px solid transparent;border-radius:var(--radius);background:var(--color-primary);color:var(--color-primary-contrast);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap" style-hover="background:var(--color-primary-hover)">＋ {{ t.issue_btn }}</button>
+  </header>
+
+  <!-- MAIN -->
+  <main style="grid-area:main;padding:24px;overflow-y:auto;display:flex;flex-direction:column;gap:20px">
+
+    <!-- toolbar row -->
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:200px">
+        <span style="font-size:20px;font-weight:700;letter-spacing:-.01em">{{ t.headline }}</span>
+        <span style="font-size:12px;color:var(--color-text-muted)">{{ t.headline_sub }} · <span dir="ltr" style="unicode-bidi:isolate;font-family:var(--font-mono);font-variant-numeric:tabular-nums">2026-07-25 14:03 UTC</span></span>
+      </div>
+      <div style="display:inline-flex;border-radius:var(--radius);overflow:hidden;border:1px solid var(--color-border-strong)">
+        <sc-for list="{{ ranges }}" as="r" hint-placeholder-count="4">
+          <button onClick="{{ r.set }}" style="{{ r.style }}">{{ r.label }}</button>
+        </sc-for>
+      </div>
+      <button style="display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border:1px solid var(--color-border-strong);border-radius:var(--radius);background:var(--color-surface);color:var(--color-text);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--color-surface-2)"><span aria-hidden="true">↓</span>{{ t.export }}</button>
+      <button style="display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border:1px solid var(--color-border-strong);border-radius:var(--radius);background:var(--color-surface);color:var(--color-text);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--color-surface-2)"><span aria-hidden="true">↻</span>{{ t.refresh }}</button>
+    </div>
+
+    <!-- KPI ROW -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+      <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+        <div style="position:relative;padding:16px 18px;border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-surface);display:flex;flex-direction:column;gap:10px;overflow:hidden">
+          <div style="position:absolute;inset-inline-start:0;top:0;bottom:0;width:3px;background:{{ k.accent }}"></div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:32px;height:32px;border-radius:8px;background:{{ k.tint }};color:{{ k.accent }};display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:14px;font-weight:700">{{ k.icon }}</div>
+            <span style="font-size:11.5px;font-weight:600;color:var(--color-text-muted);letter-spacing:.02em;text-transform:uppercase">{{ k.label }}</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:8px;line-height:1">
+            <span dir="ltr" style="unicode-bidi:isolate;font-size:30px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums">{{ k.value }}</span>
+            <span style="font-size:12px;font-weight:600;color:{{ k.deltaColor }}">{{ k.delta }}</span>
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:2px;height:26px">
+            <sc-for list="{{ k.spark }}" as="s" hint-placeholder-count="14">
+              <div style="flex:1;background:{{ k.accent }};opacity:.28;border-radius:2px 2px 0 0;height:{{ s }}%"></div>
+            </sc-for>
+          </div>
+          <span style="font-size:11px;color:var(--color-text-subtle)">{{ k.foot }}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- MIDDLE: chart + key health -->
+    <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:14px">
+      <!-- chart card -->
+      <div style="padding:18px 20px 16px;border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-surface);display:flex;flex-direction:column;gap:14px;min-height:320px">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+            <span style="font-size:14px;font-weight:700">{{ t.chart_title }}</span>
+            <span style="font-size:11.5px;color:var(--color-text-muted)">{{ t.chart_sub }}</span>
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap">
+            <sc-for list="{{ legend }}" as="l" hint-placeholder-count="3">
+              <div style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--color-text-muted)"><span style="width:9px;height:9px;border-radius:2px;background:{{ l.color }}"></span>{{ l.label }} <span style="color:var(--color-text);font-weight:600;font-variant-numeric:tabular-nums">{{ l.total }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="flex:1;position:relative">
+          <div dir="ltr" style="position:relative;height:220px;display:grid;grid-template-columns:32px 1fr;gap:8px">
+            <div style="display:flex;flex-direction:column;justify-content:space-between;font-family:var(--font-mono);font-size:10px;color:var(--color-text-subtle);text-align:end;padding-inline-end:4px;font-variant-numeric:tabular-nums">
+              <sc-for list="{{ yAxis }}" as="y" hint-placeholder-count="5"><span>{{ y }}</span></sc-for>
+            </div>
+            <div style="position:relative;border-inline-start:1px solid var(--color-border);border-block-end:1px solid var(--color-border)">
+              <div style="position:absolute;inset:0;background-image:linear-gradient(to top, transparent calc(25% - 1px), var(--color-border) 25%, transparent calc(25% + 1px)),linear-gradient(to top, transparent calc(50% - 1px), var(--color-border) 50%, transparent calc(50% + 1px)),linear-gradient(to top, transparent calc(75% - 1px), var(--color-border) 75%, transparent calc(75% + 1px));opacity:.6"></div>
+              <div style="position:absolute;inset:0;display:flex;align-items:flex-end;gap:6px;padding:0 6px">
+                <sc-for list="{{ chartBars }}" as="b" hint-placeholder-count="14">
+                  <div style="flex:1;display:flex;flex-direction:column-reverse;gap:2px;height:100%;justify-content:flex-start">
+                    <div style="height:{{ b.a }}%;background:var(--color-primary);border-radius:2px 2px 0 0"></div>
+                    <div style="height:{{ b.b }}%;background:var(--color-info);opacity:.85;border-radius:2px 2px 0 0"></div>
+                    <div style="height:{{ b.c }}%;background:var(--color-danger);opacity:.85;border-radius:2px 2px 0 0"></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+          <div dir="ltr" style="display:grid;grid-template-columns:32px 1fr;gap:8px;margin-top:6px">
+            <div></div>
+            <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:10px;color:var(--color-text-subtle);padding:0 6px">
+              <sc-for list="{{ xAxis }}" as="x" hint-placeholder-count="7"><span>{{ x }}</span></sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- key health -->
+      <div style="padding:18px 20px;border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-surface);display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:14px;font-weight:700;flex:1">{{ t.keys_title }}</span>
+          <a href="#" style="font-size:11.5px;font-weight:600">{{ t.view_all }} →</a>
+        </div>
+        <sc-for list="{{ keys }}" as="k" hint-placeholder-count="3">
+          <div style="display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-surface-2)">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="width:8px;height:8px;border-radius:50%;background:{{ k.dot }};box-shadow:0 0 0 3px color-mix(in oklch, {{ k.dot }} 22%, transparent)"></span>
+              <span style="font-size:12.5px;font-weight:600;flex:1">{{ k.name }}</span>
+              <span dir="ltr" style="unicode-bidi:isolate;font-family:var(--font-mono);font-size:11px;color:var(--color-text-muted);font-variant-numeric:tabular-nums">{{ k.kid }}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-text-muted)">
+              <span>{{ k.statusLabel }}</span>
+              <span dir="ltr" style="unicode-bidi:isolate;font-family:var(--font-mono);font-variant-numeric:tabular-nums">{{ k.expiry }}</span>
+            </div>
+            <div style="position:relative;height:5px;border-radius:3px;background:var(--color-border);overflow:hidden">
+              <div style="position:absolute;inset-block:0;inset-inline-start:0;width:{{ k.pct }}%;background:{{ k.dot }}"></div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- BOTTOM: activity + attention + parties -->
+    <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:14px">
+      <!-- recent activity -->
+      <div style="border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-surface);overflow:hidden;display:flex;flex-direction:column">
+        <div style="padding:14px 18px;display:flex;align-items:center;gap:8px;border-block-end:1px solid var(--color-border)">
+          <span style="font-size:14px;font-weight:700;flex:1">{{ t.activity_title }}</span>
+          <div style="display:inline-flex;border-radius:var(--radius);overflow:hidden;border:1px solid var(--color-border)">
+            <sc-for list="{{ activityTabs }}" as="tab" hint-placeholder-count="4">
+              <button style="{{ tab.style }}">{{ tab.label }}</button>
+            </sc-for>
+          </div>
+          <a href="#" style="font-size:11.5px;font-weight:600">{{ t.view_all }} →</a>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+          <thead>
+            <tr style="background:var(--color-surface-2)">
+              <th style="text-align:start;padding:8px 14px;font-weight:600;font-size:11px;color:var(--color-text-muted);letter-spacing:.04em;text-transform:uppercase;border-block-end:1px solid var(--color-border)">{{ t.th_ref }}</th>
+              <th style="text-align:start;padding:8px 14px;font-weight:600;font-size:11px;color:var(--color-text-muted);letter-spacing:.04em;text-transform:uppercase;border-block-end:1px solid var(--color-border)">{{ t.th_event }}</th>
+              <th style="text-align:start;padding:8px 14px;font-weight:600;font-size:11px;color:var(--color-text-muted);letter-spacing:.04em;text-transform:uppercase;border-block-end:1px solid var(--color-border)">{{ t.th_party }}</th>
+              <th style="text-align:start;padding:8px 14px;font-weight:600;font-size:11px;color:var(--color-text-muted);letter-spacing:.04em;text-transform:uppercase;border-block-end:1px solid var(--color-border);white-space:nowrap">{{ t.th_when }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{ activity }}" as="a" hint-placeholder-count="7">
+              <tr style="height:32px" style-hover="background:var(--color-surface-2)">
+                <td style="padding:0 14px;border-block-end:1px solid var(--color-border)"><span dir="ltr" style="unicode-bidi:isolate;font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:11.5px">{{ a.ref }}</span></td>
+                <td style="padding:0 14px;border-block-end:1px solid var(--color-border)"><span style="display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:var(--radius-pill);font-size:11px;font-weight:600;background:{{ a.bg }};color:{{ a.fg }}"><span style="width:6px;height:6px;border-radius:50%;background:{{ a.fg }}"></span>{{ a.event }}</span></td>
+                <td style="padding:0 14px;border-block-end:1px solid var(--color-border);color:var(--color-text-muted);white-space:nowrap">{{ a.party }}</td>
+                <td style="padding:0 14px;border-block-end:1px solid var(--color-border);color:var(--color-text-subtle)"><span dir="ltr" style="unicode-bidi:isolate;font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:11px">{{ a.when }}</span></td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- right column: needs attention + top parties -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="padding:16px 18px;border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-surface);display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:14px;font-weight:700;flex:1">{{ t.attention_title }}</span>
+            <span style="padding:2px 9px;border-radius:var(--radius-pill);font-size:11px;font-weight:600;background:var(--color-warning-tint);color:var(--color-warning)">{{ attentionCount }}</span>
+          </div>
+          <sc-for list="{{ attention }}" as="i" hint-placeholder-count="3">
+            <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-surface-2)">
+              <span style="flex:none;width:20px;height:20px;border-radius:50%;background:{{ i.fg }};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">{{ i.glyph }}</span>
+              <div style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0">
+                <span style="font-size:12.5px;font-weight:600">{{ i.title }}</span>
+                <span style="font-size:11.5px;color:var(--color-text-muted);line-height:1.45">{{ i.body }}</span>
+              </div>
+              <a href="#" style="flex:none;font-size:11.5px;font-weight:600;white-space:nowrap">{{ i.cta }} →</a>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="padding:16px 18px;border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-surface);display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:14px;font-weight:700;flex:1">{{ t.parties_title }}</span>
+            <a href="#" style="font-size:11.5px;font-weight:600">{{ t.view_all }} →</a>
+          </div>
+          <sc-for list="{{ parties }}" as="p" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:28px;height:28px;border-radius:6px;background:var(--color-primary-tint);color:var(--color-primary);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none">{{ p.initials }}</div>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+                <span style="font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.name }}</span>
+                <span style="font-size:11px;color:var(--color-text-subtle)">{{ p.calls }} {{ t.calls }} · {{ p.rate }} {{ t.success_rate }}</span>
+              </div>
+              <div dir="ltr" style="width:96px;height:6px;border-radius:3px;background:var(--color-border);overflow:hidden;flex:none;position:relative">
+                <div style="position:absolute;inset-block:0;inset-inline-start:0;width:{{ p.pct }}%;background:var(--color-primary)"></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:940},&quot;initialTheme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;initialLang&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;en&quot;,&quot;ar&quot;],&quot;default&quot;:&quot;en&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;primaryHue&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;min&quot;:120,&quot;max&quot;:200,&quot;step&quot;:1,&quot;default&quot;:158,&quot;unit&quot;:&quot;°&quot;,&quot;tsType&quot;:&quot;number&quot;}}">
+const HUE = 158;
+const FONT_SANS='system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+const FONT_AR='"Segoe UI", Tahoma, "Geeza Pro", "Noto Kufi Arabic", "Noto Naskh Arabic", sans-serif';
+const FONT_MONO='ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", Consolas, "Liberation Mono", monospace';
+
+const TOK = [
+  ['--color-bg','oklch(0.985 0.004 155)','oklch(0.17 0.006 158)'],
+  ['--color-surface','oklch(1 0 0)','oklch(0.215 0.008 158)'],
+  ['--color-surface-2','oklch(0.972 0.005 155)','oklch(0.255 0.009 158)'],
+  ['--color-border','oklch(0.9 0.007 155)','oklch(0.31 0.01 158)'],
+  ['--color-border-strong','oklch(0.8 0.01 155)','oklch(0.42 0.012 158)'],
+  ['--color-text','oklch(0.24 0.014 158)','oklch(0.95 0.005 158)'],
+  ['--color-text-muted','oklch(0.47 0.012 158)','oklch(0.72 0.008 158)'],
+  ['--color-text-subtle','oklch(0.62 0.01 158)','oklch(0.56 0.008 158)'],
+  ['--color-success','oklch(0.5 0.12 148)','oklch(0.72 0.14 148)'],
+  ['--color-success-tint','oklch(0.95 0.035 148)','oklch(0.3 0.05 148)'],
+  ['--color-info','oklch(0.53 0.12 245)','oklch(0.72 0.12 245)'],
+  ['--color-info-tint','oklch(0.95 0.03 245)','oklch(0.3 0.05 245)'],
+  ['--color-warning','oklch(0.62 0.12 76)','oklch(0.8 0.13 80)'],
+  ['--color-warning-tint','oklch(0.95 0.05 82)','oklch(0.33 0.06 76)'],
+  ['--color-danger','oklch(0.52 0.18 27)','oklch(0.68 0.17 27)'],
+  ['--color-danger-tint','oklch(0.95 0.04 27)','oklch(0.33 0.07 27)'],
+  ['--color-neutral','oklch(0.55 0.008 158)','oklch(0.66 0.008 158)'],
+  ['--color-neutral-tint','oklch(0.93 0.004 158)','oklch(0.3 0.006 158)'],
+];
+
+const STR = {
+  en: {
+    brand:'Khatm', console:'Console', user:'Bootstrap Administrator', tenant:'default-tenant', env:'production',
+    crumb1:'Operations', crumb2:'Dashboard', dash:'Dashboard', search:'Search credential, ref, party…',
+    light:'Light', dark:'Dark', issue_btn:'Issue',
+    headline:'Operations at a glance', headline_sub:'Last updated',
+    export:'Export', refresh:'Refresh',
+    r7:'7d', r30:'30d', r90:'90d', rc:'Custom',
+    kpi_issued:'Issued', kpi_consumed:'Consumed', kpi_verified:'Verifications passed', kpi_revoked:'Revoked',
+    vs_prev:'vs. prev period',
+    kpi_issued_foot:'Peak: Tuesday, 18:00', kpi_consumed_foot:'42% redemption within 24h',
+    kpi_verified_foot:'0.6% failure rate', kpi_revoked_foot:'2 by request · 1 compromised',
+    chart_title:'Credential lifecycle', chart_sub:'Daily volume by event',
+    l_issued:'Issued', l_consumed:'Consumed', l_revoked:'Revoked',
+    keys_title:'Signing keys', view_all:'View all',
+    key_active:'Active · rotation in', key_rotating:'Rotating (grace)', key_retired:'Retired',
+    activity_title:'Recent activity',
+    tab_all:'All', tab_iss:'Issued', tab_con:'Consumed', tab_rev:'Revoked',
+    th_ref:'Reference', th_event:'Event', th_party:'Consuming party', th_when:'When',
+    attention_title:'Needs attention',
+    at1_t:'1 consume denied', at1_b:'Globex tried a suspended key. Investigate before re-enabling.', at1_cta:'Review',
+    at2_t:'Verification failure rate up', at2_b:'0.6% (24h) vs 0.2% baseline — inspect schema Employment proof v2.', at2_cta:'Open schema',
+    at3_t:'Signing key nearing rotation', at3_b:'kid-2026-Q3 rotates in 6 days. Confirm downstream consumers.', at3_cta:'Plan rotation',
+    parties_title:'Top consuming parties', calls:'calls', success_rate:'success',
+    ev_issued:'Issued', ev_consumed:'Consumed', ev_revoked:'Revoked', ev_denied:'Denied', ev_verified:'Verified',
+    p_min:'Ministry of Interior', p_acme:'Acme Bank', p_health:'Health Authority', p_globex:'Globex',
+  },
+  ar: {
+    brand:'خَتْم', console:'لوحة التحكّم', user:'المسؤول', tenant:'المستأجر الافتراضي', env:'الإنتاج',
+    crumb1:'العمليات', crumb2:'اللوحة', dash:'اللوحة', search:'ابحث عن وثيقة أو مرجع أو طرف…',
+    light:'فاتح', dark:'داكن', issue_btn:'إصدار',
+    headline:'نظرة عامّة على العمليات', headline_sub:'آخر تحديث',
+    export:'تصدير', refresh:'تحديث',
+    r7:'٧ أيام', r30:'٣٠ يوم', r90:'٩٠ يوم', rc:'مخصّص',
+    kpi_issued:'المُصدَرة', kpi_consumed:'المُستهلَكة', kpi_verified:'عمليات تحقّق ناجحة', kpi_revoked:'المُبطَلة',
+    vs_prev:'مقارنةً بالفترة السابقة',
+    kpi_issued_foot:'الذروة: الثلاثاء ١٨:٠٠', kpi_consumed_foot:'٤٢٪ استُهلكت خلال ٢٤ ساعة',
+    kpi_verified_foot:'نسبة فشل ٠٫٦٪', kpi_revoked_foot:'٢ بطلب · ١ اختراق',
+    chart_title:'دورة حياة الوثائق', chart_sub:'الحجم اليومي حسب الحدث',
+    l_issued:'مُصدَرة', l_consumed:'مُستهلَكة', l_revoked:'مُبطَلة',
+    keys_title:'مفاتيح التوقيع', view_all:'عرض الكل',
+    key_active:'نشط · تدوير خلال', key_rotating:'قيد التدوير', key_retired:'متقاعد',
+    activity_title:'النشاط الأخير',
+    tab_all:'الكل', tab_iss:'مُصدَرة', tab_con:'مُستهلَكة', tab_rev:'مُبطَلة',
+    th_ref:'المرجع', th_event:'الحدث', th_party:'الطرف المُستهلِك', th_when:'الوقت',
+    attention_title:'يستدعي الانتباه',
+    at1_t:'استهلاك مرفوض', at1_b:'حاول جلوبكس استعمال مفتاح موقوف. راجِع قبل إعادة التفعيل.', at1_cta:'مراجعة',
+    at2_t:'ارتفاع نسبة فشل التحقّق', at2_b:'٠٫٦٪ خلال ٢٤ ساعة مقابل ٠٫٢٪ أساس — افحص مخطّط إثبات التوظيف ٢.', at2_cta:'فتح المخطّط',
+    at3_t:'قرب تدوير مفتاح توقيع', at3_b:'يُدوَّر kid-2026-Q3 خلال ٦ أيّام. أكِّد جاهزية المستهلكين.', at3_cta:'التخطيط',
+    parties_title:'أعلى الأطراف المُستهلِكة', calls:'طلب', success_rate:'نجاح',
+    ev_issued:'مُصدَرة', ev_consumed:'مُستهلَكة', ev_revoked:'مُبطَلة', ev_denied:'مرفوضة', ev_verified:'مُتحقَّق',
+    p_min:'وزارة الداخلية', p_acme:'بنك أكمي', p_health:'هيئة الصحة', p_globex:'جلوبكس',
+  },
+};
+
+class Component extends DCLogic {
+  state = { theme:null, lang:null, range:'30d', tab:'all' };
+  eff(k, prop, dflt){ return this.state[k]!=null ? this.state[k] : (this.props[prop]!=null ? this.props[prop] : dflt); }
+
+  buildVars(dark, hue){
+    const o = {};
+    TOK.forEach(([n,l,d]) => o[n] = dark ? d : l);
+    if (dark){
+      o['--color-primary'] = `oklch(0.7 0.13 ${hue})`;
+      o['--color-primary-hover'] = `oklch(0.77 0.13 ${hue})`;
+      o['--color-primary-tint'] = `oklch(0.3 0.05 ${hue})`;
+      o['--color-primary-contrast'] = `oklch(0.16 0.02 ${hue})`;
+      o['--color-focus'] = `oklch(0.72 0.14 ${hue})`;
+    } else {
+      o['--color-primary'] = `oklch(0.48 0.11 ${hue})`;
+      o['--color-primary-hover'] = `oklch(0.41 0.11 ${hue})`;
+      o['--color-primary-tint'] = `oklch(0.95 0.03 ${hue})`;
+      o['--color-primary-contrast'] = `oklch(0.99 0.01 ${hue})`;
+      o['--color-focus'] = `oklch(0.55 0.13 ${hue})`;
+    }
+    return o;
+  }
+
+  seg(active){
+    return {
+      padding:'6px 13px', border:'none', cursor:'pointer', font:'inherit', fontSize:'12px', fontWeight:600,
+      background: active ? 'var(--color-primary)' : 'var(--color-surface)',
+      color: active ? 'var(--color-primary-contrast)' : 'var(--color-text-muted)',
+      transition:'background .15s, color .15s',
+    };
+  }
+  rangeSeg(active){
+    return { ...this.seg(active), padding:'6px 11px', fontSize:'11.5px' };
+  }
+  tabSeg(active){
+    return {
+      padding:'4px 10px', border:'none', cursor:'pointer', font:'inherit', fontSize:'11px', fontWeight:600,
+      background: active ? 'var(--color-primary-tint)' : 'var(--color-surface)',
+      color: active ? 'var(--color-primary)' : 'var(--color-text-muted)',
+    };
+  }
+  navItem(active){
+    return {
+      display:'flex', alignItems:'center', gap:'10px', padding:'8px 12px',
+      borderRadius:'var(--radius)', fontSize:'12.5px', fontWeight:active?600:500,
+      color: active ? 'var(--color-primary)' : 'var(--color-text)',
+      background: active ? 'var(--color-primary-tint)' : 'transparent',
+      textDecoration:'none', transition:'background .15s',
+    };
+  }
+
+  renderVals(){
+    const theme = this.eff('theme','initialTheme','light');
+    const lang = this.eff('lang','initialLang','en');
+    const hue = this.props.primaryHue ?? HUE;
+    const dark = theme === 'dark';
+    const ar = lang === 'ar';
+    const t = STR[ar?'ar':'en'];
+    const vars = this.buildVars(dark, hue);
+
+    const rootStyle = {
+      ...vars,
+      '--font-sans':FONT_SANS,'--font-arabic':FONT_AR,'--font-mono':FONT_MONO,
+      '--radius-sm':'4px','--radius':'7px','--radius-lg':'12px','--radius-pill':'999px',
+      display:'grid',
+      gridTemplateColumns:'240px 1fr',
+      gridTemplateRows:'56px 1fr',
+      gridTemplateAreas:'"side top" "side main"',
+      minHeight:'100vh', height:'100vh',
+      background:'var(--color-bg)', color:'var(--color-text)',
+      fontFamily: ar ? 'var(--font-arabic)' : 'var(--font-sans)',
+      fontSize:'13px', lineHeight:1.5,
+      colorScheme: dark ? 'dark' : 'light',
+    };
+
+    const navSpec = [
+      {label: ar?'اللوحة':'Dashboard', icon:'▦', active:true},
+      {label: ar?'الإصدار':'Issue', icon:'＋'},
+      {label: ar?'إصدار مجمّع':'Bulk Issue', icon:'≡'},
+      {label: ar?'المخطّطات':'Schemas', icon:'▤'},
+      {label: ar?'إدارة المخطّطات':'Manage Schemas', icon:'✎'},
+      {label: ar?'الوثائق':'Credentials', icon:'◈'},
+      {label: ar?'التحقّق':'Verify', icon:'✓'},
+      {label: ar?'الإبطال':'Revoke', icon:'⊘', badge:'1'},
+      {label: ar?'الأطراف المُستهلِكة':'Consuming Parties', icon:'⚑'},
+      {label: ar?'محاكي الاستهلاك':'Consume Simulator', icon:'▷'},
+    ];
+    const nav = navSpec.map(n => ({
+      ...n,
+      style: this.navItem(!!n.active),
+      iconColor: n.active ? 'var(--color-primary)' : 'var(--color-text-subtle)',
+    }));
+
+    const range = this.state.range;
+    const ranges = [
+      {key:'7d', label:t.r7}, {key:'30d', label:t.r30},
+      {key:'90d', label:t.r90}, {key:'custom', label:t.rc},
+    ].map(r => ({...r, style:this.rangeSeg(range===r.key), set: () => this.setState({range:r.key})}));
+
+    const sparkA = [40,55,45,60,50,72,65,58,68,80,72,85,78,92];
+    const sparkB = [30,45,40,50,42,55,50,48,60,58,65,60,70,68];
+    const sparkC = [50,60,55,65,70,72,68,80,78,85,82,90,86,94];
+    const sparkD = [20,22,18,25,28,24,30,26,22,20,25,28,24,30];
+
+    const kpis = [
+      {label:t.kpi_issued, value:'1,284', delta:'▲ 12.4%', deltaColor:'var(--color-success)',
+       accent:'var(--color-primary)', tint:'var(--color-primary-tint)', icon:'✚', spark:sparkA, foot:t.kpi_issued_foot},
+      {label:t.kpi_consumed, value:'847', delta:'▲ 5.1%', deltaColor:'var(--color-success)',
+       accent:'var(--color-info)', tint:'var(--color-info-tint)', icon:'↓', spark:sparkB, foot:t.kpi_consumed_foot},
+      {label:t.kpi_verified, value:'3,912', delta:'▲ 2.8%', deltaColor:'var(--color-success)',
+       accent:'var(--color-success)', tint:'var(--color-success-tint)', icon:'✓', spark:sparkC, foot:t.kpi_verified_foot},
+      {label:t.kpi_revoked, value:'3', delta:'▼ 40%', deltaColor:'var(--color-text-muted)',
+       accent:'var(--color-danger)', tint:'var(--color-danger-tint)', icon:'⊘', spark:sparkD, foot:t.kpi_revoked_foot},
+    ];
+
+    const legend = [
+      {label:t.l_issued, color:'var(--color-primary)', total:'1,284'},
+      {label:t.l_consumed, color:'var(--color-info)', total:'847'},
+      {label:t.l_revoked, color:'var(--color-danger)', total:'3'},
+    ];
+    const yAxis = ['200','150','100','50','0'];
+    const xAxis = ['Jul 1','Jul 5','Jul 10','Jul 15','Jul 20','Jul 25','Jul 30'];
+    const chartBars = [
+      [55,32,4],[62,38,2],[48,30,3],[70,42,5],[58,36,4],[74,44,6],[65,40,3],
+      [80,48,4],[68,42,5],[86,52,7],[72,46,3],[90,56,5],[78,50,4],[95,60,6],
+    ].map(([a,b,c]) => ({a,b,c}));
+
+    const keys = [
+      {name: ar?'مفتاح التوقيع الحالي':'Current signing key', kid:'kid-2026-Q3',
+       dot:'var(--color-success)', statusLabel: `${t.key_active} 6d`, expiry:'2026-08-01', pct:82},
+      {name: ar?'مفتاح سابق (مهلة)':'Previous key (grace)', kid:'kid-2026-Q2',
+       dot:'var(--color-warning)', statusLabel:t.key_rotating, expiry:'2026-07-31', pct:36},
+      {name: ar?'متقاعد':'Retired', kid:'kid-2026-Q1',
+       dot:'var(--color-neutral)', statusLabel:t.key_retired, expiry:'2026-04-01', pct:100},
+    ];
+
+    const tab = this.state.tab;
+    const activityTabs = [
+      {key:'all', label:t.tab_all},{key:'iss', label:t.tab_iss},
+      {key:'con', label:t.tab_con},{key:'rev', label:t.tab_rev},
+    ].map(x => ({...x, style:this.tabSeg(tab===x.key)}));
+
+    const evStyle = {
+      iss:{bg:'var(--color-success-tint)', fg:'var(--color-success)', label:t.ev_issued},
+      con:{bg:'var(--color-info-tint)', fg:'var(--color-info)', label:t.ev_consumed},
+      rev:{bg:'var(--color-danger-tint)', fg:'var(--color-danger)', label:t.ev_revoked},
+      den:{bg:'var(--color-danger-tint)', fg:'var(--color-danger)', label:t.ev_denied},
+      ver:{bg:'var(--color-success-tint)', fg:'var(--color-success)', label:t.ev_verified},
+    };
+    const rawActivity = [
+      ['KHT-9F3A-2C71','iss',t.p_min,'14:02'],
+      ['KHT-1B77-8E20','con',t.p_acme,'13:58'],
+      ['KHT-4D02-A9C5','ver',t.p_health,'13:47'],
+      ['KHT-7E51-33F0','den',t.p_globex,'13:31'],
+      ['KHT-0A2C-6B98','iss',t.p_min,'13:20'],
+      ['KHT-6C13-90D4','rev',t.p_acme,'12:55'],
+      ['KHT-8F44-1E27','con',t.p_health,'12:41'],
+    ];
+    const activity = rawActivity.map(([ref,ev,party,when]) => {
+      const s = evStyle[ev];
+      return { ref, party, when, event:s.label, bg:s.bg, fg:s.fg };
+    });
+
+    const attention = [
+      {glyph:'!', fg:'var(--color-danger)', title:t.at1_t, body:t.at1_b, cta:t.at1_cta},
+      {glyph:'⚠', fg:'var(--color-warning)', title:t.at2_t, body:t.at2_b, cta:t.at2_cta},
+      {glyph:'◷', fg:'var(--color-info)', title:t.at3_t, body:t.at3_b, cta:t.at3_cta},
+    ];
+
+    const initials = (ar?['وز','بأ','هص','جل']:['MI','AB','HA','GX']);
+    const parties = [
+      {name:t.p_min, initials:initials[0], calls:'2,410', rate:'99.8%', pct:96},
+      {name:t.p_acme, initials:initials[1], calls:'1,207', rate:'99.4%', pct:78},
+      {name:t.p_health, initials:initials[2], calls:'845', rate:'98.9%', pct:58},
+      {name:t.p_globex, initials:initials[3], calls:'96', rate:'71.2%', pct:18},
+    ];
+
+    return {
+      rootStyle, dir: ar?'rtl':'ltr', t, nav,
+      segLight:this.seg(!dark), segDark:this.seg(dark),
+      segEn:this.seg(!ar), segAr:this.seg(ar),
+      setLight: () => this.setState({theme:'light'}),
+      setDark:  () => this.setState({theme:'dark'}),
+      setEn:    () => this.setState({lang:'en'}),
+      setAr:    () => this.setState({lang:'ar'}),
+      ranges, kpis, legend, yAxis, xAxis, chartBars,
+      keys, activityTabs, activity,
+      attention, attentionCount: attention.length, parties,
+    };
+  }
+}
+</script>
+</body>
+</html>

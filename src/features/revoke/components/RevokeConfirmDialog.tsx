@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/Button';
+import { khatmInputClass } from '@/components/ui/FormField';
 import styles from './RevokeConfirmDialog.module.css';
 
 interface RevokeConfirmDialogProps {
@@ -51,6 +53,7 @@ export function RevokeConfirmDialog({
             ref={inputRef}
             type="text"
             autoComplete="off"
+            className={`${khatmInputClass(typed.trim().length > 0 && !matches ? 'error' : 'default')} ltr-embed`}
             value={typed}
             onChange={(e) => setTyped(e.target.value)}
           />
@@ -60,17 +63,17 @@ export function RevokeConfirmDialog({
         </div>
         {errorMessage && <p className={styles.mismatch}>{errorMessage}</p>}
         <div className={styles.actions}>
-          <button type="button" className={styles.cancel} onClick={onCancel} disabled={isRevoking}>
+          <Button variant="secondary" type="button" onClick={onCancel} disabled={isRevoking}>
             {t('revoke.confirmCancel')}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="danger"
             type="button"
-            className={styles.danger}
             onClick={onConfirm}
             disabled={!matches || isRevoking}
           >
             {isRevoking ? t('revoke.revoking') : t('revoke.confirmRevoke')}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

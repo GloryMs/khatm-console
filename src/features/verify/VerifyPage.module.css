@@ -2,12 +2,12 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  max-width: 720px;
+  max-inline-size: 720px;
 }
 
 .title {
   margin: 0;
-  font-size: 1.3rem;
+  font-size: var(--fs-h1);
 }
 
 .form {
@@ -16,50 +16,24 @@
   gap: var(--space-4);
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  font-size: 0.9rem;
-}
-
-.label {
-  font-weight: 500;
-}
-
 .help {
   color: var(--color-text-muted);
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
+  margin: 0;
 }
 
-.field textarea {
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font: inherit;
-  font-family: 'SFMono-Regular', 'Consolas', monospace;
+.resultHeading {
+  margin: 0;
+  font-size: var(--fs-h3);
+}
+
+.textarea {
+  font-family: var(--font-mono);
   min-block-size: 120px;
   resize: vertical;
 }
 
-.fieldError {
-  color: var(--color-danger);
-  font-size: 0.8rem;
-}
-
+/* .form is a flex column, which stretches children full-width by default. */
 .submit {
   align-self: flex-start;
-  padding: var(--space-2) var(--space-4);
-  background: var(--color-primary);
-  color: var(--color-primary-contrast);
-  border: none;
-  border-radius: var(--radius-sm);
-  font: inherit;
-  font-size: 0.95rem;
-  cursor: pointer;
-}
-
-.submit:disabled {
-  opacity: 0.6;
-  cursor: default;
 }

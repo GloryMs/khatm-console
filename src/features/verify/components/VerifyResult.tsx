@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import type { VerifyResponse } from '../api';
 import styles from './VerifyResult.module.css';
 
@@ -31,9 +32,9 @@ export function VerifyResult({ result }: { result: VerifyResponse }) {
   return (
     <div className={styles.result} data-testid="verify-result">
       <div className={styles.head}>
-        <span className={`${styles.verdict} ${result.valid ? styles.valid : styles.invalid}`}>
+        <StatusBadge tone={result.valid ? 'success' : 'danger'}>
           {result.valid ? t('verify.valid') : t('verify.invalid')}
-        </span>
+        </StatusBadge>
         {result.revoked !== undefined && (
           <span className={styles.note}>
             {result.revoked ? t('verify.revoked') : t('verify.notRevoked')}

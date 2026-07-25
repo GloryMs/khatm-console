@@ -1,0 +1,46 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--fs-body);
+  color: var(--color-text);
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.label {
+  font-weight: 600;
+  font-size: var(--fs-sm);
+}
+
+.field[data-state='error'] .label {
+  color: var(--color-danger);
+}
+
+.field[data-state='valid'] .label {
+  color: var(--color-success);
+}
+
+.help {
+  color: var(--color-text-muted);
+  font-size: var(--fs-xs);
+}
+
+.error {
+  color: var(--color-danger);
+  font-size: var(--fs-xs);
+}
+
+.valid {
+  color: var(--color-success);
+  font-size: var(--fs-xs);
+}
+
+.valid::before {
+  content: '✓ ';
+}

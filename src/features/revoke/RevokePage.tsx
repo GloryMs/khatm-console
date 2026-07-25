@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
 import { ApiErrorBanner } from '@/components/ui/ApiErrorBanner';
+import { Button } from '@/components/ui/Button';
+import { FormField, khatmInputClass } from '@/components/ui/FormField';
 import { useErrorMessage } from '@/api/useErrorMessage';
 import { RequireScope } from '@/features/auth/RequireScope';
 import { CredentialSummary } from './components/CredentialSummary';
@@ -70,24 +72,25 @@ function RevokePageBody() {
       <h1 className={styles.title}>{t('revoke.title')}</h1>
 
       <form className={styles.form} onSubmit={onLookup} noValidate>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="revoke-id">
-            {t('revoke.lookupLabel')}
-          </label>
+        <FormField
+          label={t('revoke.lookupLabel')}
+          htmlFor="revoke-id"
+          help={t('revoke.lookupHelp')}
+          error={errors.id?.message}
+        >
           <input
             id="revoke-id"
             type="text"
             autoComplete="off"
             placeholder={t('revoke.lookupPlaceholder')}
+            className={`${khatmInputClass(errors.id ? 'error' : 'default')} ltr-embed`}
             {...register('id')}
           />
-          {errors.id && <span className={styles.help}>{errors.id.message}</span>}
-        </div>
-        <button type="submit" className={styles.lookup} disabled={credentialQuery.isFetching}>
+        </FormField>
+        <Button type="submit" variant="primary" disabled={credentialQuery.isFetching}>
           {credentialQuery.isFetching ? t('revoke.looking') : t('revoke.lookup')}
-        </button>
+        </Button>
       </form>
-      <p className={styles.help}>{t('revoke.lookupHelp')}</p>
 
       {activeId && credentialQuery.isError && <ApiErrorBanner error={credentialQuery.error} />}
 
@@ -97,14 +100,18 @@ function RevokePageBody() {
           <CredentialSummary view={view} />
           {revoke.isError && <ApiErrorBanner error={revoke.error} />}
           {!view.revoked && (
-            <button
-              type="button"
-              className={styles.revokeCta}
-              onClick={() => setDialogOpen(true)}
-              disabled={revoke.isPending}
-            >
-              {t('revoke.revokeCta')}
-            </button>
+            <div className={styles.revokePanel}>
+              <span className={styles.revokePanelTitle}>{t('revoke.revokeCta')}</span>
+              <p className={styles.revokePanelBody}>{t('revoke.revokePanelHint')}</p>
+              <Button
+                type="button"
+                variant="danger"
+                onClick={() => setDialogOpen(true)}
+                disabled={revoke.isPending}
+              >
+                {t('revoke.revokeCta')}
+              </Button>
+            </div>
           )}
         </div>
       )}

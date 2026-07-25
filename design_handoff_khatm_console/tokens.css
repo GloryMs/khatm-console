@@ -1,0 +1,85 @@
+/* Khatm Console — design tokens */
+:root {
+  /* fonts */
+  --font-sans: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-arabic: "Segoe UI", Tahoma, "Geeza Pro", "Noto Kufi Arabic", "Noto Naskh Arabic", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", Consolas, "Liberation Mono", monospace;
+
+  /* type scale */
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-body: 13.5px;
+  --fs-h3: 15px;
+  --fs-h2: 18px;
+  --fs-h1: 22px;
+  --fs-display: 32px;
+
+  /* radius / spacing / rows */
+  --radius-sm: 4px;
+  --radius: 7px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --row-height: 32px; /* compact table density; use 44px for comfortable */
+
+  --shadow: 0 1px 2px oklch(0.2 0.02 158 / .06), 0 2px 8px oklch(0.2 0.02 158 / .06);
+  --shadow-lg: 0 6px 24px oklch(0.2 0.02 158 / .12);
+
+  /* color — light (default) */
+  --color-bg: oklch(0.985 0.004 155);
+  --color-surface: oklch(1 0 0);
+  --color-surface-2: oklch(0.972 0.005 155);
+  --color-border: oklch(0.9 0.007 155);
+  --color-border-strong: oklch(0.8 0.01 155);
+  --color-text: oklch(0.24 0.014 158);
+  --color-text-muted: oklch(0.47 0.012 158);
+  --color-text-subtle: oklch(0.62 0.01 158);
+  --color-primary: oklch(0.48 0.11 158);
+  --color-primary-hover: oklch(0.41 0.11 158);
+  --color-primary-contrast: oklch(0.99 0.01 158);
+  --color-primary-tint: oklch(0.95 0.03 158);
+  --color-success: oklch(0.5 0.12 148);
+  --color-success-tint: oklch(0.95 0.035 148);
+  --color-info: oklch(0.53 0.12 245);
+  --color-info-tint: oklch(0.95 0.03 245);
+  --color-warning: oklch(0.62 0.12 76);
+  --color-warning-tint: oklch(0.95 0.05 82);
+  --color-danger: oklch(0.52 0.18 27);
+  --color-danger-tint: oklch(0.95 0.04 27);
+  --color-neutral: oklch(0.55 0.008 158);
+  --color-neutral-tint: oklch(0.93 0.004 158);
+  --color-focus: oklch(0.55 0.13 158);
+}
+
+[data-theme="dark"] {
+  --shadow: 0 1px 2px oklch(0 0 0 / .4);
+  --shadow-lg: 0 8px 28px oklch(0 0 0 / .5);
+  --color-bg: oklch(0.17 0.006 158);
+  --color-surface: oklch(0.215 0.008 158);
+  --color-surface-2: oklch(0.255 0.009 158);
+  --color-border: oklch(0.31 0.01 158);
+  --color-border-strong: oklch(0.42 0.012 158);
+  --color-text: oklch(0.95 0.005 158);
+  --color-text-muted: oklch(0.72 0.008 158);
+  --color-text-subtle: oklch(0.56 0.008 158);
+  --color-primary: oklch(0.7 0.13 158);
+  --color-primary-hover: oklch(0.77 0.13 158);
+  --color-primary-contrast: oklch(0.16 0.02 158);
+  --color-primary-tint: oklch(0.3 0.05 158);
+  --color-success: oklch(0.72 0.14 148);
+  --color-success-tint: oklch(0.3 0.05 148);
+  --color-info: oklch(0.72 0.12 245);
+  --color-info-tint: oklch(0.3 0.05 245);
+  --color-warning: oklch(0.8 0.13 80);
+  --color-warning-tint: oklch(0.33 0.06 76);
+  --color-danger: oklch(0.68 0.17 27);
+  --color-danger-tint: oklch(0.33 0.07 27);
+  --color-neutral: oklch(0.66 0.008 158);
+  --color-neutral-tint: oklch(0.3 0.006 158);
+  --color-focus: oklch(0.72 0.14 158);
+}

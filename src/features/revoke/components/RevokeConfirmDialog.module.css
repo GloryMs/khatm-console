@@ -17,18 +17,19 @@
   padding: var(--space-6);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
 }
 
 .title {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--fs-h2);
   color: var(--color-danger);
 }
 
 .body {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--fs-body);
   color: var(--color-text);
 }
 
@@ -36,56 +37,22 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
 }
 
 .idToType {
-  font-family: 'SFMono-Regular', 'Consolas', monospace;
+  font-family: var(--font-mono);
   word-break: break-all;
   color: var(--color-text-muted);
 }
 
-.prompt input {
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font: inherit;
-}
-
 .mismatch {
   color: var(--color-danger);
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
 }
 
 .actions {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-3);
-}
-
-.cancel {
-  padding: var(--space-2) var(--space-4);
-  background: var(--color-bg);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font: inherit;
-  font-size: 0.95rem;
-  cursor: pointer;
-}
-
-.danger {
-  padding: var(--space-2) var(--space-4);
-  background: var(--color-danger);
-  color: var(--color-danger-contrast);
-  border: none;
-  border-radius: var(--radius-sm);
-  font: inherit;
-  font-size: 0.95rem;
-  cursor: pointer;
-}
-
-.danger:disabled {
-  opacity: 0.6;
-  cursor: default;
 }

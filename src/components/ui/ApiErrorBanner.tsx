@@ -1,12 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '@/api/errors';
 import { useErrorMessage } from '@/api/useErrorMessage';
+import { Banner } from './Banner';
 import styles from './ApiErrorBanner.module.css';
 
 /**
  * Renders a resolved API error inline: localized message plus `code` +
  * `traceId` for support correlation (work rule 3). Never shows raw JSON or
- * stack traces.
+ * stack traces. This is the app's one error-banner surface — components
+ * never toast raw errors themselves.
  */
 export function ApiErrorBanner({ error }: { error: unknown }) {
   const { t } = useTranslation();
@@ -18,8 +20,8 @@ export function ApiErrorBanner({ error }: { error: unknown }) {
   const traceId = error instanceof ApiError ? error.traceId : undefined;
 
   return (
-    <div className={styles.banner} role="alert">
-      <p>{resolveMessage(error)}</p>
+    <Banner tone="danger">
+      <p className={styles.text}>{resolveMessage(error)}</p>
       {(code ?? traceId) && (
         <p className={`${styles.meta} ltr-embed`}>
           {code && (
@@ -34,6 +36,6 @@ export function ApiErrorBanner({ error }: { error: unknown }) {
           )}
         </p>
       )}
-    </div>
+    </Banner>
   );
 }
