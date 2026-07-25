@@ -6,12 +6,13 @@
 
 .title {
   margin: 0;
-  font-size: 1.3rem;
+  font-size: var(--fs-h1);
 }
 
 .help {
   color: var(--color-text-muted);
   margin: 0;
+  font-size: var(--fs-sm);
 }
 
 .panel {
@@ -27,7 +28,7 @@
 
 .panelTitle {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--fs-h3);
 }
 
 .selectedSchema {
@@ -38,30 +39,73 @@
   gap: var(--space-3);
 }
 
-.changeButton,
-.copyButton,
-.secondaryButton {
-  padding: var(--space-2) var(--space-3);
+/* Two-column form + result panel, per the design guide's Issuance — single
+   screen: left is the live form, right (bg surface-2) is the result. */
+.formPanel {
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg);
-  color: var(--color-text);
-  font: inherit;
-  cursor: pointer;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.formPanelHead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+}
+
+@media (max-width: 720px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.left {
+  padding: var(--space-4);
+  padding-block-start: 0;
+  border-inline-end: 1px solid var(--color-border);
+}
+
+@media (max-width: 720px) {
+  .left {
+    border-inline-end: none;
+    border-block-end: 1px solid var(--color-border);
+  }
+}
+
+.right {
+  padding: var(--space-4);
+  background: var(--color-surface-2);
+  display: flex;
+  flex-direction: column;
 }
 
 .successGrid {
   display: grid;
   gap: var(--space-4);
+  align-content: start;
 }
 
-.onceNote {
-  padding: var(--space-3);
-  border: 1px solid color-mix(in oklch, var(--color-warning) 40%, transparent);
-  border-radius: var(--radius);
-  color: var(--color-warning);
-  background: var(--color-warning-tint);
-  font-weight: 600;
+/* Grid items stretch to the column width by default; the "issue another"
+   button should size to its own content instead, like every other action
+   in this column. */
+.issueAnotherButton {
+  justify-self: start;
+}
+
+.successHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
 }
 
 .valueRow {
@@ -73,13 +117,14 @@
 
 .valueLabel {
   font-weight: 600;
+  font-size: var(--fs-sm);
 }
 
 .codeValue {
   font-family: var(--font-mono);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius);
-  background: var(--color-surface-2);
+  background: var(--color-surface);
   border: 1px dashed var(--color-border-strong);
   overflow-wrap: anywhere;
 }
@@ -106,4 +151,5 @@
   background: color-mix(in srgb, var(--color-danger) 10%, var(--color-surface));
   color: var(--color-danger);
   font-weight: 600;
+  font-size: var(--fs-sm);
 }

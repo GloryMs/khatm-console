@@ -17,3 +17,9 @@ The contract looks credentials up by their **UUID `id`**, not their human-facing
 the operator to retype that id. Not-found / already-revoked / forbidden outcomes
 arrive as the platform's localized error envelope and render via the shared error
 layer — never client-side re-worded.
+
+`CredentialSummary` renders the design guide's result-card look (ref + `StatusBadge`
+header over a meta grid, bg `--color-surface-2`) with the fields `CredentialView`
+actually exposes (schema/uses/valid-until — no `issuedAt` or consuming-party field
+on this shape, unlike the search list's `CredentialSummary` type). The revoke action
+sits in its own danger-bordered panel below.

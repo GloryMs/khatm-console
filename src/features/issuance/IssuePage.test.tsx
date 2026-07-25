@@ -124,6 +124,8 @@ describe('IssuePage', () => {
     });
     expect(await screen.findByText(i18n.t('issue.codeShownOnce'))).toBeInTheDocument();
     expect(screen.getByText('CRD-2026-0001')).toBeInTheDocument();
+    // The claim code is masked by default (SecretReveal); reveal it to check the value.
+    await user.click(screen.getByRole('button', { name: i18n.t('common.reveal') }));
     expect(screen.getByText('CLAIM-ABC')).toBeInTheDocument();
     expect(screen.getByTestId('qr-code')).toHaveTextContent(
       '{"v":1,"api":"https://khatm.example.com","code":"CLAIM-ABC"}',

@@ -13,3 +13,6 @@ failure is `valid: false`, not an error envelope (only a blank `sdJwt` is a 400)
 `statusListVersion`, `statusListUri`) defensively: they are absent from the
 current contract (KH-1.3 not yet merged) and render only when the server returns
 them, so they never cause a crash.
+
+The verdict uses the shared `StatusBadge` (success/danger tone); the presentation
+textarea uses the shared `FormField`/`khatmInputClass`.

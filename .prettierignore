@@ -3,3 +3,4 @@ coverage
 src/api/generated
 contracts/openapi.json
 .claude
+design_handoff_khatm_console

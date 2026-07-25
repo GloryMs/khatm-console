@@ -98,6 +98,9 @@
     "noSchemas": "No published schemas are available to issue against.",
     "pickCta": "Continue",
     "changeSchema": "Choose a different schema",
+    "cancel": "Cancel",
+    "resultEmptyTitle": "Nothing minted yet",
+    "resultEmptyBody": "Fill in the form and mint to see the one-time claim code and QR here.",
     "holderRef": "Holder reference",
     "holderRefHelp": "A pseudonymous holder identifier from your system (pseudo_ref).",
     "holderRefRequired": "Holder reference is required",
@@ -113,6 +116,7 @@
     "unknownTypeWarning": "Unknown field type \"{{type}}\" for \"{{field}}\"; rendered as text.",
     "submit": "Issue credential",
     "submitting": "Issuing…",
+    "issuedBadge": "Issued",
     "successTitle": "Credential issued",
     "refLabel": "Credential reference",
     "refHelp": "The credential's permanent identifier (its UUID id).",
@@ -169,6 +173,7 @@
     "validTo": "Valid until",
     "noExpiry": "No expiry",
     "revokeCta": "Revoke credential",
+    "revokePanelHint": "This cannot be undone.",
     "alreadyRevokedNote": "This credential is already revoked.",
     "confirmTitle": "Confirm revocation",
     "confirmBody": "Revocation is permanent and irreversible. The credential will fail every future verification and consumption.",
@@ -184,7 +189,10 @@
     "loading": "Loading…",
     "copy": "Copy",
     "copied": "Copied",
-    "back": "Back"
+    "back": "Back",
+    "reveal": "Reveal",
+    "hide": "Hide",
+    "shownOnce": "Shown once"
   },
   "schemaManagement": {
     "title": "Manage Schemas",

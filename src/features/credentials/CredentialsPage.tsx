@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ApiErrorBanner } from '@/components/ui/ApiErrorBanner';
+import { Button } from '@/components/ui/Button';
 import { useSchemas } from '@/features/schemas/hooks';
 import { FilterBar } from './components/FilterBar';
 import { ResultsTable } from './components/ResultsTable';
@@ -40,26 +41,28 @@ export function CredentialsPage() {
         <>
           <ResultsTable rows={search.data.items ?? []} />
           <div className={styles.pagination}>
-            <button
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page <= 0}
             >
               {t('credentials.pagination.prev')}
-            </button>
-            <span>
+            </Button>
+            <span className={styles.pageInfo}>
               {t('credentials.pagination.pageInfo', {
                 page: page + 1,
                 totalPages: Math.max(totalPages, 1),
               })}
             </span>
-            <button
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => setPage((p) => p + 1)}
               disabled={page + 1 >= totalPages}
             >
               {t('credentials.pagination.next')}
-            </button>
+            </Button>
           </div>
         </>
       )}

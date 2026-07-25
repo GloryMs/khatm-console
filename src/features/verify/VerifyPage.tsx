@@ -4,6 +4,8 @@ import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import { ApiErrorBanner } from '@/components/ui/ApiErrorBanner';
+import { Button } from '@/components/ui/Button';
+import { FormField, khatmInputClass } from '@/components/ui/FormField';
 import { VerifyResult } from './components/VerifyResult';
 import { useVerifyPresentation } from './hooks';
 import type { VerifyResponse } from './api';
@@ -41,27 +43,33 @@ export function VerifyPage() {
       <p className={styles.help}>{t('verify.prompt')}</p>
 
       <form className={styles.form} onSubmit={onSubmit} noValidate>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="verify-sdJwt">
-            {t('verify.sdJwtLabel')}
-          </label>
+        <FormField
+          label={t('verify.sdJwtLabel')}
+          htmlFor="verify-sdJwt"
+          error={errors.sdJwt?.message}
+        >
           <textarea
             id="verify-sdJwt"
             autoComplete="off"
             spellCheck={false}
             placeholder={t('verify.sdJwtPlaceholder')}
+            className={`${khatmInputClass(errors.sdJwt ? 'error' : 'default')} ${styles.textarea}`}
             {...register('sdJwt')}
           />
-          {errors.sdJwt && <span className={styles.fieldError}>{errors.sdJwt.message}</span>}
-        </div>
+        </FormField>
 
         <ApiErrorBanner error={verify.error} />
-        <button type="submit" className={styles.submit} disabled={verify.isPending}>
+        <Button
+          type="submit"
+          variant="primary"
+          className={styles.submit}
+          disabled={verify.isPending}
+        >
           {verify.isPending ? t('verify.submitting') : t('verify.submit')}
-        </button>
+        </Button>
       </form>
 
-      <h2 className={styles.label}>{t('verify.resultHeading')}</h2>
+      <h2 className={styles.resultHeading}>{t('verify.resultHeading')}</h2>
       {result ? (
         <VerifyResult result={result} />
       ) : (

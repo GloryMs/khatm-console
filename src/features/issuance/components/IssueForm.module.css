@@ -12,37 +12,13 @@
   border-block-end: 1px solid var(--color-border);
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  font-size: 0.9rem;
-  color: var(--color-text);
-}
-
-.fieldHead {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.label {
-  font-weight: 500;
-}
-
-.help {
-  color: var(--color-text-muted);
-  font-size: 0.8rem;
-}
-
 .badges {
   display: inline-flex;
   gap: var(--space-1);
 }
 
 .badge {
-  font-size: 0.7rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -59,19 +35,9 @@
 }
 
 .badgeSelective {
-  color: var(--color-text-muted);
-}
-
-.field input {
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font: inherit;
-}
-
-.fieldError {
-  color: var(--color-danger);
-  font-size: 0.8rem;
+  color: var(--color-info);
+  border-color: var(--color-info);
+  background: var(--color-info-tint);
 }
 
 .actions {
@@ -79,21 +45,4 @@
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-3);
-}
-
-.submit {
-  margin-block-start: var(--space-2);
-  padding: var(--space-2) var(--space-4);
-  background: var(--color-primary);
-  color: var(--color-primary-contrast);
-  border: none;
-  border-radius: var(--radius-sm);
-  font: inherit;
-  font-size: 0.95rem;
-  cursor: pointer;
-}
-
-.submit:disabled {
-  opacity: 0.6;
-  cursor: default;
 }

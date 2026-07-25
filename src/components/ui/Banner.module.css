@@ -1,0 +1,78 @@
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+}
+
+.icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: #fff;
+}
+
+.message {
+  flex: 1;
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--fs-body);
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+.dismiss {
+  flex: none;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.danger {
+  background: var(--color-danger-tint);
+  border: 1px solid color-mix(in oklch, var(--color-danger) 40%, transparent);
+}
+
+.danger .icon {
+  background: var(--color-danger);
+}
+
+.warning {
+  background: var(--color-warning-tint);
+  border: 1px solid color-mix(in oklch, var(--color-warning) 40%, transparent);
+}
+
+.warning .icon {
+  background: var(--color-warning);
+}
+
+.info {
+  background: var(--color-info-tint);
+  border: 1px solid color-mix(in oklch, var(--color-info) 40%, transparent);
+}
+
+.info .icon {
+  background: var(--color-info);
+}
+
+.success {
+  background: var(--color-success-tint);
+  border: 1px solid color-mix(in oklch, var(--color-success) 40%, transparent);
+}
+
+.success .icon {
+  background: var(--color-success);
+}
