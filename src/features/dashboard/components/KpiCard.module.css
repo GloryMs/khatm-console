@@ -1,0 +1,82 @@
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4) calc(var(--space-4) + var(--space-1));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.accentBar {
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block: 0;
+  inline-size: 3px;
+  background: var(--kpi-accent, var(--color-neutral));
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.iconChip {
+  inline-size: 32px;
+  block-size: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-h3);
+  font-weight: 700;
+  flex: none;
+  background: var(--kpi-tint, var(--color-neutral-tint));
+  color: var(--kpi-accent, var(--color-neutral));
+}
+
+/* tone → accent/tint custom properties, consumed by .accentBar / .iconChip above */
+.primary {
+  --kpi-accent: var(--color-primary);
+  --kpi-tint: var(--color-primary-tint);
+}
+
+.info {
+  --kpi-accent: var(--color-info);
+  --kpi-tint: var(--color-info-tint);
+}
+
+.success {
+  --kpi-accent: var(--color-success);
+  --kpi-tint: var(--color-success-tint);
+}
+
+.danger {
+  --kpi-accent: var(--color-danger);
+  --kpi-tint: var(--color-danger-tint);
+}
+
+.label {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.value {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.footer {
+  font-size: var(--fs-xs);
+  color: var(--color-text-subtle);
+}

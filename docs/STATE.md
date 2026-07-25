@@ -4,6 +4,9 @@
 
 ## Current phase / task
 
+- Dashboard v2 redesign (`feat/dashboard-redesign`, no WBS ticket number) — **DONE. PR opened
+  2026-07-25**, pending CI + merge. See "Last completed" below for the full breakdown,
+  including the deliberate scope call on the four panels with no backing API data.
 - Design handoff v2 (component library + Issuance/Credential-search-verify-revoke wiring)
   — **DONE. PR #10** (`feat/design-handoff-v2`, no WBS ticket number was ever attached to
   this task, so no `KH-x.y.z` prefix) squash-merged into `main` on 2026-07-25 (CI green,
@@ -30,6 +33,68 @@
   pending (not yet run as of this entry).
 
 ## Last completed
+
+- 2026-07-25 (Dashboard v2 redesign): a third design handoff arrived
+  (`design_handoff_khatm_console/Dashboard.dc.html` + `DASHBOARD_HANDOFF.md`) — Dashboard-only,
+  reusing the already-implemented tokens/primitives from the two prior handoffs (no new design
+  system work). Delivered:
+  - **Real-data panels, fully wired**: 4 KPI cards (Issued/Consumed/Verified/Revoked — icon
+    chip, accent bar, big tabular value) from the existing `GET /api/v1/stats`; a secondary
+    compact stats strip for the 3 remaining real counters the new KPI row has no card for
+    (claimsRedeemed/consumeDenied/verifyFailed) so no existing real data silently disappeared
+    from the page; a signing-keys panel wired to `GET /.well-known/jwks.json` (verified live
+    against the local Docker stack — real shape is `{kty, kid, crv, x, y}`, no expiry/status/
+    rotation fields at all, confirmed by direct `curl`).
+  - **Explicit scope decision, confirmed with Majd first**: the design guide's lifecycle bar
+    chart, recent-activity table, needs-attention panel, and top-consuming-parties panel have
+    **no backing API data whatsoever** — `/api/v1/stats` is a single-window aggregate (no daily
+    series), and there's no activity-feed, anomaly-feed, or per-party-usage endpoint. Rather than
+    fabricate numbers (this repo's P1 "proofs, not content" / no-fabrication norm, reinforced
+    throughout this file's history), asked Majd how to handle it; Majd's answer: build every
+    panel's real card/layout chrome per the mock, real data where it exists, and for the rest
+    ship the shell with an honest empty state **plus a written API-needs doc for the backend
+    team** rather than skip them. Delivered exactly that — see
+    `docs/specs/dashboard-v2-backend-needs.md` for the four gaps (daily time series, activity
+    feed, anomaly feed, per-party usage stats) written for the khatm-platform team, each with a
+    suggested endpoint shape.
+  - KPI cards also drop the mock's delta (`▲ 12.4% vs. prev period`) and sparkline — both would
+    need a previous-period or daily comparison that doesn't exist either — replaced with a real,
+    derived footer caption (the stats window's date range, `formatWindowRange` in `windows.ts`).
+  - Toolbar: real headline + a genuine "last updated" timestamp (TanStack Query's
+    `dataUpdatedAt`, not fabricated), a 7d/30d range switch (only what `/api/v1/stats` actually
+    supports — the mock's 90d/Custom options were not added since they'd be non-functional), a
+    real Refresh (pre-existing), and a real Export — `csv.ts`'s `buildStatsCsv` serializes the
+    on-screen stats snapshot client-side (small, local, no new endpoint, mirrors the existing
+    `downloadCsv` pattern from `bulkIssuance`).
+  - New shared-within-feature `PanelCard` component (title/subtitle/action header + body shell)
+    so the five bordered panel cards (chart/keys/activity/attention/parties) share one chrome
+    instead of five near-duplicates.
+  - `KpiCard`'s per-KPI accent/tint color is a CSS-module tone class (`primary`/`info`/
+    `success`/`danger`, each setting `--kpi-accent`/`--kpi-tint` with a same-file fallback —
+    deliberately avoiding the exact undefined-`var()`-with-no-fallback bug class found in the
+    prior session), mirroring `StatusBadge`'s existing tone-class pattern rather than inline
+    style objects.
+  - Explicitly **out of scope, by design**: the shared `AppShell`/`Sidebar`/`Topbar` (already
+    used app-wide, already on the design-system tokens) were left untouched — the handoff doc
+    itself scopes this to `src/features/dashboard/components/`, and the mock's topbar
+    extras (global search, notifications bell) have no backend support either, so touching the
+    shared shell would have both widened blast radius past "Dashboard-only" and reintroduced
+    the same fabrication problem one level up.
+  - i18n: full new `dashboard.*` key set (headline/export/keys/chart/activity/attention/parties,
+    each empty-panel with its own honest `emptyTitle`/`emptyBody` copy) added to both `en.json`
+    and `ar.json` in the same commit; removed the now-unused `dashboard.title` and
+    `dashboard.groups.*` keys (dead after the KPI-row/secondary-strip restructure). Parity test
+    green.
+  - RTL: grep-verified zero physical left/right properties across every new/changed dashboard
+    stylesheet (same method as every prior session — no browser-automation tool available).
+  - Tests: 170 total now (was 162) — 8 new (`DashboardPage.test.tsx` +4: export button, real
+    signing keys render, signing-keys empty state, all-four-placeholders-render-not-fabricated;
+    `windows.test.ts` +2 for `formatWindowRange`; new `csv.test.ts` +2 for `buildStatsCsv`).
+    `npm run typecheck`, `lint`, `format:check`, and `test` all clean (same one pre-existing
+    `FormField.tsx` HMR warning as every session since the design-handoff-v2 PR). `npm run
+build` clean.
+  - Committed on `feat/dashboard-redesign` and PR opened same session, per Majd's explicit
+    go-ahead for this task (same branch-then-PR flow as PR #10).
 
 - 2026-07-25 (follow-up: every button rendered broken — root cause + fix): Majd reviewed
   the rebuilt container and screenshotted the Issue screen — every button (Sign in, Issue
@@ -673,6 +738,10 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 3. KH-2.2-era RBAC changes, whatever those turn out to require.
 4. Unify the scope-gating placement convention (self-gating vs. App.tsx-level wrapping — see
    "Open decisions" above) across every gated page.
+5. Dashboard v2's four data-less panels (lifecycle chart, recent activity, needs attention, top
+   consuming parties) — wire them up for real once khatm-platform implements any of the
+   endpoints in `docs/specs/dashboard-v2-backend-needs.md`. Not urgent; the console-side card
+   shells are already built and just need their `EmptyState` swapped for a real query per panel.
 
 Closed: the full EN/AR + RTL click-through across every screen — Majd confirmed the Arabic
 layout and messages read correctly across the rebuilt container before merging PR #6.

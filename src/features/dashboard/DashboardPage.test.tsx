@@ -6,7 +6,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import i18n from '@/i18n';
 import { DashboardPage } from './DashboardPage';
 import * as api from './api';
-import type { StatsResponse } from './api';
+import type { SigningKey, StatsResponse } from './api';
+import * as csv from './csv';
 
 function renderPage() {
   const queryClient = new QueryClient({
@@ -34,27 +35,36 @@ const fullStats: StatsResponse = {
   },
 };
 
+const oneSigningKey: SigningKey[] = [{ kid: 'khatm-default:key-1', kty: 'EC' }];
+
+function mockDefaults() {
+  vi.spyOn(api, 'getStats').mockResolvedValue(fullStats);
+  vi.spyOn(api, 'getSigningKeys').mockResolvedValue(oneSigningKey);
+}
+
 describe('DashboardPage', () => {
   afterEach(async () => {
     vi.restoreAllMocks();
     await i18n.changeLanguage('en');
   });
 
-  it('renders every counter with localized formatting', async () => {
-    vi.spyOn(api, 'getStats').mockResolvedValue(fullStats);
+  it('renders every KPI and secondary counter with localized formatting', async () => {
+    mockDefaults();
     renderPage();
 
+    // Primary KPIs: issued, consumed, verifyOk, revoked.
     expect(await screen.findByText('1,234')).toBeInTheDocument();
-    expect(screen.getByText('900')).toBeInTheDocument();
     expect(screen.getByText('800')).toBeInTheDocument();
     expect(screen.getByText('700')).toBeInTheDocument();
     expect(screen.getByText('3')).toBeInTheDocument();
+    // Secondary strip: claimsRedeemed, consumeDenied, verifyFailed.
+    expect(screen.getByText('900')).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByText('1')).toBeInTheDocument();
   });
 
   it('renders Arabic-Indic digit grouping in the Arabic locale', async () => {
-    vi.spyOn(api, 'getStats').mockResolvedValue(fullStats);
+    mockDefaults();
     await i18n.changeLanguage('ar');
     renderPage();
 
@@ -63,6 +73,7 @@ describe('DashboardPage', () => {
 
   it('renders every optional counter as 0 when the response omits them, never crashing', async () => {
     vi.spyOn(api, 'getStats').mockResolvedValue({ window: fullStats.window, counters: {} });
+    vi.spyOn(api, 'getSigningKeys').mockResolvedValue(oneSigningKey);
     renderPage();
 
     await waitFor(() => expect(api.getStats).toHaveBeenCalled());
@@ -71,6 +82,7 @@ describe('DashboardPage', () => {
 
   it('renders as defensively zeroed even when the counters object itself is missing', async () => {
     vi.spyOn(api, 'getStats').mockResolvedValue({ window: fullStats.window });
+    vi.spyOn(api, 'getSigningKeys').mockResolvedValue(oneSigningKey);
     renderPage();
 
     await waitFor(() => expect(api.getStats).toHaveBeenCalled());
@@ -79,6 +91,7 @@ describe('DashboardPage', () => {
 
   it('requests a 30-day window by default and switches to 7 days on toggle', async () => {
     const getStats = vi.spyOn(api, 'getStats').mockResolvedValue(fullStats);
+    vi.spyOn(api, 'getSigningKeys').mockResolvedValue(oneSigningKey);
     const user = userEvent.setup();
     renderPage();
 
@@ -109,14 +122,55 @@ describe('DashboardPage', () => {
   });
 
   it('re-fetches when the refresh button is clicked', async () => {
-    const getStats = vi.spyOn(api, 'getStats').mockResolvedValue(fullStats);
+    mockDefaults();
     const user = userEvent.setup();
     renderPage();
 
     expect(await screen.findByText('1,234')).toBeInTheDocument();
-    expect(getStats).toHaveBeenCalledTimes(1);
+    expect(api.getStats).toHaveBeenCalledTimes(1);
     await user.click(screen.getByRole('button', { name: i18n.t('dashboard.refresh') }));
 
-    await waitFor(() => expect(getStats).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(api.getStats).toHaveBeenCalledTimes(2));
+  });
+
+  it('exports the current stats snapshot as CSV when Export is clicked', async () => {
+    mockDefaults();
+    const downloadCsvSpy = vi.spyOn(csv, 'downloadCsv').mockImplementation(() => undefined);
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText('1,234');
+    await user.click(screen.getByRole('button', { name: i18n.t('dashboard.export') }));
+
+    expect(downloadCsvSpy).toHaveBeenCalledTimes(1);
+    const [filename, content] = downloadCsvSpy.mock.calls[0];
+    expect(filename).toBe('khatm-dashboard-30d.csv');
+    expect(content).toContain('issued,1234');
+  });
+
+  it('renders the real signing keys published by the platform', async () => {
+    mockDefaults();
+    renderPage();
+
+    expect(await screen.findByText('khatm-default:key-1')).toBeInTheDocument();
+    expect(screen.getByText('EC')).toBeInTheDocument();
+  });
+
+  it('shows an empty state when no signing keys are published', async () => {
+    vi.spyOn(api, 'getStats').mockResolvedValue(fullStats);
+    vi.spyOn(api, 'getSigningKeys').mockResolvedValue([]);
+    renderPage();
+
+    expect(await screen.findByText(i18n.t('dashboard.keys.emptyTitle'))).toBeInTheDocument();
+  });
+
+  it('ships the four panels with no backing data as placeholders, not fabricated content', async () => {
+    mockDefaults();
+    renderPage();
+
+    expect(await screen.findByText(i18n.t('dashboard.chart.emptyTitle'))).toBeInTheDocument();
+    expect(screen.getByText(i18n.t('dashboard.activity.emptyTitle'))).toBeInTheDocument();
+    expect(screen.getByText(i18n.t('dashboard.attention.emptyTitle'))).toBeInTheDocument();
+    expect(screen.getByText(i18n.t('dashboard.parties.emptyTitle'))).toBeInTheDocument();
   });
 });
