@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeWindow, formatWindowRange } from './windows';
+import { computeComparisonWindow, computeWindow, formatWindowRange } from './windows';
 
 describe('computeWindow', () => {
   const now = new Date('2026-07-22T12:00:00.000Z');
@@ -14,6 +14,17 @@ describe('computeWindow', () => {
   it('computes a 30-day trailing window', () => {
     expect(computeWindow(30, now)).toEqual({
       from: '2026-06-22T12:00:00.000Z',
+      to: '2026-07-22T12:00:00.000Z',
+    });
+  });
+});
+
+describe('computeComparisonWindow', () => {
+  const now = new Date('2026-07-22T12:00:00.000Z');
+
+  it('spans twice the window, ending now', () => {
+    expect(computeComparisonWindow(7, now)).toEqual({
+      from: '2026-07-08T12:00:00.000Z',
       to: '2026-07-22T12:00:00.000Z',
     });
   });

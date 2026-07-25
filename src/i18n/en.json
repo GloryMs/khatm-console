@@ -48,30 +48,76 @@
     },
     "keys": {
       "title": "Signing keys",
-      "published": "Published",
-      "emptyTitle": "No signing keys published",
-      "emptyBody": "The platform's public key set is currently empty."
+      "emptyTitle": "No signing keys yet",
+      "emptyBody": "No signing key has been created for this tenant.",
+      "adminOnlyTitle": "Admin access required",
+      "adminOnlyBody": "Signing-key status is only visible to admin-scoped operators.",
+      "validFrom": "Valid from",
+      "validTo": "Valid to",
+      "noExpiry": "No expiry set",
+      "states": {
+        "active": "Active",
+        "retiring": "Retiring",
+        "pending": "Pending",
+        "retired": "Retired"
+      }
     },
     "chart": {
       "title": "Credential lifecycle",
       "subtitle": "Daily volume by event",
-      "emptyTitle": "Daily breakdown not available yet",
-      "emptyBody": "The stats endpoint reports one total per window, not a day-by-day series. A time-series endpoint is on the backend request list."
+      "emptyTitle": "No activity in this window",
+      "emptyBody": "Nothing was issued, consumed, or revoked in the selected time range.",
+      "legendIssued": "Issued",
+      "legendConsumed": "Consumed",
+      "legendRevoked": "Revoked"
     },
     "activity": {
       "title": "Recent activity",
-      "emptyTitle": "Activity feed not available yet",
-      "emptyBody": "There's no per-event activity endpoint yet — this panel will list recent issue/consume/revoke events once one exists."
+      "emptyTitle": "No recent activity",
+      "emptyBody": "Nothing matches this filter yet.",
+      "columns": {
+        "ref": "Reference",
+        "event": "Event",
+        "party": "Consuming party",
+        "when": "When"
+      },
+      "tabs": {
+        "all": "All",
+        "issued": "Issued",
+        "consumed": "Consumed",
+        "revoked": "Revoked"
+      },
+      "events": {
+        "issued": "Issued",
+        "consumed": "Consumed",
+        "revoked": "Revoked",
+        "denied": "Denied",
+        "claimRedeemed": "Claim redeemed",
+        "verifyOk": "Verified",
+        "verifyFailed": "Verify failed",
+        "other": "Event"
+      }
     },
     "attention": {
       "title": "Needs attention",
-      "emptyTitle": "Anomaly detection not available yet",
-      "emptyBody": "Denied consumes, verification failure spikes and rotation warnings aren't surfaced as items yet. The raw counts are in the stats strip above."
+      "emptyTitle": "Nothing needs attention",
+      "emptyBody": "No anomalies detected right now.",
+      "types": {
+        "schemaDenied": {
+          "title": "Consuming party denied by schema allowlist",
+          "body": "{{party}} tried to consume a credential outside its schema allowlist ({{schema}}). Review before adjusting access."
+        },
+        "other": {
+          "title": "Needs review",
+          "body": "See the audit log for details."
+        }
+      }
     },
     "parties": {
       "title": "Top consuming parties",
-      "emptyTitle": "Usage ranking not available yet",
-      "emptyBody": "Call-volume and success-rate stats per consuming party aren't tracked yet — see the Consuming Parties page for the registered list."
+      "emptyTitle": "No consume activity in this window",
+      "emptyBody": "No consuming party has made a call in the selected time range.",
+      "callsAndRate": "{{calls}} calls · {{rate}} success"
     }
   },
   "auth": {

@@ -68,12 +68,46 @@
   text-transform: uppercase;
 }
 
+.valueRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  line-height: 1;
+}
+
 .value {
   font-size: 30px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  line-height: 1;
   font-variant-numeric: tabular-nums;
+}
+
+.delta {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.deltaUp {
+  color: var(--color-success);
+}
+
+.deltaDown {
+  color: var(--color-text-muted);
+}
+
+.spark {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  block-size: 26px;
+}
+
+.sparkBar {
+  flex: 1;
+  background: var(--kpi-accent, var(--color-neutral));
+  opacity: 0.28;
+  border-radius: 2px 2px 0 0;
+  min-block-size: 2px;
 }
 
 .footer {

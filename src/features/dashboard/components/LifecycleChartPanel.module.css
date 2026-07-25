@@ -1,0 +1,145 @@
+.help {
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.legendRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-block-end: var(--space-3);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+}
+
+.legendDot {
+  inline-size: 9px;
+  block-size: 9px;
+  border-radius: 2px;
+}
+
+.legendIssued {
+  background: var(--color-primary);
+}
+
+.legendConsumed {
+  background: var(--color-info);
+}
+
+.legendRevoked {
+  background: var(--color-danger);
+}
+
+.legendTotal {
+  color: var(--color-text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart {
+  position: relative;
+  block-size: 220px;
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: var(--space-2);
+}
+
+.yAxis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-subtle);
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.plot {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  border-inline-start: 1px solid var(--color-border);
+  border-block-end: 1px solid var(--color-border);
+  background-image:
+    linear-gradient(
+      to top,
+      transparent calc(25% - 1px),
+      var(--color-border) 25%,
+      transparent calc(25% + 1px)
+    ),
+    linear-gradient(
+      to top,
+      transparent calc(50% - 1px),
+      var(--color-border) 50%,
+      transparent calc(50% + 1px)
+    ),
+    linear-gradient(
+      to top,
+      transparent calc(75% - 1px),
+      var(--color-border) 75%,
+      transparent calc(75% + 1px)
+    );
+  opacity: 1;
+  padding-inline: 4px;
+}
+
+.barGroup {
+  flex: 1;
+  block-size: 100%;
+  display: flex;
+  align-items: flex-end;
+  min-inline-size: 2px;
+}
+
+.barStack {
+  inline-size: 100%;
+  display: flex;
+  flex-direction: column-reverse;
+  border-radius: 2px 2px 0 0;
+  overflow: hidden;
+}
+
+.barIssued {
+  background: var(--color-primary);
+  inline-size: 100%;
+}
+
+.barConsumed {
+  background: var(--color-info);
+  opacity: 0.85;
+  inline-size: 100%;
+}
+
+.barRevoked {
+  background: var(--color-danger);
+  opacity: 0.85;
+  inline-size: 100%;
+}
+
+.xAxis {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: var(--space-2);
+  margin-block-start: var(--space-1);
+}
+
+.xAxisSpacer {
+  inline-size: 32px;
+}
+
+.xAxisLabels {
+  display: flex;
+  justify-content: space-between;
+  padding-inline: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-subtle);
+}

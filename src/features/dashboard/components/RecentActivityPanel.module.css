@@ -1,0 +1,33 @@
+.tabs {
+  display: inline-flex;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  flex: none;
+}
+
+.tab,
+.tabActive {
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab {
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}
+
+.tabActive {
+  background: var(--color-primary-tint);
+  color: var(--color-primary);
+}
+
+.help {
+  color: var(--color-text-muted);
+  margin: 0;
+  padding: var(--space-4);
+}
