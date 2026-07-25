@@ -4,252 +4,33 @@
 
 ## Current phase / task
 
-- Dashboard v2 redesign (`feat/dashboard-redesign`, no WBS ticket number) — **DONE. PR opened
-  2026-07-25**, pending CI + merge. See "Last completed" below for the full breakdown,
-  including the deliberate scope call on the four panels with no backing API data.
-- Design handoff v2 (component library + Issuance/Credential-search-verify-revoke wiring)
-  — **DONE. PR #10** (`feat/design-handoff-v2`, no WBS ticket number was ever attached to
-  this task, so no `KH-x.y.z` prefix) squash-merged into `main` on 2026-07-25 (CI green,
-  branch deleted post-merge). See "Last completed" below for the full breakdown. Container
-  rebuild + Majd's manual EN/AR + RTL + light/dark walkthrough against the live container are
-  still the outstanding gate (see "Environment facts" — no browser-automation tool available
-  in this environment).
-- Follow-up same day: Majd screenshotted the live container and reported **every button
-  looked wrong** (tiny, unpadded, native-browser-chrome look) across Issue, Credentials,
-  Verify and Revoke — **DONE, root-caused and fixed**, see "Last completed" below. This is
-  the first real evidence of the "no browser-automation tool" gap actually biting: the bug
-  was invisible to `tsc`/`eslint`/`vitest`+jsdom and only showed up in an actual rendered
-  browser.
-- Design-system update (v1) — **DONE.** New stakeholder visual identity (verdigris-green palette,
-  light/dark theme + toggle, shared Button/StatusBadge/Table primitives) applied across the
-  console; squash-merged into `main` on 2026-07-24. Container rebuilt.
-- Post-V1 bugfix — **LAN-IP secure-context crashes (consume-sim idempotency key, copy buttons)**
-  — **DONE. PR #8** (`fix/lan-ip-secure-context-crypto-clipboard`) squash-merged into `main` on
-  2026-07-24 (branch deleted post-merge). Container rebuilt; Majd manually confirmed both bugs
-  fixed in-browser via the LAN IP.
-- Post-V1 chore — **no silent QR api-base fallback** — **DONE. PR #7**
-  (`chore/qr-api-base-guard`) squash-merged into `main` on 2026-07-23 (branch deleted
-  post-merge). Container rebuilt; Majd's manual EN/AR + RTL walkthrough of the new banner is
-  pending (not yet run as of this entry).
+- No active task. Design system (tokens + component library + Issuance/Credentials/Verify/
+  Revoke restyle + Dashboard restyle) is fully merged into `main`, Majd-verified EN/AR + RTL +
+  light/dark on the rebuilt container as of 2026-07-25. Brief history in "Last completed" below.
+- Post-V1 bugfix — LAN-IP secure-context crashes (consume-sim idempotency key, copy buttons) —
+  DONE. PR #8 merged 2026-07-24.
+- Post-V1 chore — no silent QR api-base fallback — DONE. PR #7 merged 2026-07-23; Majd's
+  manual EN/AR + RTL walkthrough of that specific banner was never explicitly logged as run.
 
 ## Last completed
 
-- 2026-07-25 (Dashboard v2 redesign): a third design handoff arrived
-  (`design_handoff_khatm_console/Dashboard.dc.html` + `DASHBOARD_HANDOFF.md`) — Dashboard-only,
-  reusing the already-implemented tokens/primitives from the two prior handoffs (no new design
-  system work). Delivered:
-  - **Real-data panels, fully wired**: 4 KPI cards (Issued/Consumed/Verified/Revoked — icon
-    chip, accent bar, big tabular value) from the existing `GET /api/v1/stats`; a secondary
-    compact stats strip for the 3 remaining real counters the new KPI row has no card for
-    (claimsRedeemed/consumeDenied/verifyFailed) so no existing real data silently disappeared
-    from the page; a signing-keys panel wired to `GET /.well-known/jwks.json` (verified live
-    against the local Docker stack — real shape is `{kty, kid, crv, x, y}`, no expiry/status/
-    rotation fields at all, confirmed by direct `curl`).
-  - **Explicit scope decision, confirmed with Majd first**: the design guide's lifecycle bar
-    chart, recent-activity table, needs-attention panel, and top-consuming-parties panel have
-    **no backing API data whatsoever** — `/api/v1/stats` is a single-window aggregate (no daily
-    series), and there's no activity-feed, anomaly-feed, or per-party-usage endpoint. Rather than
-    fabricate numbers (this repo's P1 "proofs, not content" / no-fabrication norm, reinforced
-    throughout this file's history), asked Majd how to handle it; Majd's answer: build every
-    panel's real card/layout chrome per the mock, real data where it exists, and for the rest
-    ship the shell with an honest empty state **plus a written API-needs doc for the backend
-    team** rather than skip them. Delivered exactly that — see
-    `docs/specs/dashboard-v2-backend-needs.md` for the four gaps (daily time series, activity
-    feed, anomaly feed, per-party usage stats) written for the khatm-platform team, each with a
-    suggested endpoint shape.
-  - KPI cards also drop the mock's delta (`▲ 12.4% vs. prev period`) and sparkline — both would
-    need a previous-period or daily comparison that doesn't exist either — replaced with a real,
-    derived footer caption (the stats window's date range, `formatWindowRange` in `windows.ts`).
-  - Toolbar: real headline + a genuine "last updated" timestamp (TanStack Query's
-    `dataUpdatedAt`, not fabricated), a 7d/30d range switch (only what `/api/v1/stats` actually
-    supports — the mock's 90d/Custom options were not added since they'd be non-functional), a
-    real Refresh (pre-existing), and a real Export — `csv.ts`'s `buildStatsCsv` serializes the
-    on-screen stats snapshot client-side (small, local, no new endpoint, mirrors the existing
-    `downloadCsv` pattern from `bulkIssuance`).
-  - New shared-within-feature `PanelCard` component (title/subtitle/action header + body shell)
-    so the five bordered panel cards (chart/keys/activity/attention/parties) share one chrome
-    instead of five near-duplicates.
-  - `KpiCard`'s per-KPI accent/tint color is a CSS-module tone class (`primary`/`info`/
-    `success`/`danger`, each setting `--kpi-accent`/`--kpi-tint` with a same-file fallback —
-    deliberately avoiding the exact undefined-`var()`-with-no-fallback bug class found in the
-    prior session), mirroring `StatusBadge`'s existing tone-class pattern rather than inline
-    style objects.
-  - Explicitly **out of scope, by design**: the shared `AppShell`/`Sidebar`/`Topbar` (already
-    used app-wide, already on the design-system tokens) were left untouched — the handoff doc
-    itself scopes this to `src/features/dashboard/components/`, and the mock's topbar
-    extras (global search, notifications bell) have no backend support either, so touching the
-    shared shell would have both widened blast radius past "Dashboard-only" and reintroduced
-    the same fabrication problem one level up.
-  - i18n: full new `dashboard.*` key set (headline/export/keys/chart/activity/attention/parties,
-    each empty-panel with its own honest `emptyTitle`/`emptyBody` copy) added to both `en.json`
-    and `ar.json` in the same commit; removed the now-unused `dashboard.title` and
-    `dashboard.groups.*` keys (dead after the KPI-row/secondary-strip restructure). Parity test
-    green.
-  - RTL: grep-verified zero physical left/right properties across every new/changed dashboard
-    stylesheet (same method as every prior session — no browser-automation tool available).
-  - Tests: 170 total now (was 162) — 8 new (`DashboardPage.test.tsx` +4: export button, real
-    signing keys render, signing-keys empty state, all-four-placeholders-render-not-fabricated;
-    `windows.test.ts` +2 for `formatWindowRange`; new `csv.test.ts` +2 for `buildStatsCsv`).
-    `npm run typecheck`, `lint`, `format:check`, and `test` all clean (same one pre-existing
-    `FormField.tsx` HMR warning as every session since the design-handoff-v2 PR). `npm run
-build` clean.
-  - Committed on `feat/dashboard-redesign` and PR opened same session, per Majd's explicit
-    go-ahead for this task (same branch-then-PR flow as PR #10).
+- 2026-07-25 (design system v3 — Dashboard redesign, PR #11): restyled `/dashboard` onto the
+  existing tokens/primitives. KPI cards and the signing-keys panel are wired to real data
+  (`GET /api/v1/stats`, `GET /.well-known/jwks.json`); the lifecycle chart, recent-activity,
+  needs-attention, and top-parties panels have no backing API data, so they ship as real card
+  shells with an empty state rather than fabricated numbers — see
+  `docs/specs/dashboard-v2-backend-needs.md` for what khatm-platform would need to add. Majd
+  confirmed EN/AR + RTL + light/dark on the rebuilt container. Merged into `main`.
 
-- 2026-07-25 (follow-up: every button rendered broken — root cause + fix): Majd reviewed
-  the rebuilt container and screenshotted the Issue screen — every button (Sign in, Issue
-  credential, Cancel, Search, Reset, Verify, Look up, Reveal/Hide, Copy, Issue another) looked
-  like an unstyled native browser button: tight to the text, ~18px tall, no visible
-  padding — instead of the intended padded, rounded, 34px-tall pills. Root-caused with a
-  throwaway Playwright script (`playwright-core`, installed standalone in the scratchpad, not
-  added to the project) driving the real running container and reading `getComputedStyle` —
-  no browser-automation tool is available as a first-class tool in this environment, but a
-  disposable local script was enough here. Found: `Button.module.css`'s base `.button` rule
-  set `padding: var(--space-2) var(--space-5)`, and **`--space-5` was never defined** in
-  `tokens.css` (the scale jumps `--space-4` → `--space-6`) — a pre-existing bug from the
-  2026-07-24 design-system-update session (that file was never touched this session before
-  now). An unresolvable `var()` with no fallback invalidates the whole shorthand at
-  computed-value time, so `padding` silently fell back to `0` for **every** `Button`
-  instance in the app — invisible to `tsc`/`eslint`/`vitest`+jsdom (jsdom doesn't compute
-  real layout), only visible in an actual rendered browser. This session's own work happened
-  to multiply the bug's visible surface area (many more call sites now route through the
-  shared `Button`), which is what made it obvious. Fixed by changing the reference to
-  `var(--space-4)` (8px 16px — the padding convention already used elsewhere in this
-  codebase's hand-written button CSS, and close to the design handoff's literal "9px 18px").
-  Verified computed padding is now `8px 16px` (`8px 12px` for `ghost`) and height `34.1875px`
-  consistently across every button on Issue/Credentials/Verify/Revoke, via the same
-  Playwright script.
-  - **Second, related bug found in the same pass**: `IssuePage`'s "Issue another" button and
-    `VerifyPage`'s "Verify" button were stretching to fill their entire container width
-    instead of sizing to their content — a `justify-items`/`align-items: stretch` default
-    (CSS Grid's and Flexbox's default, respectively) applying to a `Button` that was a direct
-    child of a `display: grid`/`flex-direction: column` container with no explicit
-    self-alignment. Fixed with targeted `justify-self: start` (`.issueAnotherButton`,
-    `IssuePage.module.css`) and `align-self: flex-start` (`.submit`, `VerifyPage.module.css`)
-    on just those two buttons — both are logical/writing-mode-relative keywords (`start`/
-    `flex-start` are not `left`/`right`), so they stay RTL-correct. `RevokePage`/`FilterBar`/
-    `IssueForm`/`SecretReveal`'s buttons were already safe (nested inside a row flex container,
-    or given `flex: none`), confirmed by grepping every `display: grid`/`flex-direction: column`
-    container in the touched files for a `Button` as a _direct_ child.
-  - Also **empirically verified real click behavior** (per Majd's explicit ask, not just
-    look-and-feel), against the live container with a real authenticated session: Reveal/Hide
-    genuinely toggles the DOM between the masked placeholder and the real claim code (not just
-    a label swap); both Copy buttons genuinely write the correct value to
-    `navigator.clipboard` (read back and asserted); Search genuinely filters the credentials
-    table (20 rows → 1 on an exact ref match) and Reset genuinely restores it; Verify's submit
-    genuinely shows a validation error on empty input without crashing.
-  - Full suite re-verified after both fixes: **162/162 tests, `tsc` clean, `eslint` clean**
-    (same one pre-existing HMR-only warning). Rebuilt and redeployed the `khatm-console`
-    container twice this follow-up (once per fix) via `docker compose build` +
-    `docker compose up -d --force-recreate`, against the already-running `khatm-api`/
-    `khatm-worker`/`khatm-postgres`/`khatm-redis` stack.
-  - **Still not done**: a real EN/AR + RTL + dark-mode manual pass — this follow-up only
-    exercised English/light/LTR via the throwaway script. `--space-5` is worth grep-ing for
-    before trusting any future design-token change; more generally, an undefined `var()` with
-    no fallback is a silent, test-invisible failure mode worth remembering.
+- 2026-07-25 (design system v2 — component library + screen restyle, PR #10): built the shared
+  CSS-Module primitives (`DataTable`, `FormField`, `SecretReveal`, `EmptyState`, `Banner`,
+  `Toast`) and restyled Issuance (single) + Credentials search/Verify/Revoke onto them. A
+  same-day follow-up fixed an undefined `--space-5` token that was silently zeroing every
+  Button's padding, plus two buttons stretching to fill their container. Merged into `main`.
 
-- 2026-07-24 (design handoff v2 — component library + two-screen wiring): a second design
-  handoff arrived (`design_handoff_khatm_console/`: `tokens.css`, `README.md`, an interactive
-  `.dc.html` reference) with the same verdigris-green token set as the v1 design-system update
-  below plus explicit component patterns (StatusBadge, Button, compact DataTable, FormField,
-  shown-once SecretReveal, EmptyState, Banner/Toast) and two fully-worked screens (Issuance —
-  single, Credential search/verify/revoke). Delivered:
-  - **`tokens.css` merge** — verified, not re-applied: `src/styles/tokens.css` already carried
-    every token in the handoff file (from the 2026-07-24 v1 session) plus two extras
-    (`color-scheme`, `--color-danger-contrast`) neither present in nor conflicting with the
-    handoff. No diff needed.
-  - **New CSS-Module primitives in `src/components/ui/`**, all `var(--token)` + logical
-    properties only (RTL grep-verified, zero physical left/right matches across every file
-    touched this session):
-    - `DataTable` — generic `columns`/`rows`/`rowKey` table, compact rows via `--row-height`
-      (32px, set on `tr`, mirroring the handoff's own `<tr style="height:var(--row-height)">`
-      pattern), `code` column flag for the mono/tabular/forced-LTR treatment, an `emptyState`
-      slot. Renders real `<table>/<tr>/<td>` (not a div-grid) — kept `ResultsTable`'s existing
-      `closest('tr')` test assumption intact.
-    - `FormField` + `khatmInputClass(state)` — label/badge/help/error/valid shell around a
-      control the caller registers itself (doesn't own the `<input>`, so `react-hook-form`'s
-      `register()` spread keeps working unchanged); `khatmInputClass` composes the existing
-      global `.khatm-input`/`--error`/`--valid` classes from `global.css` rather than
-      duplicating that CSS.
-    - `SecretReveal` — the one shown-once pattern for claim codes and API keys: masked by
-      default (dot-grouped placeholder, never leaks exact length precisely), a "Shown once"
-      pill, reveal/hide toggle, optional copy action wired to the existing `copyToClipboard()`
-      helper, and a `Toast` confirmation on copy.
-    - `EmptyState` — dashed card, decorative seal-ring glyph (kept to a pure CSS ring, no
-      hardcoded "ختم" glyph text — the app's existing brand mark already localizes that via
-      `t('app.brand')`, and a shared "dumb" UI component shouldn't hardcode either language).
-    - `Banner` (tone-based alert, replaces `ApiErrorBanner`'s internals — same public API,
-      `role="alert"`, message/meta content unchanged) and `Toast` (floating confirmation,
-      fixed + logical insets so it mirrors correctly in RTL).
-  - **Issuance — single (`/issue`) rewired**: `IssuePage` now renders the schema-detail step as
-    the design guide's two-column panel (`.grid`/`.left`/`.right`, `border-inline-end` divider,
-    right column bg `--color-surface-2`) — left is the live `IssueForm`, right is an `EmptyState`
-    until a credential is minted, then the success view. The claim code renders through
-    `SecretReveal` (masked by default — a real behavior change from the previous always-visible
-    code; `IssuePage.test.tsx`'s mint test now clicks "Reveal" before asserting the code text).
-    `IssueForm` now builds every field through `FormField`/`khatmInputClass` and uses the shared
-    `Button` for submit/cancel; a new `onBack` wire (labelled `issue.cancel`, not the previous
-    unused prop) gives the mock's "Mint (primary) + Cancel (secondary)" pair. Kept the
-    schema-picker step as its own card-list panel rather than collapsing it into the mock's
-    plain `<select>` — `SchemaPicker` is shared with `BulkIssuePage` and has its own tests; this
-    was judged a legitimate, lower-risk deviation from pixel-fidelity, not a shortcut.
-  - **Credential search (`/credentials`) rewired**: `FilterBar` uses `FormField`, `khatmInputClass`
-    and `Button`; `ResultsTable` now renders through `DataTable` with `EmptyState` for no matches;
-    `CredentialsPage`'s pagination controls use `Button`.
-  - **Verify (`/verify`) rewired**: `VerifyPage`'s form uses `FormField`, `khatmInputClass` and
-    `Button`; `VerifyResult`'s valid/invalid verdict now uses the shared `StatusBadge`
-    (success/danger) instead of bespoke `.valid`/`.invalid` CSS.
-  - **Revoke (`/revoke`) rewired** — closest of the four to the handoff's literal "search →
-    result card → revoke panel" screen 2 mock: lookup form uses `FormField`, `khatmInputClass`
-    and `Button`; `CredentialSummary` restyled to the mock's result-card look (coded ref and
-    `StatusBadge` header row over a `repeat(auto-fit,minmax(150px,1fr))` meta grid, bg
-    `--color-surface-2`) using the fields the real `CredentialView` contract actually exposes
-    (schema/uses/valid-until — **no `issuedAt` or consuming-party field on this shape**, unlike
-    the search list's `CredentialSummary` type, so the mock's "issued date / consuming party"
-    columns were not fabricated); the revoke action now sits in its own danger-bordered panel
-    (`border: color-mix(... var(--color-danger) 35% ...)`, per the mock). The mock's "Reason"
-    `<select>` was **not** added — the real `POST .../revoke` endpoint takes no request body at
-    all, so a reason field would have nothing to submit to (contract discipline: "the generated
-    types, not this brief/mock, are authoritative"). `RevokeConfirmDialog` now uses `Button` and
-    `khatmInputClass` for its type-to-confirm input.
-  - **i18n**: added `common.reveal`/`hide`/`shownOnce`, `issue.cancel`/`issuedBadge`/
-    `resultEmptyTitle`/`resultEmptyBody`, `revoke.revokePanelHint` to both `en.json` and
-    `ar.json` in the same commit-to-be; parity test green.
-  - **`.prettierignore`** gained `design_handoff_khatm_console` (the handoff bundle itself —
-    reference material, not maintained source; was failing `format:check` otherwise).
-  - Tests: updated `IssuePage.test.tsx`'s mint-flow test to reveal the now-masked claim code
-    before asserting its value; no other test files needed behavioral changes (verified every
-    other assertion targets text/role, not the specific DOM shape that changed). Full suite:
-    **162 passed**, 0 failed. `typecheck` clean. `lint` clean except one pre-existing-pattern
-    warning (`react-refresh/only-export-components` on `FormField.tsx`, since it exports both
-    the component and the `khatmInputClass` helper — judged not worth a file split for one
-    HMR-only warning). `format:check` clean except the **pre-existing, out-of-scope**
-    `.vscode/extensions.json` issue (see "Open decisions" — unrelated to this session, same
-    caveat as prior sessions). `npm run build` clean.
-  - **Not done this session**: no browser-automation tool is available in this environment (see
-    "Environment facts"), so the visual/RTL result was verified by grep (zero physical
-    left/right properties) and by the component/page test suite (which exercises real rendered
-    DOM), not by an actual browser screenshot. A manual EN/AR + RTL + light/dark walkthrough
-    against the live container is still the real gate before merge, same as every prior
-    UI-visible session. Also not done: applying `SecretReveal` to `MintedKeyModal`'s API-key
-    display (the design handoff's other named use case) — out of this session's explicit scope
-    (Issuance + Credential search/verify/revoke only); worth a quick follow-up since the
-    component already supports it as-is.
-  - **Branched, committed, and merged 2026-07-25** as `feat/design-handoff-v2` (no WBS ticket
-    number was ever given for this task, so no `KH-x.y.z` prefix) per Majd's explicit
-    go-ahead; full suite re-verified green immediately before commit (162/162 tests, `tsc`
-    clean, `eslint` clean bar the one pre-existing HMR warning, `format:check` clean bar the
-    pre-existing untracked `.vscode/extensions.json`). **PR #10** opened, CI green (typecheck,
-    lint, format check, unit tests, build, contract-types freshness), squash-merged into
-    `main` with `--delete-branch`. **Not yet done**: rebuilding the `khatm-console` container
-    and Majd's manual EN/AR + RTL + light/dark walkthrough against it — still the real gate,
-    same as every prior UI-visible session (see "Environment facts": no browser-automation
-    tool available in this environment, so this session's own verification stopped at
-    grep + component/page test suite, not an actual rendered browser).
-
-- 2026-07-24 (design-system update): applied the new stakeholder design system (verdigris-green
-  palette, light/dark theme + toggle, shared Button/StatusBadge/Table primitives) across the
-  console — see the "Current phase" line above for the one-line summary.
+- 2026-07-24 (design system v1 — visual identity): applied the stakeholder verdigris-green
+  token system (light/dark themes via `data-theme`) and the original shared Button/StatusBadge/
+  Table primitives across the console. Merged into `main`.
 
 - 2026-07-24 (PR #8, bugfix): Majd reported live — `ConsumeSimPage` (`/consume-sim`) rendered
   "Something went wrong" (the `ErrorBoundary` fallback) when opened via a LAN IP over plain HTTP
@@ -615,9 +396,8 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 - `khatm-platform` is a **private** repo — `npm run contract:update` falls back to `gh api`
   (works with the caller's own `gh` credentials). The contract, not platform source, is now
   sufficient for Issue request construction.
-- Design tokens (`src/styles/tokens.css`) are the stakeholder design system (verdigris-green
-  oklch hue 158, light `:root` + `[data-theme="dark"]`) applied 2026-07-24; the neutral POC
-  palette is retired.
+- Design tokens (`src/styles/tokens.css`): stakeholder verdigris-green system, light/dark via
+  `data-theme`. Applied 2026-07-24; the old neutral POC palette is gone.
 - No browser-automation tool is available in this environment unless a future session gains one.
   For C1/C1b/C2/C2b/C3/C4, automated checks cover type/lint/format/unit tests; a real manual
   visual/RTL pass should still happen before merge — for C3+C4 specifically, Majd's walkthrough
@@ -679,18 +459,6 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
   free-text render hint. `fromSchemaDetail` normalizes any stored `"string"` to `"text"` on
   prefill. Fixed and covered by a new test (`claimsBuilder.test.ts` — normalizes legacy
   "string" to "text").
-- **Design tokens / visual identity — RESOLVED 2026-07-24.** The stakeholder design guide
-  arrived (Claude Design project `fd7b727b-…`, file `Khatm Console Design System.dc.html`) and
-  was applied to `src/styles/tokens.css` (verdigris-green oklch hue 158, light + dark) plus the
-  shared primitives, dark-mode toggle, and app-wide token rename — see the design-system-update
-  entry under "Last completed". The neutral placeholder palette is gone.
-- **Remaining design-system migration — deferred, low-risk.** The shared `Button`,
-  `StatusBadge`, `Table.module.css`, `.khatm-input`, and `.emptyState` primitives exist and the
-  highest-duplication call sites are on them, but ~12 duplicated feature-dialog/form button
-  blocks still use their own per-feature `.submit`/`.cancel`/`.confirm` CSS (they already
-  consume the new tokens, so they look right) and most forms haven't adopted `.khatm-input`
-  (the global `:focus-visible` ring already covers them). Migrating the rest is mechanical
-  CSS/JSX and the natural follow-up to this session.
 - `khatm-platform`'s CI publishing step for `docs/api/openapi.json` (KH-1.6) should eventually
   make the raw URL work without the `gh` fallback — worth revisiting once that lands.
 - Dev-only `esbuild`/vitest-toolchain `npm audit` advisory (moderate, dev-server request forgery)
@@ -712,29 +480,14 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
   report-alignment model than the current single-batch one, none of which seemed "trivial to do
   cleanly" within this session. Revisit if a pilot tenant actually needs single-file uploads over
   200 rows.
-- **Design tokens / visual identity — RESOLVED 2026-07-24.** The stakeholder design guide
-  arrived (Claude Design project `fd7b727b-…`, file `Khatm Console Design System.dc.html`) and
-  was applied to `src/styles/tokens.css` (verdigris-green oklch hue 158, light + dark) plus the
-  shared primitives, dark-mode toggle, and app-wide token rename — see the design-system-update
-  entry under "Last completed". The neutral placeholder palette is gone.
-- **Remaining design-system migration — deferred, low-risk.** The shared `Button`,
-  `StatusBadge`, `Table.module.css`, `.khatm-input`, and `.emptyState` primitives exist and the
-  highest-duplication call sites are on them, but ~12 duplicated feature-dialog/form button
-  blocks still use their own per-feature `.submit`/`.cancel`/`.confirm` CSS (they already
-  consume the new tokens, so they look right) and most forms haven't adopted `.khatm-input`
-  (the global `:focus-visible` ring already covers them). Migrating the rest is mechanical
-  CSS/JSX and the natural follow-up to this session.
-- `khatm-platform`'s CI publishing step for `docs/api/openapi.json` (KH-1.6) should eventually
-  make the raw URL work without the `gh` fallback — worth revisiting once that lands.
 
 ## Next up (post-V1, ordered per Majd)
 
 1. API-key revocation UI (KH-2.2-era — the platform endpoint already exists,
    `POST /api/v1/admin/api-keys/{id}/revoke`).
-2. Visual identity — **DONE 2026-07-24** (design-system update on `feat/design-system-update`).
-   Remainder: finish migrating the last ~12 duplicated button blocks onto `Button` and adopt
-   `.khatm-input` across the remaining forms (see Open decisions), and revisit whether a real
-   charting library belongs in the dashboard now that the palette is finalized.
+2. Visual identity — **DONE**. Remainder: migrate the last ~12 duplicated button blocks onto
+   `Button` and adopt `.khatm-input` across remaining forms; revisit whether a real charting
+   library belongs in the dashboard.
 3. KH-2.2-era RBAC changes, whatever those turn out to require.
 4. Unify the scope-gating placement convention (self-gating vs. App.tsx-level wrapping — see
    "Open decisions" above) across every gated page.
