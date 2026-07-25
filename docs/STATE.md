@@ -5,9 +5,12 @@
 ## Current phase / task
 
 - Design handoff v2 (component library + Issuance/Credential-search-verify-revoke wiring)
-  — **DONE.** See "Last completed" below for the full breakdown. Branched as
-  `feat/design-handoff-v2` (no WBS ticket number was ever attached to this task, so no
-  `KH-x.y.z` prefix) and committed on 2026-07-25 per Majd's go-ahead; PR opened same day.
+  — **DONE. PR #10** (`feat/design-handoff-v2`, no WBS ticket number was ever attached to
+  this task, so no `KH-x.y.z` prefix) squash-merged into `main` on 2026-07-25 (CI green,
+  branch deleted post-merge). See "Last completed" below for the full breakdown. Container
+  rebuild + Majd's manual EN/AR + RTL + light/dark walkthrough against the live container are
+  still the outstanding gate (see "Environment facts" — no browser-automation tool available
+  in this environment).
 - Follow-up same day: Majd screenshotted the live container and reported **every button
   looked wrong** (tiny, unpadded, native-browser-chrome look) across Issue, Credentials,
   Verify and Revoke — **DONE, root-caused and fixed**, see "Last completed" below. This is
@@ -167,11 +170,17 @@
     display (the design handoff's other named use case) — out of this session's explicit scope
     (Issuance + Credential search/verify/revoke only); worth a quick follow-up since the
     component already supports it as-is.
-  - **Branched and committed 2026-07-25** as `feat/design-handoff-v2` (no WBS ticket number
-    was ever given for this task, so no `KH-x.y.z` prefix) per Majd's explicit go-ahead; full
-    suite re-verified green immediately before commit (162/162 tests, `tsc` clean, `eslint`
-    clean bar the one pre-existing HMR warning, `format:check` clean bar the pre-existing
-    untracked `.vscode/extensions.json`). PR opened same session.
+  - **Branched, committed, and merged 2026-07-25** as `feat/design-handoff-v2` (no WBS ticket
+    number was ever given for this task, so no `KH-x.y.z` prefix) per Majd's explicit
+    go-ahead; full suite re-verified green immediately before commit (162/162 tests, `tsc`
+    clean, `eslint` clean bar the one pre-existing HMR warning, `format:check` clean bar the
+    pre-existing untracked `.vscode/extensions.json`). **PR #10** opened, CI green (typecheck,
+    lint, format check, unit tests, build, contract-types freshness), squash-merged into
+    `main` with `--delete-branch`. **Not yet done**: rebuilding the `khatm-console` container
+    and Majd's manual EN/AR + RTL + light/dark walkthrough against it — still the real gate,
+    same as every prior UI-visible session (see "Environment facts": no browser-automation
+    tool available in this environment, so this session's own verification stopped at
+    grep + component/page test suite, not an actual rendered browser).
 
 - 2026-07-24 (design-system update): applied the new stakeholder design system (verdigris-green
   palette, light/dark theme + toggle, shared Button/StatusBadge/Table primitives) across the
