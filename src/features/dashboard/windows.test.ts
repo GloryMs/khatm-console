@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeWindow } from './windows';
+import { computeWindow, formatWindowRange } from './windows';
 
 describe('computeWindow', () => {
   const now = new Date('2026-07-22T12:00:00.000Z');
@@ -16,5 +16,21 @@ describe('computeWindow', () => {
       from: '2026-06-22T12:00:00.000Z',
       to: '2026-07-22T12:00:00.000Z',
     });
+  });
+});
+
+describe('formatWindowRange', () => {
+  it('formats a "from – to" range in the given locale', () => {
+    const range = formatWindowRange(
+      { from: '2026-07-01T12:00:00.000Z', to: '2026-07-25T12:00:00.000Z' },
+      'en',
+    );
+    expect(range).toBe('Jul 1 – Jul 25');
+  });
+
+  it('returns an empty string when either bound is missing, never throwing', () => {
+    expect(formatWindowRange(undefined, 'en')).toBe('');
+    expect(formatWindowRange({ from: '2026-07-01T12:00:00.000Z' }, 'en')).toBe('');
+    expect(formatWindowRange({ to: '2026-07-25T12:00:00.000Z' }, 'en')).toBe('');
   });
 });

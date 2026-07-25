@@ -30,15 +30,13 @@
     "dark": "Dark"
   },
   "dashboard": {
-    "title": "Dashboard",
+    "headline": "Operations at a glance",
+    "headlineSub": "Last updated",
     "windowLabel": "Time window",
     "windowDays": "Last {{count}} days",
+    "export": "Export",
     "refresh": "Refresh",
     "refreshing": "Refreshing…",
-    "groups": {
-      "lifecycle": "Lifecycle",
-      "attention": "Needs attention"
-    },
     "counters": {
       "issued": "Issued",
       "claimsRedeemed": "Claim codes redeemed",
@@ -47,6 +45,33 @@
       "revoked": "Revoked",
       "consumeDenied": "Consume denied",
       "verifyFailed": "Verifications failed"
+    },
+    "keys": {
+      "title": "Signing keys",
+      "published": "Published",
+      "emptyTitle": "No signing keys published",
+      "emptyBody": "The platform's public key set is currently empty."
+    },
+    "chart": {
+      "title": "Credential lifecycle",
+      "subtitle": "Daily volume by event",
+      "emptyTitle": "Daily breakdown not available yet",
+      "emptyBody": "The stats endpoint reports one total per window, not a day-by-day series. A time-series endpoint is on the backend request list."
+    },
+    "activity": {
+      "title": "Recent activity",
+      "emptyTitle": "Activity feed not available yet",
+      "emptyBody": "There's no per-event activity endpoint yet — this panel will list recent issue/consume/revoke events once one exists."
+    },
+    "attention": {
+      "title": "Needs attention",
+      "emptyTitle": "Anomaly detection not available yet",
+      "emptyBody": "Denied consumes, verification failure spikes and rotation warnings aren't surfaced as items yet. The raw counts are in the stats strip above."
+    },
+    "parties": {
+      "title": "Top consuming parties",
+      "emptyTitle": "Usage ranking not available yet",
+      "emptyBody": "Call-volume and success-rate stats per consuming party aren't tracked yet — see the Consuming Parties page for the registered list."
     }
   },
   "auth": {
