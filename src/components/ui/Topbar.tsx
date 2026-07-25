@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { ThemeSwitcher } from './ThemeSwitcher';
-import { UserChip } from './UserChip';
 import styles from './Topbar.module.css';
 
 export function Topbar() {
@@ -11,7 +10,6 @@ export function Topbar() {
       <div className={styles.actions}>
         <ThemeSwitcher />
         <LanguageSwitcher />
-        <UserChip />
       </div>
     </header>
   );

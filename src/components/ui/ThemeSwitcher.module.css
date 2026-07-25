@@ -16,7 +16,7 @@
 }
 
 .active {
-  background: var(--color-text);
+  background: var(--color-primary);
   color: var(--color-primary-contrast);
-  border-color: var(--color-text);
+  border-color: var(--color-primary);
 }
