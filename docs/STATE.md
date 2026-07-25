@@ -4,11 +4,7 @@
 
 ## Current phase / task
 
-- Dashboard live-data wiring (`feat/dashboard-v2-live-data`, no WBS ticket number) — **DONE,
-  PR not yet opened as of this entry** (rest of this session). khatm-platform shipped
-  KH-1.1.5-BE (5 new endpoints) on an unmerged branch; contract pulled directly from the live
-  local backend instead of GitHub `main` since the platform PR isn't merged yet — re-run
-  `npm run contract:update` once it is, to confirm nothing drifted. See "Last completed" below.
+- Dashboard live-data wiring — **DONE. PR #12** merged 2026-07-25, Majd-verified (EN/AR + RTL).
 - Post-V1 bugfix — LAN-IP secure-context crashes (consume-sim idempotency key, copy buttons) —
   DONE. PR #8 merged 2026-07-24.
 - Post-V1 chore — no silent QR api-base fallback — DONE. PR #7 merged 2026-07-23; Majd's
