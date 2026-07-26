@@ -1,3221 +1,3039 @@
 {
-  "openapi": "3.0.1",
-  "info": {
-    "title": "Khatm Platform API",
-    "version": "0.1.0-SNAPSHOT"
+  "components" : {
+    "schemas" : {
+      "ActivityItem" : {
+        "description" : "One recent, display-ready audit event",
+        "properties" : {
+          "action" : {
+            "type" : "string"
+          },
+          "actorType" : {
+            "type" : "string"
+          },
+          "consumingPartyCode" : {
+            "type" : "string"
+          },
+          "consumingPartyName" : {
+            "$ref" : "#/components/schemas/LocalizedText"
+          },
+          "detail" : {
+            "additionalProperties" : {
+              "type" : "object"
+            },
+            "type" : "object"
+          },
+          "entityRef" : {
+            "type" : "string"
+          },
+          "occurredAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ActivityResponse" : {
+        "description" : "Recent, display-ready credential activity",
+        "properties" : {
+          "items" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ActivityItem"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "AllowSchemaRequest" : {
+        "properties" : {
+          "schemaId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "required" : [ "schemaId" ],
+        "type" : "object"
+      },
+      "AllowedSchema" : {
+        "properties" : {
+          "schemaCode" : {
+            "type" : "string"
+          },
+          "schemaId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "AttentionEntry" : {
+        "description" : "One actionable needs-attention item",
+        "properties" : {
+          "detail" : {
+            "additionalProperties" : {
+              "type" : "object"
+            },
+            "type" : "object"
+          },
+          "occurredAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "type" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "AttentionResponse" : {
+        "description" : "Itemized, actionable needs-attention feed",
+        "properties" : {
+          "items" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AttentionEntry"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "BulkIssueDefaults" : {
+        "description" : "Batch-wide defaults, overridable per item",
+        "properties" : {
+          "maxUses" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "validMinutes" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "BulkIssueItem" : {
+        "description" : "One credential to issue within a bulk batch",
+        "properties" : {
+          "claims" : {
+            "additionalProperties" : {
+              "type" : "object"
+            },
+            "type" : "object"
+          },
+          "maxUses" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "pseudoRef" : {
+            "type" : "string"
+          },
+          "validMinutes" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "BulkIssueItemError" : {
+        "description" : "Why one bulk-issue item failed",
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "BulkIssueItemResult" : {
+        "description" : "One bulk-issue row's outcome",
+        "properties" : {
+          "claimCode" : {
+            "type" : "string"
+          },
+          "error" : {
+            "$ref" : "#/components/schemas/BulkIssueItemError"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "index" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "ref" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "BulkIssueRequest" : {
+        "description" : "Request to issue a batch of credentials against one schema",
+        "properties" : {
+          "defaults" : {
+            "$ref" : "#/components/schemas/BulkIssueDefaults"
+          },
+          "items" : {
+            "items" : {
+              "$ref" : "#/components/schemas/BulkIssueItem"
+            },
+            "type" : "array"
+          },
+          "mintClaimCodes" : {
+            "type" : "boolean"
+          },
+          "schemaCode" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "schemaCode" ],
+        "type" : "object"
+      },
+      "BulkIssueResponse" : {
+        "description" : "Full per-item report of a bulk issuance batch",
+        "properties" : {
+          "failed" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "results" : {
+            "items" : {
+              "$ref" : "#/components/schemas/BulkIssueItemResult"
+            },
+            "type" : "array"
+          },
+          "succeeded" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "total" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ClaimCodeMintRequest" : {
+        "description" : "Request to mint a fresh wallet claim code for an already-issued credential",
+        "properties" : {
+          "sdJwt" : {
+            "type" : "string"
+          },
+          "ttlMinutes" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "sdJwt" ],
+        "type" : "object"
+      },
+      "ClaimCodeMintResponse" : {
+        "description" : "Result of minting a one-time wallet claim code",
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "expiresAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ClaimFieldRequest" : {
+        "properties" : {
+          "labelI18n" : {
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "type" : "object"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "type" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "labelI18n", "name", "type" ],
+        "type" : "object"
+      },
+      "ClaimRedeemRequest" : {
+        "description" : "Request to redeem a one-time wallet claim code",
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "code" ],
+        "type" : "object"
+      },
+      "ClaimRedeemResponse" : {
+        "description" : "Full, one-time delivery of a credential to a wallet (spec FS-1.2.1 D4)",
+        "properties" : {
+          "credential" : {
+            "type" : "string"
+          },
+          "disclosures" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "expiresAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "issuedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "maxUses" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "ref" : {
+            "type" : "string"
+          },
+          "schema" : {
+            "$ref" : "#/components/schemas/ClaimSchemaRef"
+          },
+          "statusListUri" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ClaimSchemaRef" : {
+        "description" : "The redeemed credential's schema, display shape",
+        "properties" : {
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "nameI18n" : {
+            "$ref" : "#/components/schemas/LocalizedText"
+          },
+          "version" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ConsumeRequest" : {
+        "properties" : {
+          "consumer" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "idempotencyKey" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ConsumeResponse" : {
+        "properties" : {
+          "consumed" : {
+            "type" : "boolean"
+          },
+          "reason" : {
+            "type" : "string"
+          },
+          "usesRemaining" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ConsumingPartyStatsEntry" : {
+        "description" : "One consuming party's call-volume stats",
+        "properties" : {
+          "consumed" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "denied" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "partyCode" : {
+            "type" : "string"
+          },
+          "partyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "partyName" : {
+            "$ref" : "#/components/schemas/LocalizedText"
+          },
+          "successRate" : {
+            "format" : "double",
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "ConsumingPartyStatsResponse" : {
+        "description" : "Per-consuming-party call-volume stats",
+        "properties" : {
+          "parties" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ConsumingPartyStatsEntry"
+            },
+            "type" : "array"
+          },
+          "window" : {
+            "$ref" : "#/components/schemas/StatsWindow"
+          }
+        },
+        "type" : "object"
+      },
+      "ConsumingPartyView" : {
+        "properties" : {
+          "allowedSchemas" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AllowedSchema"
+            },
+            "type" : "array"
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "nameI18n" : {
+            "$ref" : "#/components/schemas/LocalizedText"
+          },
+          "status" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "CreateApiKeyRequest" : {
+        "properties" : {
+          "ownerId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "ownerType" : {
+            "enum" : [ "TENANT", "CONSUMING_PARTY" ],
+            "type" : "string"
+          },
+          "scopes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array",
+            "uniqueItems" : true
+          }
+        },
+        "required" : [ "ownerType", "scopes" ],
+        "type" : "object"
+      },
+      "CreateApiKeyResponse" : {
+        "properties" : {
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "keyPrefix" : {
+            "type" : "string"
+          },
+          "rawKey" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "CreateConsumingPartyRequest" : {
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "nameI18n" : {
+            "$ref" : "#/components/schemas/NameI18nRequest"
+          }
+        },
+        "required" : [ "nameI18n" ],
+        "type" : "object"
+      },
+      "CredentialPage" : {
+        "properties" : {
+          "items" : {
+            "items" : {
+              "$ref" : "#/components/schemas/CredentialSummary"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalElements" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "CredentialSummary" : {
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "issuedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "maxUses" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "ref" : {
+            "type" : "string"
+          },
+          "revoked" : {
+            "type" : "boolean"
+          },
+          "schemaCode" : {
+            "type" : "string"
+          },
+          "schemaName" : {
+            "$ref" : "#/components/schemas/LocalizedText"
+          },
+          "usesRemaining" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "validTo" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "CredentialView" : {
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "jwt" : {
+            "type" : "string"
+          },
+          "maxUses" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "ref" : {
+            "type" : "string"
+          },
+          "revoked" : {
+            "type" : "boolean"
+          },
+          "schemaCode" : {
+            "type" : "string"
+          },
+          "usesRemaining" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "validTo" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "DailyStatsEntry" : {
+        "description" : "One UTC day's pilot-metrics counters",
+        "properties" : {
+          "counters" : {
+            "$ref" : "#/components/schemas/StatsCounters"
+          },
+          "day" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "DailyStatsResponse" : {
+        "description" : "Pilot-metrics counters broken down by UTC day",
+        "properties" : {
+          "days" : {
+            "items" : {
+              "$ref" : "#/components/schemas/DailyStatsEntry"
+            },
+            "type" : "array"
+          },
+          "window" : {
+            "$ref" : "#/components/schemas/StatsWindow"
+          }
+        },
+        "type" : "object"
+      },
+      "ErrorDetail" : {
+        "description" : "One field-level validation failure",
+        "properties" : {
+          "field" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "messageKey" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ErrorEnvelope" : {
+        "description" : "Uniform error response for every non-2xx API response",
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "details" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ErrorDetail"
+            },
+            "type" : "array"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "messageKey" : {
+            "type" : "string"
+          },
+          "timestamp" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "traceId" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "IssueRequest" : {
+        "description" : "Request to issue a new SD-JWT verifiable credential",
+        "properties" : {
+          "claims" : {
+            "additionalProperties" : {
+              "type" : "object"
+            },
+            "type" : "object"
+          },
+          "holderRef" : {
+            "type" : "string"
+          },
+          "maxUses" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "schemaCode" : {
+            "type" : "string"
+          },
+          "sdFields" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "validMinutes" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "holderRef" ],
+        "type" : "object"
+      },
+      "IssueResponse" : {
+        "description" : "Result of a successful SD-JWT credential issuance",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "ref" : {
+            "type" : "string"
+          },
+          "sdJwt" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "LocalizedText" : {
+        "properties" : {
+          "ar" : {
+            "type" : "string"
+          },
+          "en" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "LoginRequest" : {
+        "properties" : {
+          "password" : {
+            "type" : "string"
+          },
+          "username" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "password", "username" ],
+        "type" : "object"
+      },
+      "MeResponse" : {
+        "properties" : {
+          "displayNameI18n" : {
+            "$ref" : "#/components/schemas/LocalizedText"
+          },
+          "preferredLang" : {
+            "type" : "string"
+          },
+          "scopes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array",
+            "uniqueItems" : true
+          },
+          "username" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "NameI18nRequest" : {
+        "properties" : {
+          "ar" : {
+            "type" : "string"
+          },
+          "en" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "ar", "en" ],
+        "type" : "object"
+      },
+      "SchemaAuthoringRequest" : {
+        "properties" : {
+          "claimsDef" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ClaimFieldRequest"
+            },
+            "type" : "array"
+          },
+          "defaultMaxUses" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "defaultValidity" : {
+            "type" : "string"
+          },
+          "nameI18n" : {
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "type" : "object"
+          },
+          "sdFields" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "claimsDef", "nameI18n" ],
+        "type" : "object"
+      },
+      "SchemaCreateRequest" : {
+        "properties" : {
+          "claimsDef" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ClaimFieldRequest"
+            },
+            "type" : "array"
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "defaultMaxUses" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "defaultValidity" : {
+            "type" : "string"
+          },
+          "nameI18n" : {
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "type" : "object"
+          },
+          "sdFields" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "claimsDef", "code", "nameI18n" ],
+        "type" : "object"
+      },
+      "SchemaDetail" : {
+        "properties" : {
+          "claimsDefJson" : {
+            "type" : "string"
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "defaultMaxUses" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "defaultValidity" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "nameI18n" : {
+            "$ref" : "#/components/schemas/LocalizedText"
+          },
+          "sdFields" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "SchemaSummary" : {
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "nameI18n" : {
+            "$ref" : "#/components/schemas/LocalizedText"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "SigningKeyView" : {
+        "description" : "A signing key's lifecycle status, no JWK material",
+        "properties" : {
+          "kid" : {
+            "type" : "string"
+          },
+          "state" : {
+            "type" : "string"
+          },
+          "validFrom" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "validTo" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SigningKeysResponse" : {
+        "description" : "Every signing key's lifecycle status",
+        "properties" : {
+          "keys" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SigningKeyView"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "StatsCounters" : {
+        "description" : "Pilot-metrics counters for the requested window",
+        "properties" : {
+          "claimsRedeemed" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "consumeDenied" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "consumed" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "issued" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "revoked" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "verifyFailed" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "verifyOk" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "StatsResponse" : {
+        "description" : "Pilot-metrics counters for a time window",
+        "properties" : {
+          "counters" : {
+            "$ref" : "#/components/schemas/StatsCounters"
+          },
+          "window" : {
+            "$ref" : "#/components/schemas/StatsWindow"
+          }
+        },
+        "type" : "object"
+      },
+      "StatsWindow" : {
+        "description" : "The time window counters were aggregated over",
+        "properties" : {
+          "from" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "to" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "VerifyRequest" : {
+        "description" : "Request to verify an SD-JWT credential presentation",
+        "properties" : {
+          "sdJwt" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "sdJwt" ],
+        "type" : "object"
+      },
+      "VerifyResponse" : {
+        "description" : "Result of an SD-JWT credential presentation verification",
+        "properties" : {
+          "claims" : {
+            "additionalProperties" : {
+              "type" : "object"
+            },
+            "type" : "object"
+          },
+          "reason" : {
+            "type" : "string"
+          },
+          "reasonMessage" : {
+            "type" : "string"
+          },
+          "revoked" : {
+            "type" : "boolean"
+          },
+          "statusListChecked" : {
+            "type" : "boolean"
+          },
+          "statusListUri" : {
+            "type" : "string"
+          },
+          "statusListVersion" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "usesRemaining" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "valid" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      }
+    },
+    "securitySchemes" : {
+      "apiKeyBearer" : {
+        "bearerFormat" : "khk_...",
+        "description" : "API key bearer token: Authorization: Bearer khk_<prefix>.<secret>. Scope and actor-kind requirements vary per endpoint — see each operation's description.",
+        "scheme" : "bearer",
+        "type" : "http"
+      },
+      "sessionCookie" : {
+        "description" : "Console session cookie, set by POST /api/v1/auth/login. Used together with the XSRF-TOKEN cookie/X-XSRF-TOKEN header on state-changing requests.",
+        "in" : "cookie",
+        "name" : "KHATM_SESSION",
+        "type" : "apiKey"
+      }
+    }
   },
-  "servers": [
-    {
-      "url": "http://localhost:8080",
-      "description": "Generated server url"
-    }
-  ],
-  "tags": [
-    {
-      "name": "attention",
-      "description": "Itemized, actionable needs-attention feed"
-    },
-    {
-      "name": "jwks",
-      "description": "Public JSON Web Key Set for signature verification"
-    },
-    {
-      "name": "schema",
-      "description": "Credential schema (credential type) lookups and authoring"
-    },
-    {
-      "name": "consuming-parties-admin",
-      "description": "Consuming-party (verifier) administration — registry, status, schema allowlist"
-    },
-    {
-      "name": "activity",
-      "description": "Recent, display-ready credential activity feed"
-    },
-    {
-      "name": "stats",
-      "description": "Pilot-metrics counters aggregated from the audit trail"
-    },
-    {
-      "name": "status",
-      "description": "Signed status-list revocation artifacts"
-    },
-    {
-      "name": "claim",
-      "description": "Wallet claim-code delivery"
-    },
-    {
-      "name": "admin-signing-keys",
-      "description": "Signing-key lifecycle status for the console"
-    },
-    {
-      "name": "credential",
-      "description": "Issue, consume, verify, and revoke SD-JWT credentials"
-    },
-    {
-      "name": "stats",
-      "description": "Per-consuming-party call-volume stats"
-    },
-    {
-      "name": "auth",
-      "description": "Console session login/logout and admin API-key management"
-    }
-  ],
-  "paths": {
-    "/api/v1/schemas/{id}": {
-      "get": {
-        "tags": [
-          "schema"
-        ],
-        "summary": "Fetch a credential schema's detail",
-        "description": "Adds the raw claims definition to the list view's fields, so a console issue screen can render the schema's claim fields. Same access rule as the list endpoint — authenticated, any scope.",
-        "operationId": "get",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Schema detail",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/SchemaDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid session or API key",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No schema with this id (KH-SCH-0404)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "schema"
-        ],
-        "summary": "Rewrite a DRAFT schema's authoring fields in place",
-        "description": "Requires the admin scope. DRAFT only — fixes mistakes before publish. Validated identically to POST /api/v1/schemas.",
-        "operationId": "update",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SchemaAuthoringRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Schema updated",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/SchemaDetail"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bean Validation failed, or a business-level check (KH-SCH-0400)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid session or API key",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Missing the admin scope",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No schema with this id (KH-SCH-0404)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The schema is not DRAFT (KH-SCH-0409)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/schemas": {
-      "get": {
-        "tags": [
-          "schema"
-        ],
-        "summary": "List credential schemas",
-        "description": "Read-only tenant metadata (id, display name, version, status) — every authenticated actor kind may call this, no specific scope required (a deliberate, documented decision: see rbac.security.SecurityConfig's Javadoc). The optional status filter (KH-1.1.1) lets the console's schema management view show DRAFT rows too; the issue-form picker keeps filtering to PUBLISHED client-side, as before.",
-        "operationId": "list",
-        "parameters": [
-          {
-            "name": "status",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Every matching schema registered for the tenant",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/SchemaSummary"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid session or API key",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "schema"
-        ],
-        "summary": "Create a new DRAFT credential schema (version 1)",
-        "description": "Requires the admin scope. Server-side validation rejects an empty claimsDef, a claim field with an unsupported type (text/number/date), a nameI18n or claim labelI18n missing en or ar, an sdFields entry not among the claim field names, or a code already registered at version 1 — all as KH-SCH-0400. The schema starts DRAFT and unavailable for issuance until POST /{id}/publish.",
-        "operationId": "create",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SchemaCreateRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Schema created (DRAFT)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/SchemaDetail"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bean Validation failed, or a business-level check (KH-SCH-0400)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid session or API key",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Missing the admin scope",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/schemas/{id}/versions": {
-      "post": {
-        "tags": [
-          "schema"
-        ],
-        "summary": "Create a new DRAFT version of a PUBLISHED schema",
-        "description": "Requires the admin scope. Same code, version + 1. The console is responsible for prefilling the request body from the source schema's current fields — this endpoint validates the submitted body exactly like POST /api/v1/schemas, with no server-side default-merging.",
-        "operationId": "createVersion",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SchemaAuthoringRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "New DRAFT version created",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/SchemaDetail"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bean Validation failed, or a business-level check (KH-SCH-0400)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid session or API key",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Missing the admin scope",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No schema with this id (KH-SCH-0404)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The source schema is not PUBLISHED (KH-SCH-1409)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/schemas/{id}/publish": {
-      "post": {
-        "tags": [
-          "schema"
-        ],
-        "summary": "Publish a DRAFT schema",
-        "description": "Requires the admin scope. DRAFT -> PUBLISHED — the immutability line: a published schema's claim fields can never be mutated again (no general update endpoint exists for a PUBLISHED schema); a mistake found later needs a new version (POST /{id}/versions) instead. A PUBLISHED schema becomes a valid issuance target for POST /api/v1/credentials/issue's schemaCode.",
-        "operationId": "publish",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Schema published",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/SchemaDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid session or API key",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Missing the admin scope",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No schema with this id (KH-SCH-0404)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The schema is not DRAFT (KH-SCH-1409)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/schemas/{id}/archive": {
-      "post": {
-        "tags": [
-          "schema"
-        ],
-        "summary": "Archive a PUBLISHED schema",
-        "description": "Requires the admin scope. PUBLISHED -> ARCHIVED — stops NEW issuance against this schema (POST /api/v1/credentials/issue and the internal find-or-create path both reject it, KH-SCH-1409); every credential already issued against it, and its verification/consumption, is completely unaffected.",
-        "operationId": "archive",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Schema archived",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/SchemaDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid session or API key",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Missing the admin scope",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No schema with this id (KH-SCH-0404)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The schema is not PUBLISHED (KH-SCH-1409)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/credentials/{id}/revoke": {
-      "post": {
-        "tags": [
-          "credential"
-        ],
-        "summary": "Revoke a credential",
-        "description": "Immediately and permanently invalidates the credential — a subsequent /verify or /consume call reports it revoked. Requires the revoke scope and a console session (an API key is always 403 here). Irreversible.",
-        "operationId": "revoke",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Revoked"
-          },
-          "401": {
-            "description": "No valid session or API key",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Missing the revoke scope, or called with an API key instead of a console session",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No credential with this id (KH-CRD-0404)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/credentials/{id}/claim-code": {
-      "post": {
-        "tags": [
-          "credential"
-        ],
-        "summary": "Mint a fresh wallet claim code for an already-issued credential",
-        "description": "The console-facing counterpart to POST /issue's one-time claim-code delivery — spec FS-1.2.1 D2's explicit recovery path: if a code never reached the wallet (lost response, expired unclaimed, or the issuer simply wants to hand the credential out again), the issuer mints a new one here rather than re-issuing the whole credential. Requires the exact sdJwt presentation string the original /issue call returned — the platform never stores disclosures outside a claim_code row (P1), so this endpoint cannot reconstruct them on its own; the caller is expected to have retained that one-time delivery for exactly this purpose.\n\nMinting voids any prior still-live code for this credential (its disclosures_enc is zeroed, the same mechanism the redeem and expiry-sweep paths use) — at most one code is ever redeemable per credential at a time.\n\nThe response's code is a one-time delivery, exactly like /issue's sdJwt: it appears in this response and nowhere else, ever. It is what a console issue screen encodes into the QR v1 payload described on POST /api/v1/claims/redeem — {\"v\":1,\"api\":\"<platform base URL>\",\"code\":\"<this code>\"} — for a wallet to scan and redeem at that endpoint.",
-        "operationId": "mintClaimCode",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ClaimCodeMintRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Claim code minted",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ClaimCodeMintResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bean Validation failed (a blank sdJwt)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid session or API key",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Missing the issue scope, or called with a CONSUMING_PARTY API key instead of a console session or TENANT API key",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No credential with this id (KH-CRD-0404)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The credential is revoked or has expired and can no longer accept a claim code (KH-CRD-0409)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/credentials/verify": {
-      "post": {
-        "tags": [
-          "credential"
-        ],
-        "summary": "Verify an SD-JWT credential presentation",
-        "description": "Accepts the standard tilde-separated SD-JWT presentation, or a bare compact JWT. Passing a bare JWT with no disclosures at all is a valid zero-disclosure presentation (spec FS-0.4 §5) — it will typically (and correctly) fail with reason 'withheld_mandatory_claim' unless the schema's sd_fields happens to cover every claims_def field. A verification failure is always HTTP 200 with valid:false (spec FS-0.6a D1) — it is a domain result, never an error envelope. Only a completely blank sdJwt is rejected as a 400.",
-        "operationId": "verify",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/VerifyRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Verification result (always 200 for a well-formed request)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/VerifyResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "sdJwt was blank or missing",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/credentials/issue": {
-      "post": {
-        "tags": [
-          "credential"
-        ],
-        "summary": "Issue a new SD-JWT verifiable credential",
-        "description": "Every claim becomes a salted, selectively-disclosable SD-JWT disclosure (spec FS-0.4 D1) — none of them appear as a plaintext value in the persisted, signed payload. The response's sdJwt is a one-time delivery of the full presentation (compact JWT plus every disclosure); the platform never stores it in that form.",
-        "operationId": "issue",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/IssueRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Credential issued",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/IssueResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bean Validation failed (e.g. a missing holderRef)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Signing failed (KH-KEY-0500) or another unexpected error",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/credentials/consume": {
-      "post": {
-        "tags": [
-          "credential"
-        ],
-        "summary": "Consume one use of a credential",
-        "description": "The atomic double-spend guard: a single-transaction conditional UPDATE decrements the remaining uses only if the credential is still ACTIVE and unexpired, so exactly one caller wins under concurrency. Requires the consume scope and a CONSUMING_PARTY API key (a console session, or a TENANT key even with the consume scope, is always 403 here). The caller's consuming party must also be scoped to the credential's schema via consuming_party_schema (KH-1.4.3, deny-by-default — an unconfigured party can consume nothing). An optional idempotencyKey makes repeated calls with the same key return the first outcome without re-running the UPDATE.",
-        "operationId": "consume",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ConsumeRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Consumption outcome (accepted, already-exhausted, expired, or revoked — always a domain result, never an error envelope for a normal denial)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConsumeResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid session or API key",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Missing the consume scope, called with a console session or a TENANT API key instead of a CONSUMING_PARTY key (KH-RBC-0403), or the credential's schema is not in the calling party's allowlist (KH-CNS-0403, KH-1.4.3)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/credentials/bulk": {
-      "post": {
-        "tags": [
-          "credential"
-        ],
-        "summary": "Issue a batch of credentials against one schema",
-        "description": "The C3 console wizard's CSV-per-schema flow (KH-1.1.3) — up to 200 items, one schema per batch, each issued independently through the same single-issue path (no parallel issuance logic, no bypass of any single-issue guard). One bad row never rolls back the batch: the response reports every item's outcome by index, ISSUED or FAILED with its own error. Setting mintClaimCodes:true mints a one-time wallet claim code for every successfully issued item (the existing POST /{id}/claim-code path) and returns it in that item's result — shown here exactly once. Requires the same scope as /issue: session or TENANT API key (a CONSUMING_PARTY key is always 403 here).",
-        "operationId": "bulkIssue",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BulkIssueRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Per-item report (always 200)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/BulkIssueResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "The batch itself is invalid — empty items, or more than 200 (KH-CRD-0400)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid session or API key",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Missing the issue scope, or called with a CONSUMING_PARTY API key instead of a console session or TENANT API key",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/claims/redeem": {
-      "post": {
-        "tags": [
-          "claim"
-        ],
-        "summary": "Redeem a one-time wallet claim code",
-        "description": "The single-use exchange that hands a freshly issued credential to a wallet: the code is consumed atomically (locked, validated, decrypted, marked claimed, and the platform's only copy of the disclosures zeroed — all in one transaction, before this response is built) so exactly one caller can ever redeem a given code. Authenticates by possession of the code alone — no session or API key, ever (spec FS-1.2.1 §9); public, rate-limited per source address instead.\n\n**QR contract v1** (spec FS-1.2.1 D8, stable): the QR payload a console issue screen renders is the JSON text `{\"v\":1,\"api\":\"<platform base URL>\",\"code\":\"<claim code>\"}`. A wallet decodes it and POSTs `code` here, against `{api}/api/v1/claims/redeem`. `v` exists so a future incompatible QR shape can be introduced without breaking wallets still reading `v:1`.\n\nThe wallet is contractually obligated to persist the full response immediately on receipt, before any display — the platform cannot hand it out a second time. A lost response after a successful redeem (e.g. the connection drops) is not recoverable by retrying; the issuer must create a new claim code from the console.\n\nThe response's `maxUses`/`expiresAt` are a redeem-time snapshot of the credential row, for display only. There is deliberately no live \"uses remaining\" channel: the holder is anonymous by design (P1 — no PII, no holder identity to authorize a lookup against), and a polling endpoint keyed by a credential reference would itself be new attack surface. Out of scope by design, not an oversight.",
-        "operationId": "redeem",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ClaimRedeemRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Credential delivered",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ClaimRedeemResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bean Validation failed (a blank code)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "The code is unknown, malformed, expired, already claimed, or expiry-zeroed — one generic outcome (KH-CLM-0404) for every flavor, so an external caller cannot distinguish 'never existed' from 'someone already claimed it' (spec D5)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Too many redeem attempts from this source address within the current window (KH-CLM-0429, spec D6)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/auth/logout": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "summary": "Console logout",
-        "description": "Invalidates the current session.",
-        "operationId": "logout",
-        "responses": {
-          "200": {
-            "description": "Logged out"
-          }
-        }
-      }
-    },
-    "/api/v1/auth/login": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "summary": "Console login",
-        "description": "Authenticates a username/password pair for the current tenant and establishes a server-side session (Redis-backed, cookie KHATM_SESSION). Every failure reason — unknown user, wrong password, temporary lockout, administrative LOCKED/DISABLED — returns the identical generic 401 (spec FS-0.6b D7); the real reason is recorded only in the audit log.",
-        "operationId": "login",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LoginRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Login succeeded; session cookie set"
-          },
-          "401": {
-            "description": "Authentication failed (KH-RBC-0401, generic message)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/admin/consuming-parties": {
-      "get": {
-        "tags": [
-          "consuming-parties-admin"
-        ],
-        "summary": "List consuming parties",
-        "description": "Every consuming party registered for the tenant (newest first), each with its status and resolved schema allowlist. Requires the admin scope.",
-        "operationId": "list_2",
-        "responses": {
-          "200": {
-            "description": "The tenant's consuming parties",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ConsumingPartyView"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid session or API key",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Missing the admin scope (KH-RBC-0403)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "consuming-parties-admin"
-        ],
-        "summary": "Register a consuming party",
-        "description": "Creates a party with the given code and bilingual name. The code is a lowercase slug (^[a-z0-9][a-z0-9-_]{1,62}$); the row's id is derived deterministically from (tenant, code), so this is idempotent by identity — but registering an already-registered code is a conflict (KH-CNS-0409), not a silent overwrite. Requires the admin scope.",
-        "operationId": "create_1",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateConsumingPartyRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Party registered",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConsumingPartyView"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bean Validation failed, or an invalid code format (KH-CNS-0400)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid session or API key",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Missing the admin scope (KH-RBC-0403)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "A party with this code already exists (KH-CNS-0409)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/admin/consuming-parties/{id}/suspend": {
-      "post": {
-        "tags": [
-          "consuming-parties-admin"
-        ],
-        "summary": "Suspend a consuming party",
-        "description": "Flips the party to SUSPENDED — its API keys immediately stop authenticating (KH-1.4.4 D4), the same outcome as a revoked key. Idempotent. Requires the admin scope.",
-        "operationId": "suspend",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Party suspended",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConsumingPartyView"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid session or API key",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Missing the admin scope (KH-RBC-0403)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No party with this id (KH-CNS-0404)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/admin/consuming-parties/{id}/api-keys": {
-      "post": {
-        "tags": [
-          "consuming-parties-admin"
-        ],
-        "summary": "Mint an API key for a consuming party",
-        "description": "Creates a CONSUMING_PARTY-owned API key (scope: consume) for the given party. The response's rawKey is shown exactly once — the platform stores only its SHA-256 hash and prefix (spec FS-0.6b §4). Revoke it later via POST /api/v1/admin/api-keys/{id}/revoke. Requires the admin scope.",
-        "operationId": "mintKey",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Key minted (rawKey shown once)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateApiKeyResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid session or API key",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Missing the admin scope (KH-RBC-0403)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No party with this id (KH-CNS-0404)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/admin/consuming-parties/{id}/allowed-schemas": {
-      "post": {
-        "tags": [
-          "consuming-parties-admin"
-        ],
-        "summary": "Add a schema to a party's allowlist",
-        "description": "Scopes the party to consume credentials issued against the given schema (deny-by-default: a party with an empty allowlist can consume nothing). Idempotent. The schema must exist in the tenant (KH-CNS-1404 otherwise). Requires the admin scope.",
-        "operationId": "allowSchema",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AllowSchemaRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Schema allowed; updated party view",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConsumingPartyView"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid session or API key",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Missing the admin scope (KH-RBC-0403)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No such party (KH-CNS-0404) or schema (KH-CNS-1404)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/admin/consuming-parties/{id}/activate": {
-      "post": {
-        "tags": [
-          "consuming-parties-admin"
-        ],
-        "summary": "Reactivate a consuming party",
-        "description": "Flips a SUSPENDED party back to ACTIVE — its API keys authenticate again. Idempotent. Requires the admin scope.",
-        "operationId": "activate",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Party activated",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConsumingPartyView"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid session or API key",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Missing the admin scope (KH-RBC-0403)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No party with this id (KH-CNS-0404)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/admin/api-keys": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "summary": "Create an API key",
-        "description": "The response's rawKey is shown exactly once — the platform stores only its SHA-256 hash and prefix (spec FS-0.6b §4). Requires the admin scope.",
-        "operationId": "createApiKey",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateApiKeyRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Key created",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateApiKeyResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Missing the admin scope (KH-RBC-0403)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/admin/api-keys/{id}/revoke": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "summary": "Revoke an API key",
-        "description": "The key stops authenticating on the very next request (spec FS-0.6b DoD #5). Idempotent — revoking an already-revoked or unknown key still returns 200.",
-        "operationId": "revokeApiKey",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Revoked (or already inactive)"
-          },
-          "403": {
-            "description": "Missing the admin scope (KH-RBC-0403)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/sl/{tenantSlug}/{listCode}": {
-      "get": {
-        "tags": [
-          "status"
-        ],
-        "summary": "Fetch a signed status-list artifact",
-        "description": "The public, unauthenticated source of revocation truth for offline verifiers (spec FS-1.3 D2, SAD §6). Returns the list's signed bitstring as a compact JWS (application/jose) — a verifier validates its signature against the platform's JWKS, then base64url-decodes and gunzips the `bits` claim to read the per-credential revocation bit at the index named in the credential's `status` claim. The ETag is the list's `version`; a matching If-None-Match returns 304 with no body, so periodic polls stay cheap until a revoke bumps the version. Cached for 60s, matching NFR-06's revoke-to-publish budget.",
-        "operationId": "getStatusList",
-        "parameters": [
-          {
-            "name": "tenantSlug",
-            "in": "path",
-            "description": "the tenant's slug",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "listCode",
-            "in": "path",
-            "description": "the status list's code",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "If-None-Match",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "The signed status-list artifact",
-            "headers": {
-              "Cache-Control": {
-                "description": "max-age=60",
-                "style": "simple",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "ETag": {
-                "description": "The list's version, quoted — weak entity tag for revalidation",
-                "style": "simple",
-                "schema": {
-                  "type": "string"
+  "info" : {
+    "title" : "Khatm Platform API",
+    "version" : "0.1.0-SNAPSHOT"
+  },
+  "openapi" : "3.0.1",
+  "paths" : {
+    "/.well-known/jwks.json" : {
+      "get" : {
+        "description" : "Public ACTIVE + RETIRING signing keys, no authentication required.",
+        "operationId" : "jwks",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
-            "content": {
-              "application/jose": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "304": {
-            "description": "The client's If-None-Match matched the current version — body omitted",
-            "content": {
-              "application/jose": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No status list at this tenantSlug/listCode, or the tenantSlug is unknown (KH-STS-0404)",
-            "content": {
-              "application/jose": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
+            "description" : "OK"
           }
-        }
+        },
+        "summary" : "Fetch the JWKS",
+        "tags" : [ "jwks" ]
       }
     },
-    "/api/v1/stats": {
-      "get": {
-        "tags": [
-          "stats"
-        ],
-        "summary": "Fetch pilot-metrics counters",
-        "description": "A plain GROUP BY action aggregation over audit_log for the requested window — counters only, never claim content (P1). Defaults to the last 30 days when from/to are omitted. Requires a console session — no API key of any kind works here (see rbac.security.SecurityConfig's Javadoc).",
-        "operationId": "stats",
-        "parameters": [
-          {
-            "name": "from",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "to",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
+    "/api/v1/activity" : {
+      "get" : {
+        "description" : "The most recent credential-lifecycle audit events (issued/consumed/revoked/schema-denied/claim-redeemed/verify-ok/verify-failed), newest first, resolved for display: entity_ref is always the credential's ref (never a bare id), and consuming-party attribution is resolved where the underlying event supports it. event, if present, is a comma-separated subset of AuditAction names to filter to (unknown values are ignored); omit it for every eligible action. Requires a console session — no API key of any kind works here (same gate as GET /api/v1/stats).",
+        "operationId" : "activity",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "limit",
+          "required" : false,
+          "schema" : {
+            "format" : "int32",
+            "type" : "integer"
           }
-        ],
-        "responses": {
-          "200": {
-            "description": "Counters for the resolved window",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/StatsResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "from/to was present but not a valid ISO-8601 instant",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid session",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Authenticated with an API key instead of a console session",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
+        }, {
+          "in" : "query",
+          "name" : "event",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
           }
-        }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ActivityResponse"
+                }
+              }
+            },
+            "description" : "Recent activity, newest first"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No valid session"
+          },
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Authenticated with an API key instead of a console session"
+          }
+        },
+        "summary" : "Fetch the recent-activity feed",
+        "tags" : [ "activity" ]
       }
     },
-    "/api/v1/stats/daily": {
-      "get": {
-        "tags": [
-          "stats"
-        ],
-        "summary": "Fetch pilot-metrics counters broken down by day",
-        "description": "The same GROUP BY action aggregation as GET /api/v1/stats, bucketed per UTC day — backs the console's lifecycle chart. Defaults to the last 30 days when from/to are omitted. Same session-only gate as GET /api/v1/stats.",
-        "operationId": "dailyStats",
-        "parameters": [
-          {
-            "name": "from",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
+    "/api/v1/admin/api-keys" : {
+      "post" : {
+        "description" : "The response's rawKey is shown exactly once — the platform stores only its SHA-256 hash and prefix (spec FS-0.6b §4). Requires the admin scope.",
+        "operationId" : "createApiKey",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateApiKeyRequest"
+              }
             }
           },
-          {
-            "name": "to",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CreateApiKeyResponse"
+                }
+              }
+            },
+            "description" : "Key created"
+          },
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Missing the admin scope (KH-RBC-0403)"
           }
-        ],
-        "responses": {
-          "200": {
-            "description": "Per-day counters for the resolved window",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/DailyStatsResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "from/to was present but not a valid ISO-8601 instant",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid session",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Authenticated with an API key instead of a console session",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
+        },
+        "summary" : "Create an API key",
+        "tags" : [ "auth" ]
       }
     },
-    "/api/v1/stats/consuming-parties": {
-      "get": {
-        "tags": [
-          "stats"
-        ],
-        "summary": "Fetch per-consuming-party call-volume stats",
-        "description": "Call volume (CREDENTIAL_CONSUMED) and denial count (CONSUME_SCHEMA_DENIED) per consuming party for the requested window, with a derived success rate. Defaults to the last 30 days when from/to are omitted. Same session-only gate as GET /api/v1/stats.",
-        "operationId": "consumingPartyStats",
-        "parameters": [
-          {
-            "name": "from",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "to",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
+    "/api/v1/admin/api-keys/{id}/revoke" : {
+      "post" : {
+        "description" : "The key stops authenticating on the very next request (spec FS-0.6b DoD #5). Idempotent — revoking an already-revoked or unknown key still returns 200.",
+        "operationId" : "revokeApiKey",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
           }
-        ],
-        "responses": {
-          "200": {
-            "description": "Per-party stats for the resolved window",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConsumingPartyStatsResponse"
-                }
-              }
-            }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Revoked (or already inactive)"
           },
-          "400": {
-            "description": "from/to was present but not a valid ISO-8601 instant",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
                 }
               }
-            }
-          },
-          "401": {
-            "description": "No valid session",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Authenticated with an API key instead of a console session",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
+            },
+            "description" : "Missing the admin scope (KH-RBC-0403)"
           }
-        }
+        },
+        "summary" : "Revoke an API key",
+        "tags" : [ "auth" ]
       }
     },
-    "/api/v1/credentials": {
-      "get": {
-        "tags": [
-          "credential"
-        ],
-        "summary": "Search/list credentials",
-        "description": "Console-facing search over this tenant's credentials (KH-1.1.4) — proof/status metadata rows only, never claim content (P1 rule). Every filter is optional and AND-combined: ref (exact), pseudoRef (exact, resolved against the holder who was issued the credential), schemaId (exact), revoked (exact). Sorted by issuedAt descending; page/size are zero-based/1-100, defaulting to 0/20. Requires a console session — no API key of any kind works here (see rbac.security.SecurityConfig's Javadoc).",
-        "operationId": "list_1",
-        "parameters": [
-          {
-            "name": "ref",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
+    "/api/v1/admin/consuming-parties" : {
+      "get" : {
+        "description" : "Every consuming party registered for the tenant (newest first), each with its status and resolved schema allowlist. Requires the admin scope.",
+        "operationId" : "list_2",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ConsumingPartyView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "The tenant's consuming parties"
           },
-          {
-            "name": "pseudoRef",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No valid session or API key"
           },
-          {
-            "name": "schemaId",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "revoked",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean"
-            }
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          },
-          {
-            "name": "size",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Missing the admin scope (KH-RBC-0403)"
           }
-        ],
-        "responses": {
-          "200": {
-            "description": "Matching page of credential summaries",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/CredentialPage"
-                }
+        },
+        "summary" : "List consuming parties",
+        "tags" : [ "consuming-parties-admin" ]
+      },
+      "post" : {
+        "description" : "Creates a party with the given code and bilingual name. The code is a lowercase slug (^[a-z0-9][a-z0-9-_]{1,62}$); the row's id is derived deterministically from (tenant, code), so this is idempotent by identity — but registering an already-registered code is a conflict (KH-CNS-0409), not a silent overwrite. Requires the admin scope.",
+        "operationId" : "create_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateConsumingPartyRequest"
               }
             }
           },
-          "401": {
-            "description": "No valid session",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConsumingPartyView"
                 }
               }
-            }
+            },
+            "description" : "Party registered"
           },
-          "403": {
-            "description": "Authenticated with an API key instead of a console session",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
                 }
               }
-            }
+            },
+            "description" : "Bean Validation failed, or an invalid code format (KH-CNS-0400)"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No valid session or API key"
+          },
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Missing the admin scope (KH-RBC-0403)"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "A party with this code already exists (KH-CNS-0409)"
           }
-        }
+        },
+        "summary" : "Register a consuming party",
+        "tags" : [ "consuming-parties-admin" ]
       }
     },
-    "/api/v1/credentials/{id}": {
-      "get": {
-        "tags": [
-          "credential"
-        ],
-        "summary": "Fetch a credential's current status",
-        "description": "Proof/status metadata only (ref, schema, status, uses remaining, timestamps) — never the claim values themselves, which only ever leave the platform inside a one-time sdJwt presentation (P1 rule). Requires any valid session or API key.",
-        "operationId": "get_1",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
+    "/api/v1/admin/consuming-parties/{id}/activate" : {
+      "post" : {
+        "description" : "Flips a SUSPENDED party back to ACTIVE — its API keys authenticate again. Idempotent. Requires the admin scope.",
+        "operationId" : "activate",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
           }
-        ],
-        "responses": {
-          "200": {
-            "description": "Credential status",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/CredentialView"
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConsumingPartyView"
                 }
               }
-            }
+            },
+            "description" : "Party activated"
           },
-          "401": {
-            "description": "No valid session or API key",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
                 }
               }
-            }
+            },
+            "description" : "No valid session or API key"
           },
-          "404": {
-            "description": "No credential with this id (KH-CRD-0404)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
                 }
               }
-            }
+            },
+            "description" : "Missing the admin scope (KH-RBC-0403)"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No party with this id (KH-CNS-0404)"
           }
-        }
+        },
+        "summary" : "Reactivate a consuming party",
+        "tags" : [ "consuming-parties-admin" ]
       }
     },
-    "/api/v1/auth/me": {
-      "get": {
-        "tags": [
-          "auth"
-        ],
-        "summary": "Current session's user",
-        "description": "Returns the authenticated user's username, display name, language, and scopes.",
-        "operationId": "me",
-        "responses": {
-          "200": {
-            "description": "Current user",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/MeResponse"
-                }
+    "/api/v1/admin/consuming-parties/{id}/allowed-schemas" : {
+      "post" : {
+        "description" : "Scopes the party to consume credentials issued against the given schema (deny-by-default: a party with an empty allowlist can consume nothing). Idempotent. The schema must exist in the tenant (KH-CNS-1404 otherwise). Requires the admin scope.",
+        "operationId" : "allowSchema",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AllowSchemaRequest"
               }
             }
           },
-          "401": {
-            "description": "No valid session or API key",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConsumingPartyView"
                 }
               }
-            }
+            },
+            "description" : "Schema allowed; updated party view"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No valid session or API key"
+          },
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Missing the admin scope (KH-RBC-0403)"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No such party (KH-CNS-0404) or schema (KH-CNS-1404)"
           }
-        }
+        },
+        "summary" : "Add a schema to a party's allowlist",
+        "tags" : [ "consuming-parties-admin" ]
       }
     },
-    "/api/v1/attention": {
-      "get": {
-        "tags": [
-          "attention"
-        ],
-        "summary": "Fetch the needs-attention feed",
-        "description": "Itemized, actionable anomalies computed on read from the audit trail — never a bare count (see GET /api/v1/stats for those). Ships two item types this session: recent CONSUME_SCHEMA_DENIED events within a configurable window, and a verify-failure-rate alert when the current window's failure rate clears a configurable multiplier of the immediately preceding window's baseline (with a minimum-volume floor to avoid noise). A third starter type (signing key approaching rotation) is deliberately out of scope this session. Requires a console session — no API key of any kind works here (same gate as GET /api/v1/stats).",
-        "operationId": "attention",
-        "responses": {
-          "200": {
-            "description": "Current needs-attention items",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/AttentionResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid session",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Authenticated with an API key instead of a console session",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
+    "/api/v1/admin/consuming-parties/{id}/allowed-schemas/{schemaId}" : {
+      "delete" : {
+        "description" : "Idempotent — removing a pair that is not allowed (including for an unknown party) is a successful 204 no-op. Requires the admin scope.",
+        "operationId" : "disallowSchema",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
           }
-        }
+        }, {
+          "in" : "path",
+          "name" : "schemaId",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Removed, or nothing to remove"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No valid session or API key"
+          },
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Missing the admin scope (KH-RBC-0403)"
+          }
+        },
+        "summary" : "Remove a schema from a party's allowlist",
+        "tags" : [ "consuming-parties-admin" ]
       }
     },
-    "/api/v1/admin/signing-keys": {
-      "get": {
-        "tags": [
-          "admin-signing-keys"
-        ],
-        "summary": "List every signing key's lifecycle status",
-        "description": "Every signing key for the tenant, newest first, every state including RETIRED — lifecycle fields only (kid/state/validFrom/validTo), never the public JWK or any private material. Requires the admin scope (any actor kind).",
-        "operationId": "signingKeys",
-        "responses": {
-          "200": {
-            "description": "Every signing key's lifecycle status",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/SigningKeysResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No valid session or API key",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Authenticated without the admin scope",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
+    "/api/v1/admin/consuming-parties/{id}/api-keys" : {
+      "post" : {
+        "description" : "Creates a CONSUMING_PARTY-owned API key (scope: consume) for the given party. The response's rawKey is shown exactly once — the platform stores only its SHA-256 hash and prefix (spec FS-0.6b §4). Revoke it later via POST /api/v1/admin/api-keys/{id}/revoke. Requires the admin scope.",
+        "operationId" : "mintKey",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
           }
-        }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CreateApiKeyResponse"
+                }
+              }
+            },
+            "description" : "Key minted (rawKey shown once)"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No valid session or API key"
+          },
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Missing the admin scope (KH-RBC-0403)"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No party with this id (KH-CNS-0404)"
+          }
+        },
+        "summary" : "Mint an API key for a consuming party",
+        "tags" : [ "consuming-parties-admin" ]
       }
     },
-    "/api/v1/activity": {
-      "get": {
-        "tags": [
-          "activity"
-        ],
-        "summary": "Fetch the recent-activity feed",
-        "description": "The most recent credential-lifecycle audit events (issued/consumed/revoked/schema-denied/claim-redeemed/verify-ok/verify-failed), newest first, resolved for display: entity_ref is always the credential's ref (never a bare id), and consuming-party attribution is resolved where the underlying event supports it. event, if present, is a comma-separated subset of AuditAction names to filter to (unknown values are ignored); omit it for every eligible action. Requires a console session — no API key of any kind works here (same gate as GET /api/v1/stats).",
-        "operationId": "activity",
-        "parameters": [
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          },
-          {
-            "name": "event",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
+    "/api/v1/admin/consuming-parties/{id}/suspend" : {
+      "post" : {
+        "description" : "Flips the party to SUSPENDED — its API keys immediately stop authenticating (KH-1.4.4 D4), the same outcome as a revoked key. Idempotent. Requires the admin scope.",
+        "operationId" : "suspend",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
           }
-        ],
-        "responses": {
-          "200": {
-            "description": "Recent activity, newest first",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ActivityResponse"
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConsumingPartyView"
                 }
               }
-            }
+            },
+            "description" : "Party suspended"
           },
-          "401": {
-            "description": "No valid session",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
                 }
               }
-            }
+            },
+            "description" : "No valid session or API key"
           },
-          "403": {
-            "description": "Authenticated with an API key instead of a console session",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
                 }
               }
-            }
+            },
+            "description" : "Missing the admin scope (KH-RBC-0403)"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No party with this id (KH-CNS-0404)"
           }
-        }
+        },
+        "summary" : "Suspend a consuming party",
+        "tags" : [ "consuming-parties-admin" ]
       }
     },
-    "/.well-known/jwks.json": {
-      "get": {
-        "tags": [
-          "jwks"
-        ],
-        "summary": "Fetch the JWKS",
-        "description": "Public ACTIVE + RETIRING signing keys, no authentication required.",
-        "operationId": "jwks",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string"
+    "/api/v1/admin/signing-keys" : {
+      "get" : {
+        "description" : "Every signing key for the tenant, newest first, every state including RETIRED — lifecycle fields only (kid/state/validFrom/validTo), never the public JWK or any private material. Requires the admin scope (any actor kind).",
+        "operationId" : "signingKeys",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SigningKeysResponse"
                 }
               }
-            }
+            },
+            "description" : "Every signing key's lifecycle status"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No valid session or API key"
+          },
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Authenticated without the admin scope"
           }
-        }
+        },
+        "summary" : "List every signing key's lifecycle status",
+        "tags" : [ "admin-signing-keys" ]
       }
     },
-    "/api/v1/admin/consuming-parties/{id}/allowed-schemas/{schemaId}": {
-      "delete": {
-        "tags": [
-          "consuming-parties-admin"
-        ],
-        "summary": "Remove a schema from a party's allowlist",
-        "description": "Idempotent — removing a pair that is not allowed (including for an unknown party) is a successful 204 no-op. Requires the admin scope.",
-        "operationId": "disallowSchema",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "schemaId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Removed, or nothing to remove"
-          },
-          "401": {
-            "description": "No valid session or API key",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
+    "/api/v1/attention" : {
+      "get" : {
+        "description" : "Itemized, actionable anomalies computed on read from the audit trail — never a bare count (see GET /api/v1/stats for those). Ships two item types this session: recent CONSUME_SCHEMA_DENIED events within a configurable window, and a verify-failure-rate alert when the current window's failure rate clears a configurable multiplier of the immediately preceding window's baseline (with a minimum-volume floor to avoid noise). A third starter type (signing key approaching rotation) is deliberately out of scope this session. Requires a console session — no API key of any kind works here (same gate as GET /api/v1/stats).",
+        "operationId" : "attention",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AttentionResponse"
                 }
+              }
+            },
+            "description" : "Current needs-attention items"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No valid session"
+          },
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Authenticated with an API key instead of a console session"
+          }
+        },
+        "summary" : "Fetch the needs-attention feed",
+        "tags" : [ "attention" ]
+      }
+    },
+    "/api/v1/auth/login" : {
+      "post" : {
+        "description" : "Authenticates a username/password pair for the current tenant and establishes a server-side session (Redis-backed, cookie KHATM_SESSION). Every failure reason — unknown user, wrong password, temporary lockout, administrative LOCKED/DISABLED — returns the identical generic 401 (spec FS-0.6b D7); the real reason is recorded only in the audit log.",
+        "operationId" : "login",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LoginRequest"
               }
             }
           },
-          "403": {
-            "description": "Missing the admin scope (KH-RBC-0403)",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Login succeeded; session cookie set"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
                 }
               }
-            }
+            },
+            "description" : "Authentication failed (KH-RBC-0401, generic message)"
           }
-        }
+        },
+        "summary" : "Console login",
+        "tags" : [ "auth" ]
+      }
+    },
+    "/api/v1/auth/logout" : {
+      "post" : {
+        "description" : "Invalidates the current session.",
+        "operationId" : "logout",
+        "responses" : {
+          "200" : {
+            "description" : "Logged out"
+          }
+        },
+        "summary" : "Console logout",
+        "tags" : [ "auth" ]
+      }
+    },
+    "/api/v1/auth/me" : {
+      "get" : {
+        "description" : "Returns the authenticated user's username, display name, language, and scopes.",
+        "operationId" : "me",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MeResponse"
+                }
+              }
+            },
+            "description" : "Current user"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No valid session or API key"
+          }
+        },
+        "summary" : "Current session's user",
+        "tags" : [ "auth" ]
+      }
+    },
+    "/api/v1/claims/redeem" : {
+      "post" : {
+        "description" : "The single-use exchange that hands a freshly issued credential to a wallet: the code is consumed atomically (locked, validated, decrypted, marked claimed, and the platform's only copy of the disclosures zeroed — all in one transaction, before this response is built) so exactly one caller can ever redeem a given code. Authenticates by possession of the code alone — no session or API key, ever (spec FS-1.2.1 §9); public, rate-limited per source address instead.\n\n**QR contract v1** (spec FS-1.2.1 D8, stable): the QR payload a console issue screen renders is the JSON text `{\"v\":1,\"api\":\"<platform base URL>\",\"code\":\"<claim code>\"}`. A wallet decodes it and POSTs `code` here, against `{api}/api/v1/claims/redeem`. `v` exists so a future incompatible QR shape can be introduced without breaking wallets still reading `v:1`.\n\nThe wallet is contractually obligated to persist the full response immediately on receipt, before any display — the platform cannot hand it out a second time. A lost response after a successful redeem (e.g. the connection drops) is not recoverable by retrying; the issuer must create a new claim code from the console.\n\nThe response's `maxUses`/`expiresAt` are a redeem-time snapshot of the credential row, for display only. There is deliberately no live \"uses remaining\" channel: the holder is anonymous by design (P1 — no PII, no holder identity to authorize a lookup against), and a polling endpoint keyed by a credential reference would itself be new attack surface. Out of scope by design, not an oversight.",
+        "operationId" : "redeem",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ClaimRedeemRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClaimRedeemResponse"
+                }
+              }
+            },
+            "description" : "Credential delivered"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Bean Validation failed (a blank code)"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "The code is unknown, malformed, expired, already claimed, or expiry-zeroed — one generic outcome (KH-CLM-0404) for every flavor, so an external caller cannot distinguish 'never existed' from 'someone already claimed it' (spec D5)"
+          },
+          "429" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Too many redeem attempts from this source address within the current window (KH-CLM-0429, spec D6)"
+          }
+        },
+        "summary" : "Redeem a one-time wallet claim code",
+        "tags" : [ "claim" ]
+      }
+    },
+    "/api/v1/credentials" : {
+      "get" : {
+        "description" : "Console-facing search over this tenant's credentials (KH-1.1.4) — proof/status metadata rows only, never claim content (P1 rule). Every filter is optional and AND-combined: ref (exact), pseudoRef (exact, resolved against the holder who was issued the credential), schemaId (exact), revoked (exact). Sorted by issuedAt descending; page/size are zero-based/1-100, defaulting to 0/20. Requires a console session — no API key of any kind works here (see rbac.security.SecurityConfig's Javadoc).",
+        "operationId" : "list_1",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "ref",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "pseudoRef",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "schemaId",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "revoked",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean"
+          }
+        }, {
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CredentialPage"
+                }
+              }
+            },
+            "description" : "Matching page of credential summaries"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No valid session"
+          },
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Authenticated with an API key instead of a console session"
+          }
+        },
+        "summary" : "Search/list credentials",
+        "tags" : [ "credential" ]
+      }
+    },
+    "/api/v1/credentials/bulk" : {
+      "post" : {
+        "description" : "The C3 console wizard's CSV-per-schema flow (KH-1.1.3) — up to 200 items, one schema per batch, each issued independently through the same single-issue path (no parallel issuance logic, no bypass of any single-issue guard). One bad row never rolls back the batch: the response reports every item's outcome by index, ISSUED or FAILED with its own error. Setting mintClaimCodes:true mints a one-time wallet claim code for every successfully issued item (the existing POST /{id}/claim-code path) and returns it in that item's result — shown here exactly once. Requires the same scope as /issue: session or TENANT API key (a CONSUMING_PARTY key is always 403 here).",
+        "operationId" : "bulkIssue",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BulkIssueRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BulkIssueResponse"
+                }
+              }
+            },
+            "description" : "Per-item report (always 200)"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "The batch itself is invalid — empty items, or more than 200 (KH-CRD-0400)"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No valid session or API key"
+          },
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Missing the issue scope, or called with a CONSUMING_PARTY API key instead of a console session or TENANT API key"
+          }
+        },
+        "summary" : "Issue a batch of credentials against one schema",
+        "tags" : [ "credential" ]
+      }
+    },
+    "/api/v1/credentials/consume" : {
+      "post" : {
+        "description" : "The atomic double-spend guard: a single-transaction conditional UPDATE decrements the remaining uses only if the credential is still ACTIVE and unexpired, so exactly one caller wins under concurrency. Requires the consume scope and a CONSUMING_PARTY API key (a console session, or a TENANT key even with the consume scope, is always 403 here). The caller's consuming party must also be scoped to the credential's schema via consuming_party_schema (KH-1.4.3, deny-by-default — an unconfigured party can consume nothing). An optional idempotencyKey makes repeated calls with the same key return the first outcome without re-running the UPDATE.",
+        "operationId" : "consume",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConsumeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConsumeResponse"
+                }
+              }
+            },
+            "description" : "Consumption outcome (accepted, already-exhausted, expired, or revoked — always a domain result, never an error envelope for a normal denial)"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No valid session or API key"
+          },
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Missing the consume scope, called with a console session or a TENANT API key instead of a CONSUMING_PARTY key (KH-RBC-0403), or the credential's schema is not in the calling party's allowlist (KH-CNS-0403, KH-1.4.3)"
+          }
+        },
+        "summary" : "Consume one use of a credential",
+        "tags" : [ "credential" ]
+      }
+    },
+    "/api/v1/credentials/issue" : {
+      "post" : {
+        "description" : "Every claim becomes a salted, selectively-disclosable SD-JWT disclosure (spec FS-0.4 D1) — none of them appear as a plaintext value in the persisted, signed payload. The response's sdJwt is a one-time delivery of the full presentation (compact JWT plus every disclosure); the platform never stores it in that form.",
+        "operationId" : "issue",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/IssueRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IssueResponse"
+                }
+              }
+            },
+            "description" : "Credential issued"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Bean Validation failed (e.g. a missing holderRef)"
+          },
+          "500" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Signing failed (KH-KEY-0500) or another unexpected error"
+          }
+        },
+        "summary" : "Issue a new SD-JWT verifiable credential",
+        "tags" : [ "credential" ]
+      }
+    },
+    "/api/v1/credentials/verify" : {
+      "post" : {
+        "description" : "Accepts the standard tilde-separated SD-JWT presentation, or a bare compact JWT. Passing a bare JWT with no disclosures at all is a valid zero-disclosure presentation (spec FS-0.4 §5) — it will typically (and correctly) fail with reason 'withheld_mandatory_claim' unless the schema's sd_fields happens to cover every claims_def field. A verification failure is always HTTP 200 with valid:false (spec FS-0.6a D1) — it is a domain result, never an error envelope. Only a completely blank sdJwt is rejected as a 400.",
+        "operationId" : "verify",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/VerifyRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/VerifyResponse"
+                }
+              }
+            },
+            "description" : "Verification result (always 200 for a well-formed request)"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "sdJwt was blank or missing"
+          }
+        },
+        "summary" : "Verify an SD-JWT credential presentation",
+        "tags" : [ "credential" ]
+      }
+    },
+    "/api/v1/credentials/{id}" : {
+      "get" : {
+        "description" : "Proof/status metadata only (ref, schema, status, uses remaining, timestamps) — never the claim values themselves, which only ever leave the platform inside a one-time sdJwt presentation (P1 rule). Requires any valid session or API key.",
+        "operationId" : "get_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CredentialView"
+                }
+              }
+            },
+            "description" : "Credential status"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No valid session or API key"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No credential with this id (KH-CRD-0404)"
+          }
+        },
+        "summary" : "Fetch a credential's current status",
+        "tags" : [ "credential" ]
+      }
+    },
+    "/api/v1/credentials/{id}/claim-code" : {
+      "post" : {
+        "description" : "The console-facing counterpart to POST /issue's one-time claim-code delivery — spec FS-1.2.1 D2's explicit recovery path: if a code never reached the wallet (lost response, expired unclaimed, or the issuer simply wants to hand the credential out again), the issuer mints a new one here rather than re-issuing the whole credential. Requires the exact sdJwt presentation string the original /issue call returned — the platform never stores disclosures outside a claim_code row (P1), so this endpoint cannot reconstruct them on its own; the caller is expected to have retained that one-time delivery for exactly this purpose.\n\nMinting voids any prior still-live code for this credential (its disclosures_enc is zeroed, the same mechanism the redeem and expiry-sweep paths use) — at most one code is ever redeemable per credential at a time.\n\nThe response's code is a one-time delivery, exactly like /issue's sdJwt: it appears in this response and nowhere else, ever. It is what a console issue screen encodes into the QR v1 payload described on POST /api/v1/claims/redeem — {\"v\":1,\"api\":\"<platform base URL>\",\"code\":\"<this code>\"} — for a wallet to scan and redeem at that endpoint.",
+        "operationId" : "mintClaimCode",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ClaimCodeMintRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClaimCodeMintResponse"
+                }
+              }
+            },
+            "description" : "Claim code minted"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Bean Validation failed (a blank sdJwt)"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No valid session or API key"
+          },
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Missing the issue scope, or called with a CONSUMING_PARTY API key instead of a console session or TENANT API key"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No credential with this id (KH-CRD-0404)"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "The credential is revoked or has expired and can no longer accept a claim code (KH-CRD-0409)"
+          }
+        },
+        "summary" : "Mint a fresh wallet claim code for an already-issued credential",
+        "tags" : [ "credential" ]
+      }
+    },
+    "/api/v1/credentials/{id}/revoke" : {
+      "post" : {
+        "description" : "Immediately and permanently invalidates the credential — a subsequent /verify or /consume call reports it revoked. Requires the revoke scope and a console session (an API key is always 403 here). Irreversible.",
+        "operationId" : "revoke",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Revoked"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No valid session or API key"
+          },
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Missing the revoke scope, or called with an API key instead of a console session"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No credential with this id (KH-CRD-0404)"
+          }
+        },
+        "summary" : "Revoke a credential",
+        "tags" : [ "credential" ]
+      }
+    },
+    "/api/v1/schemas" : {
+      "get" : {
+        "description" : "Read-only tenant metadata (id, display name, version, status) — every authenticated actor kind may call this, no specific scope required (a deliberate, documented decision: see rbac.security.SecurityConfig's Javadoc). The optional status filter (KH-1.1.1) lets the console's schema management view show DRAFT rows too; the issue-form picker keeps filtering to PUBLISHED client-side, as before.",
+        "operationId" : "list",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "status",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/SchemaSummary"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "Every matching schema registered for the tenant"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No valid session or API key"
+          }
+        },
+        "summary" : "List credential schemas",
+        "tags" : [ "schema" ]
+      },
+      "post" : {
+        "description" : "Requires the admin scope. Server-side validation rejects an empty claimsDef, a claim field with an unsupported type (text/number/date), a nameI18n or claim labelI18n missing en or ar, an sdFields entry not among the claim field names, or a code already registered at version 1 — all as KH-SCH-0400. The schema starts DRAFT and unavailable for issuance until POST /{id}/publish.",
+        "operationId" : "create",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SchemaCreateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SchemaDetail"
+                }
+              }
+            },
+            "description" : "Schema created (DRAFT)"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Bean Validation failed, or a business-level check (KH-SCH-0400)"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No valid session or API key"
+          },
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Missing the admin scope"
+          }
+        },
+        "summary" : "Create a new DRAFT credential schema (version 1)",
+        "tags" : [ "schema" ]
+      }
+    },
+    "/api/v1/schemas/{id}" : {
+      "get" : {
+        "description" : "Adds the raw claims definition to the list view's fields, so a console issue screen can render the schema's claim fields. Same access rule as the list endpoint — authenticated, any scope.",
+        "operationId" : "get",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SchemaDetail"
+                }
+              }
+            },
+            "description" : "Schema detail"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No valid session or API key"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No schema with this id (KH-SCH-0404)"
+          }
+        },
+        "summary" : "Fetch a credential schema's detail",
+        "tags" : [ "schema" ]
+      },
+      "put" : {
+        "description" : "Requires the admin scope. DRAFT only — fixes mistakes before publish. Validated identically to POST /api/v1/schemas.",
+        "operationId" : "update",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SchemaAuthoringRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SchemaDetail"
+                }
+              }
+            },
+            "description" : "Schema updated"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Bean Validation failed, or a business-level check (KH-SCH-0400)"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No valid session or API key"
+          },
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Missing the admin scope"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No schema with this id (KH-SCH-0404)"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "The schema is not DRAFT (KH-SCH-0409)"
+          }
+        },
+        "summary" : "Rewrite a DRAFT schema's authoring fields in place",
+        "tags" : [ "schema" ]
+      }
+    },
+    "/api/v1/schemas/{id}/archive" : {
+      "post" : {
+        "description" : "Requires the admin scope. PUBLISHED -> ARCHIVED — stops NEW issuance against this schema (POST /api/v1/credentials/issue and the internal find-or-create path both reject it, KH-SCH-1409); every credential already issued against it, and its verification/consumption, is completely unaffected.",
+        "operationId" : "archive",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SchemaDetail"
+                }
+              }
+            },
+            "description" : "Schema archived"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No valid session or API key"
+          },
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Missing the admin scope"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No schema with this id (KH-SCH-0404)"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "The schema is not PUBLISHED (KH-SCH-1409)"
+          }
+        },
+        "summary" : "Archive a PUBLISHED schema",
+        "tags" : [ "schema" ]
+      }
+    },
+    "/api/v1/schemas/{id}/publish" : {
+      "post" : {
+        "description" : "Requires the admin scope. DRAFT -> PUBLISHED — the immutability line: a published schema's claim fields can never be mutated again (no general update endpoint exists for a PUBLISHED schema); a mistake found later needs a new version (POST /{id}/versions) instead. A PUBLISHED schema becomes a valid issuance target for POST /api/v1/credentials/issue's schemaCode.",
+        "operationId" : "publish",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SchemaDetail"
+                }
+              }
+            },
+            "description" : "Schema published"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No valid session or API key"
+          },
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Missing the admin scope"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No schema with this id (KH-SCH-0404)"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "The schema is not DRAFT (KH-SCH-1409)"
+          }
+        },
+        "summary" : "Publish a DRAFT schema",
+        "tags" : [ "schema" ]
+      }
+    },
+    "/api/v1/schemas/{id}/versions" : {
+      "post" : {
+        "description" : "Requires the admin scope. Same code, version + 1. The console is responsible for prefilling the request body from the source schema's current fields — this endpoint validates the submitted body exactly like POST /api/v1/schemas, with no server-side default-merging.",
+        "operationId" : "createVersion",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SchemaAuthoringRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SchemaDetail"
+                }
+              }
+            },
+            "description" : "New DRAFT version created"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Bean Validation failed, or a business-level check (KH-SCH-0400)"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No valid session or API key"
+          },
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Missing the admin scope"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No schema with this id (KH-SCH-0404)"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "The source schema is not PUBLISHED (KH-SCH-1409)"
+          }
+        },
+        "summary" : "Create a new DRAFT version of a PUBLISHED schema",
+        "tags" : [ "schema" ]
+      }
+    },
+    "/api/v1/stats" : {
+      "get" : {
+        "description" : "A plain GROUP BY action aggregation over audit_log for the requested window — counters only, never claim content (P1). Defaults to the last 30 days when from/to are omitted. Requires a console session — no API key of any kind works here (see rbac.security.SecurityConfig's Javadoc).",
+        "operationId" : "stats",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "from",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StatsResponse"
+                }
+              }
+            },
+            "description" : "Counters for the resolved window"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "from/to was present but not a valid ISO-8601 instant"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No valid session"
+          },
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Authenticated with an API key instead of a console session"
+          }
+        },
+        "summary" : "Fetch pilot-metrics counters",
+        "tags" : [ "stats" ]
+      }
+    },
+    "/api/v1/stats/consuming-parties" : {
+      "get" : {
+        "description" : "Call volume (CREDENTIAL_CONSUMED) and denial count (CONSUME_SCHEMA_DENIED) per consuming party for the requested window, with a derived success rate. Defaults to the last 30 days when from/to are omitted. Same session-only gate as GET /api/v1/stats.",
+        "operationId" : "consumingPartyStats",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "from",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConsumingPartyStatsResponse"
+                }
+              }
+            },
+            "description" : "Per-party stats for the resolved window"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "from/to was present but not a valid ISO-8601 instant"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No valid session"
+          },
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Authenticated with an API key instead of a console session"
+          }
+        },
+        "summary" : "Fetch per-consuming-party call-volume stats",
+        "tags" : [ "stats" ]
+      }
+    },
+    "/api/v1/stats/daily" : {
+      "get" : {
+        "description" : "The same GROUP BY action aggregation as GET /api/v1/stats, bucketed per UTC day — backs the console's lifecycle chart. Defaults to the last 30 days when from/to are omitted. Same session-only gate as GET /api/v1/stats.",
+        "operationId" : "dailyStats",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "from",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DailyStatsResponse"
+                }
+              }
+            },
+            "description" : "Per-day counters for the resolved window"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "from/to was present but not a valid ISO-8601 instant"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No valid session"
+          },
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "Authenticated with an API key instead of a console session"
+          }
+        },
+        "summary" : "Fetch pilot-metrics counters broken down by day",
+        "tags" : [ "stats" ]
+      }
+    },
+    "/sl/{tenantSlug}/{listCode}" : {
+      "get" : {
+        "description" : "The public, unauthenticated source of revocation truth for offline verifiers (spec FS-1.3 D2, SAD §6). Returns the list's signed bitstring as a compact JWS (application/jose) — a verifier validates its signature against the platform's JWKS, then base64url-decodes and gunzips the `bits` claim to read the per-credential revocation bit at the index named in the credential's `status` claim. The ETag is the list's `version`; a matching If-None-Match returns 304 with no body, so periodic polls stay cheap until a revoke bumps the version. Cached for 60s, matching NFR-06's revoke-to-publish budget.",
+        "operationId" : "getStatusList",
+        "parameters" : [ {
+          "description" : "the tenant's slug",
+          "in" : "path",
+          "name" : "tenantSlug",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "the status list's code",
+          "in" : "path",
+          "name" : "listCode",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-None-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/jose" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "The signed status-list artifact",
+            "headers" : {
+              "Cache-Control" : {
+                "description" : "max-age=60",
+                "schema" : {
+                  "type" : "string"
+                },
+                "style" : "simple"
+              },
+              "ETag" : {
+                "description" : "The list's version, quoted — weak entity tag for revalidation",
+                "schema" : {
+                  "type" : "string"
+                },
+                "style" : "simple"
+              }
+            }
+          },
+          "304" : {
+            "content" : {
+              "application/jose" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "The client's If-None-Match matched the current version — body omitted"
+          },
+          "404" : {
+            "content" : {
+              "application/jose" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description" : "No status list at this tenantSlug/listCode, or the tenantSlug is unknown (KH-STS-0404)"
+          }
+        },
+        "summary" : "Fetch a signed status-list artifact",
+        "tags" : [ "status" ]
       }
     }
   },
-  "components": {
-    "schemas": {
-      "ErrorDetail": {
-        "type": "object",
-        "properties": {
-          "field": {
-            "type": "string"
-          },
-          "messageKey": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "description": "One field-level validation failure"
-      },
-      "ErrorEnvelope": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "messageKey": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          },
-          "traceId": {
-            "type": "string"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "details": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ErrorDetail"
-            }
-          }
-        },
-        "description": "Uniform error response for every non-2xx API response"
-      },
-      "ClaimFieldRequest": {
-        "required": [
-          "labelI18n",
-          "name",
-          "type"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string"
-          },
-          "labelI18n": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      "SchemaAuthoringRequest": {
-        "required": [
-          "claimsDef",
-          "nameI18n"
-        ],
-        "type": "object",
-        "properties": {
-          "nameI18n": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
-          },
-          "claimsDef": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ClaimFieldRequest"
-            }
-          },
-          "sdFields": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "defaultMaxUses": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "defaultValidity": {
-            "type": "string"
-          }
-        }
-      },
-      "LocalizedText": {
-        "type": "object",
-        "properties": {
-          "en": {
-            "type": "string"
-          },
-          "ar": {
-            "type": "string"
-          }
-        }
-      },
-      "SchemaDetail": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "code": {
-            "type": "string"
-          },
-          "nameI18n": {
-            "$ref": "#/components/schemas/LocalizedText"
-          },
-          "version": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "status": {
-            "type": "string"
-          },
-          "claimsDefJson": {
-            "type": "string"
-          },
-          "sdFields": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "defaultMaxUses": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "defaultValidity": {
-            "type": "string"
-          }
-        }
-      },
-      "SchemaCreateRequest": {
-        "required": [
-          "claimsDef",
-          "code",
-          "nameI18n"
-        ],
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "nameI18n": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
-          },
-          "claimsDef": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ClaimFieldRequest"
-            }
-          },
-          "sdFields": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "defaultMaxUses": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "defaultValidity": {
-            "type": "string"
-          }
-        }
-      },
-      "ClaimCodeMintRequest": {
-        "required": [
-          "sdJwt"
-        ],
-        "type": "object",
-        "properties": {
-          "sdJwt": {
-            "type": "string"
-          },
-          "ttlMinutes": {
-            "type": "integer",
-            "format": "int32"
-          }
-        },
-        "description": "Request to mint a fresh wallet claim code for an already-issued credential"
-      },
-      "ClaimCodeMintResponse": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "expiresAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "description": "Result of minting a one-time wallet claim code"
-      },
-      "VerifyRequest": {
-        "required": [
-          "sdJwt"
-        ],
-        "type": "object",
-        "properties": {
-          "sdJwt": {
-            "type": "string"
-          }
-        },
-        "description": "Request to verify an SD-JWT credential presentation"
-      },
-      "VerifyResponse": {
-        "type": "object",
-        "properties": {
-          "valid": {
-            "type": "boolean"
-          },
-          "reason": {
-            "type": "string"
-          },
-          "reasonMessage": {
-            "type": "string"
-          },
-          "claims": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "object"
-            }
-          },
-          "usesRemaining": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "revoked": {
-            "type": "boolean"
-          },
-          "statusListChecked": {
-            "type": "boolean"
-          },
-          "statusListVersion": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "statusListUri": {
-            "type": "string"
-          }
-        },
-        "description": "Result of an SD-JWT credential presentation verification"
-      },
-      "IssueRequest": {
-        "required": [
-          "holderRef"
-        ],
-        "type": "object",
-        "properties": {
-          "schemaCode": {
-            "type": "string"
-          },
-          "holderRef": {
-            "type": "string"
-          },
-          "maxUses": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "validMinutes": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "claims": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "object"
-            }
-          },
-          "sdFields": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "description": "Request to issue a new SD-JWT verifiable credential"
-      },
-      "IssueResponse": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "ref": {
-            "type": "string"
-          },
-          "sdJwt": {
-            "type": "string"
-          }
-        },
-        "description": "Result of a successful SD-JWT credential issuance"
-      },
-      "ConsumeRequest": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "consumer": {
-            "type": "string"
-          },
-          "idempotencyKey": {
-            "type": "string"
-          }
-        }
-      },
-      "ConsumeResponse": {
-        "type": "object",
-        "properties": {
-          "consumed": {
-            "type": "boolean"
-          },
-          "reason": {
-            "type": "string"
-          },
-          "usesRemaining": {
-            "type": "integer",
-            "format": "int32"
-          }
-        }
-      },
-      "BulkIssueDefaults": {
-        "type": "object",
-        "properties": {
-          "validMinutes": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "maxUses": {
-            "type": "integer",
-            "format": "int32"
-          }
-        },
-        "description": "Batch-wide defaults, overridable per item"
-      },
-      "BulkIssueItem": {
-        "type": "object",
-        "properties": {
-          "claims": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "object"
-            }
-          },
-          "pseudoRef": {
-            "type": "string"
-          },
-          "validMinutes": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "maxUses": {
-            "type": "integer",
-            "format": "int32"
-          }
-        },
-        "description": "One credential to issue within a bulk batch"
-      },
-      "BulkIssueRequest": {
-        "required": [
-          "schemaCode"
-        ],
-        "type": "object",
-        "properties": {
-          "schemaCode": {
-            "type": "string"
-          },
-          "defaults": {
-            "$ref": "#/components/schemas/BulkIssueDefaults"
-          },
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/BulkIssueItem"
-            }
-          },
-          "mintClaimCodes": {
-            "type": "boolean"
-          }
-        },
-        "description": "Request to issue a batch of credentials against one schema"
-      },
-      "BulkIssueItemError": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "description": "Why one bulk-issue item failed"
-      },
-      "BulkIssueItemResult": {
-        "type": "object",
-        "properties": {
-          "index": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "status": {
-            "type": "string"
-          },
-          "id": {
-            "type": "string"
-          },
-          "ref": {
-            "type": "string"
-          },
-          "claimCode": {
-            "type": "string"
-          },
-          "error": {
-            "$ref": "#/components/schemas/BulkIssueItemError"
-          }
-        },
-        "description": "One bulk-issue row's outcome"
-      },
-      "BulkIssueResponse": {
-        "type": "object",
-        "properties": {
-          "total": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "succeeded": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "failed": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "results": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/BulkIssueItemResult"
-            }
-          }
-        },
-        "description": "Full per-item report of a bulk issuance batch"
-      },
-      "ClaimRedeemRequest": {
-        "required": [
-          "code"
-        ],
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string"
-          }
-        },
-        "description": "Request to redeem a one-time wallet claim code"
-      },
-      "ClaimRedeemResponse": {
-        "type": "object",
-        "properties": {
-          "ref": {
-            "type": "string"
-          },
-          "credential": {
-            "type": "string"
-          },
-          "disclosures": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "schema": {
-            "$ref": "#/components/schemas/ClaimSchemaRef"
-          },
-          "statusListUri": {
-            "type": "string"
-          },
-          "issuedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "maxUses": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "expiresAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "description": "Full, one-time delivery of a credential to a wallet (spec FS-1.2.1 D4)"
-      },
-      "ClaimSchemaRef": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "nameI18n": {
-            "$ref": "#/components/schemas/LocalizedText"
-          },
-          "version": {
-            "type": "integer",
-            "format": "int32"
-          }
-        },
-        "description": "The redeemed credential's schema, display shape"
-      },
-      "LoginRequest": {
-        "required": [
-          "password",
-          "username"
-        ],
-        "type": "object",
-        "properties": {
-          "username": {
-            "type": "string"
-          },
-          "password": {
-            "type": "string"
-          }
-        }
-      },
-      "CreateConsumingPartyRequest": {
-        "required": [
-          "nameI18n"
-        ],
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "nameI18n": {
-            "$ref": "#/components/schemas/NameI18nRequest"
-          }
-        }
-      },
-      "NameI18nRequest": {
-        "required": [
-          "ar",
-          "en"
-        ],
-        "type": "object",
-        "properties": {
-          "en": {
-            "type": "string"
-          },
-          "ar": {
-            "type": "string"
-          }
-        }
-      },
-      "AllowedSchema": {
-        "type": "object",
-        "properties": {
-          "schemaId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "schemaCode": {
-            "type": "string"
-          }
-        }
-      },
-      "ConsumingPartyView": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "code": {
-            "type": "string"
-          },
-          "nameI18n": {
-            "$ref": "#/components/schemas/LocalizedText"
-          },
-          "status": {
-            "type": "string"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "allowedSchemas": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AllowedSchema"
-            }
-          }
-        }
-      },
-      "CreateApiKeyResponse": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "keyPrefix": {
-            "type": "string"
-          },
-          "rawKey": {
-            "type": "string"
-          }
-        }
-      },
-      "AllowSchemaRequest": {
-        "required": [
-          "schemaId"
-        ],
-        "type": "object",
-        "properties": {
-          "schemaId": {
-            "type": "string",
-            "format": "uuid"
-          }
-        }
-      },
-      "CreateApiKeyRequest": {
-        "required": [
-          "ownerType",
-          "scopes"
-        ],
-        "type": "object",
-        "properties": {
-          "ownerType": {
-            "type": "string",
-            "enum": [
-              "TENANT",
-              "CONSUMING_PARTY"
-            ]
-          },
-          "ownerId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "scopes": {
-            "uniqueItems": true,
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      "StatsCounters": {
-        "type": "object",
-        "properties": {
-          "issued": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "revoked": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "consumed": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "consumeDenied": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "claimsRedeemed": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "verifyOk": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "verifyFailed": {
-            "type": "integer",
-            "format": "int64"
-          }
-        },
-        "description": "Pilot-metrics counters for the requested window"
-      },
-      "StatsResponse": {
-        "type": "object",
-        "properties": {
-          "window": {
-            "$ref": "#/components/schemas/StatsWindow"
-          },
-          "counters": {
-            "$ref": "#/components/schemas/StatsCounters"
-          }
-        },
-        "description": "Pilot-metrics counters for a time window"
-      },
-      "StatsWindow": {
-        "type": "object",
-        "properties": {
-          "from": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "to": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "description": "The time window counters were aggregated over"
-      },
-      "DailyStatsEntry": {
-        "type": "object",
-        "properties": {
-          "day": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "counters": {
-            "$ref": "#/components/schemas/StatsCounters"
-          }
-        },
-        "description": "One UTC day's pilot-metrics counters"
-      },
-      "DailyStatsResponse": {
-        "type": "object",
-        "properties": {
-          "window": {
-            "$ref": "#/components/schemas/StatsWindow"
-          },
-          "days": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/DailyStatsEntry"
-            }
-          }
-        },
-        "description": "Pilot-metrics counters broken down by UTC day"
-      },
-      "ConsumingPartyStatsEntry": {
-        "type": "object",
-        "properties": {
-          "partyId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "partyCode": {
-            "type": "string"
-          },
-          "partyName": {
-            "$ref": "#/components/schemas/LocalizedText"
-          },
-          "consumed": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "denied": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "successRate": {
-            "type": "number",
-            "format": "double"
-          }
-        },
-        "description": "One consuming party's call-volume stats"
-      },
-      "ConsumingPartyStatsResponse": {
-        "type": "object",
-        "properties": {
-          "window": {
-            "$ref": "#/components/schemas/StatsWindow"
-          },
-          "parties": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ConsumingPartyStatsEntry"
-            }
-          }
-        },
-        "description": "Per-consuming-party call-volume stats"
-      },
-      "SchemaSummary": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "code": {
-            "type": "string"
-          },
-          "nameI18n": {
-            "$ref": "#/components/schemas/LocalizedText"
-          },
-          "version": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "status": {
-            "type": "string"
-          }
-        }
-      },
-      "CredentialPage": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CredentialSummary"
-            }
-          },
-          "page": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "size": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "totalElements": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "totalPages": {
-            "type": "integer",
-            "format": "int32"
-          }
-        }
-      },
-      "CredentialSummary": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "ref": {
-            "type": "string"
-          },
-          "schemaCode": {
-            "type": "string"
-          },
-          "schemaName": {
-            "$ref": "#/components/schemas/LocalizedText"
-          },
-          "issuedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "validTo": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "maxUses": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "usesRemaining": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "revoked": {
-            "type": "boolean"
-          }
-        }
-      },
-      "CredentialView": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "ref": {
-            "type": "string"
-          },
-          "schemaCode": {
-            "type": "string"
-          },
-          "usesRemaining": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "maxUses": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "revoked": {
-            "type": "boolean"
-          },
-          "validTo": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "jwt": {
-            "type": "string"
-          }
-        }
-      },
-      "MeResponse": {
-        "type": "object",
-        "properties": {
-          "username": {
-            "type": "string"
-          },
-          "displayNameI18n": {
-            "$ref": "#/components/schemas/LocalizedText"
-          },
-          "preferredLang": {
-            "type": "string"
-          },
-          "scopes": {
-            "uniqueItems": true,
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      "AttentionEntry": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string"
-          },
-          "occurredAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "detail": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "object"
-            }
-          }
-        },
-        "description": "One actionable needs-attention item"
-      },
-      "AttentionResponse": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AttentionEntry"
-            }
-          }
-        },
-        "description": "Itemized, actionable needs-attention feed"
-      },
-      "SigningKeyView": {
-        "type": "object",
-        "properties": {
-          "kid": {
-            "type": "string"
-          },
-          "state": {
-            "type": "string"
-          },
-          "validFrom": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "validTo": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "description": "A signing key's lifecycle status, no JWK material"
-      },
-      "SigningKeysResponse": {
-        "type": "object",
-        "properties": {
-          "keys": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/SigningKeyView"
-            }
-          }
-        },
-        "description": "Every signing key's lifecycle status"
-      },
-      "ActivityItem": {
-        "type": "object",
-        "properties": {
-          "action": {
-            "type": "string"
-          },
-          "actorType": {
-            "type": "string"
-          },
-          "entityRef": {
-            "type": "string"
-          },
-          "consumingPartyCode": {
-            "type": "string"
-          },
-          "consumingPartyName": {
-            "$ref": "#/components/schemas/LocalizedText"
-          },
-          "detail": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "object"
-            }
-          },
-          "occurredAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "description": "One recent, display-ready audit event"
-      },
-      "ActivityResponse": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ActivityItem"
-            }
-          }
-        },
-        "description": "Recent, display-ready credential activity"
-      }
-    },
-    "securitySchemes": {
-      "sessionCookie": {
-        "type": "apiKey",
-        "description": "Console session cookie, set by POST /api/v1/auth/login. Used together with the XSRF-TOKEN cookie/X-XSRF-TOKEN header on state-changing requests.",
-        "name": "KHATM_SESSION",
-        "in": "cookie"
-      },
-      "apiKeyBearer": {
-        "type": "http",
-        "description": "API key bearer token: Authorization: Bearer khk_<prefix>.<secret>. Scope and actor-kind requirements vary per endpoint — see each operation's description.",
-        "scheme": "bearer",
-        "bearerFormat": "khk_..."
-      }
-    }
-  }
+  "tags" : [ {
+    "description" : "Itemized, actionable needs-attention feed",
+    "name" : "attention"
+  }, {
+    "description" : "Public JSON Web Key Set for signature verification",
+    "name" : "jwks"
+  }, {
+    "description" : "Credential schema (credential type) lookups and authoring",
+    "name" : "schema"
+  }, {
+    "description" : "Consuming-party (verifier) administration — registry, status, schema allowlist",
+    "name" : "consuming-parties-admin"
+  }, {
+    "description" : "Recent, display-ready credential activity feed",
+    "name" : "activity"
+  }, {
+    "description" : "Pilot-metrics counters aggregated from the audit trail",
+    "name" : "stats"
+  }, {
+    "description" : "Signed status-list revocation artifacts",
+    "name" : "status"
+  }, {
+    "description" : "Wallet claim-code delivery",
+    "name" : "claim"
+  }, {
+    "description" : "Signing-key lifecycle status for the console",
+    "name" : "admin-signing-keys"
+  }, {
+    "description" : "Issue, consume, verify, and revoke SD-JWT credentials",
+    "name" : "credential"
+  }, {
+    "description" : "Per-consuming-party call-volume stats",
+    "name" : "stats"
+  }, {
+    "description" : "Console session login/logout and admin API-key management",
+    "name" : "auth"
+  } ]
 }
