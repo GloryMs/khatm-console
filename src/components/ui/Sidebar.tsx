@@ -1,78 +1,85 @@
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/features/auth/useAuth';
+import { useLocalizedText } from '@/hooks/useLocalizedText';
 import styles from './Sidebar.module.css';
+
+interface NavItemDef {
+  to: string;
+  labelKey: string;
+  /** Plain Unicode glyph (mono) — no icon library, per the design guide. */
+  icon: string;
+  /** When set, the item renders only for operators with this scope. */
+  scope?: string;
+}
+
+const NAV_ITEMS: NavItemDef[] = [
+  { to: '/dashboard', labelKey: 'nav.dashboard', icon: '▦' },
+  { to: '/issue', labelKey: 'nav.issue', icon: '＋' },
+  { to: '/issue/bulk', labelKey: 'nav.issueBulk', icon: '≡' },
+  { to: '/schemas', labelKey: 'nav.schemas', icon: '▤' },
+  { to: '/schemas/manage', labelKey: 'nav.schemaManage', icon: '✎', scope: 'admin' },
+  { to: '/credentials', labelKey: 'nav.credentials', icon: '◈' },
+  { to: '/verify', labelKey: 'nav.verify', icon: '✓' },
+  { to: '/revoke', labelKey: 'nav.revoke', icon: '⊘' },
+  { to: '/consumers', labelKey: 'nav.consumingParties', icon: '⚑', scope: 'admin' },
+  { to: '/consume-sim', labelKey: 'nav.consumeSim', icon: '▷' },
+];
+
+function initials(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) return '?';
+  const parts = trimmed.split(/\s+/);
+  return (parts.length >= 2 ? parts[0][0] + parts[1][0] : trimmed.slice(0, 2)).toUpperCase();
+}
 
 export function Sidebar() {
   const { t } = useTranslation();
-  const { hasScope } = useAuth();
+  const { user, logout, hasScope } = useAuth();
+  const localize = useLocalizedText();
+  const userName = (user && (localize(user.displayNameI18n) || user.username)) ?? '';
+
   return (
-    <nav className={styles.sidebar} aria-label={t('shell.sidebarLabel')}>
-      <div className={styles.brand}>{t('app.brand')}</div>
-      <NavLink
-        to="/dashboard"
-        className={({ isActive }) => (isActive ? styles.linkActive : styles.link)}
-      >
-        {t('nav.dashboard')}
-      </NavLink>
-      <NavLink
-        to="/issue"
-        className={({ isActive }) => (isActive ? styles.linkActive : styles.link)}
-      >
-        {t('nav.issue')}
-      </NavLink>
-      <NavLink
-        to="/issue/bulk"
-        className={({ isActive }) => (isActive ? styles.linkActive : styles.link)}
-      >
-        {t('nav.issueBulk')}
-      </NavLink>
-      <NavLink
-        to="/schemas"
-        className={({ isActive }) => (isActive ? styles.linkActive : styles.link)}
-      >
-        {t('nav.schemas')}
-      </NavLink>
-      {hasScope('admin') && (
-        <NavLink
-          to="/schemas/manage"
-          className={({ isActive }) => (isActive ? styles.linkActive : styles.link)}
-        >
-          {t('nav.schemaManage')}
-        </NavLink>
+    <aside className={styles.sidebar} aria-label={t('shell.sidebarLabel')}>
+      <div className={styles.header}>
+        <div className={styles.seal} aria-hidden="true">
+          <span className={styles.sealRing} />
+          <span className={styles.sealMark}>{t('app.brand')}</span>
+        </div>
+        <div className={styles.wordmark}>
+          <span className={styles.brand}>{t('app.brand')}</span>
+          <span className={styles.console}>{t('app.console')}</span>
+        </div>
+      </div>
+
+      <nav className={styles.nav}>
+        {NAV_ITEMS.filter((item) => !item.scope || hasScope(item.scope)).map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) => (isActive ? styles.linkActive : styles.link)}
+          >
+            <span className={styles.icon} aria-hidden="true">
+              {item.icon}
+            </span>
+            <span className={styles.label}>{t(item.labelKey)}</span>
+          </NavLink>
+        ))}
+      </nav>
+
+      {user && (
+        <div className={styles.footer}>
+          <span className={styles.avatar} aria-hidden="true">
+            {initials(userName)}
+          </span>
+          <div className={styles.user}>
+            <span className={styles.userName}>{userName}</span>
+            <button type="button" className={styles.logout} onClick={() => void logout()}>
+              {t('auth.logout')}
+            </button>
+          </div>
+        </div>
       )}
-      <NavLink
-        to="/credentials"
-        className={({ isActive }) => (isActive ? styles.linkActive : styles.link)}
-      >
-        {t('nav.credentials')}
-      </NavLink>
-      <NavLink
-        to="/verify"
-        className={({ isActive }) => (isActive ? styles.linkActive : styles.link)}
-      >
-        {t('nav.verify')}
-      </NavLink>
-      <NavLink
-        to="/revoke"
-        className={({ isActive }) => (isActive ? styles.linkActive : styles.link)}
-      >
-        {t('nav.revoke')}
-      </NavLink>
-      {hasScope('admin') && (
-        <NavLink
-          to="/consumers"
-          className={({ isActive }) => (isActive ? styles.linkActive : styles.link)}
-        >
-          {t('nav.consumingParties')}
-        </NavLink>
-      )}
-      <NavLink
-        to="/consume-sim"
-        className={({ isActive }) => (isActive ? styles.linkActive : styles.link)}
-      >
-        {t('nav.consumeSim')}
-      </NavLink>
-    </nav>
+    </aside>
   );
 }

@@ -71,25 +71,27 @@ function RevokePageBody() {
     <section className={styles.page}>
       <h1 className={styles.title}>{t('revoke.title')}</h1>
 
-      <form className={styles.form} onSubmit={onLookup} noValidate>
+      <form onSubmit={onLookup} noValidate>
         <FormField
           label={t('revoke.lookupLabel')}
           htmlFor="revoke-id"
           help={t('revoke.lookupHelp')}
           error={errors.id?.message}
         >
-          <input
-            id="revoke-id"
-            type="text"
-            autoComplete="off"
-            placeholder={t('revoke.lookupPlaceholder')}
-            className={`${khatmInputClass(errors.id ? 'error' : 'default')} ltr-embed`}
-            {...register('id')}
-          />
+          <div className={styles.inputRow}>
+            <input
+              id="revoke-id"
+              type="text"
+              autoComplete="off"
+              placeholder={t('revoke.lookupPlaceholder')}
+              className={`${khatmInputClass(errors.id ? 'error' : 'default')} ${styles.input} ltr-embed`}
+              {...register('id')}
+            />
+            <Button type="submit" variant="primary" disabled={credentialQuery.isFetching}>
+              {credentialQuery.isFetching ? t('revoke.looking') : t('revoke.lookup')}
+            </Button>
+          </div>
         </FormField>
-        <Button type="submit" variant="primary" disabled={credentialQuery.isFetching}>
-          {credentialQuery.isFetching ? t('revoke.looking') : t('revoke.lookup')}
-        </Button>
       </form>
 
       {activeId && credentialQuery.isError && <ApiErrorBanner error={credentialQuery.error} />}

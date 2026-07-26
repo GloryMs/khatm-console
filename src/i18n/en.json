@@ -1,7 +1,8 @@
 {
   "app": {
     "title": "Khatm Console",
-    "brand": "Khatm"
+    "brand": "Khatm",
+    "console": "Console"
   },
   "nav": {
     "schemas": "Schemas",

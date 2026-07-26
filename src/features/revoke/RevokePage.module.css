@@ -10,14 +10,19 @@
   font-size: var(--fs-h1);
 }
 
-.form {
+/* The submit button lives in the same row as the input (inside the field's
+   control slot) rather than as a flex sibling of the whole FormField — the
+   field also renders help text below the input, so a button aligned to the
+   field block's edge would sit on the help-text line, not the input line. */
+.inputRow {
   display: flex;
-  align-items: flex-end;
+  align-items: stretch;
   gap: var(--space-3);
 }
 
-.form > *:first-child {
+.input {
   flex: 1;
+  min-inline-size: 0;
 }
 
 .summaryBlock {
