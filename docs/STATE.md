@@ -5,6 +5,7 @@
 ## Current phase / task
 
 - Dashboard live-data wiring — **DONE. PR #12** merged 2026-07-25, Majd-verified (EN/AR + RTL).
+- App shell sidebar redesign + toggle/button polish — **DONE. PR #13** merged 2026-07-25.
 - Post-V1 bugfix — LAN-IP secure-context crashes (consume-sim idempotency key, copy buttons) —
   DONE. PR #8 merged 2026-07-24.
 - Post-V1 chore — no silent QR api-base fallback — DONE. PR #7 merged 2026-07-23; Majd's
