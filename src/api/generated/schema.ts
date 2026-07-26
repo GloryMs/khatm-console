@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/api/v1/schemas/{id}": {
+    "/.well-known/jwks.json": {
         parameters: {
             query?: never;
             header?: never;
@@ -12,15 +12,11 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Fetch a credential schema's detail
-         * @description Adds the raw claims definition to the list view's fields, so a console issue screen can render the schema's claim fields. Same access rule as the list endpoint — authenticated, any scope.
+         * Fetch the JWKS
+         * @description Public ACTIVE + RETIRING signing keys, no authentication required.
          */
-        get: operations["get"];
-        /**
-         * Rewrite a DRAFT schema's authoring fields in place
-         * @description Requires the admin scope. DRAFT only — fixes mistakes before publish. Validated identically to POST /api/v1/schemas.
-         */
-        put: operations["update"];
+        get: operations["jwks"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -28,7 +24,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/schemas": {
+    "/api/v1/activity": {
         parameters: {
             query?: never;
             header?: never;
@@ -36,370 +32,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List credential schemas
-         * @description Read-only tenant metadata (id, display name, version, status) — every authenticated actor kind may call this, no specific scope required (a deliberate, documented decision: see rbac.security.SecurityConfig's Javadoc). The optional status filter (KH-1.1.1) lets the console's schema management view show DRAFT rows too; the issue-form picker keeps filtering to PUBLISHED client-side, as before.
+         * Fetch the recent-activity feed
+         * @description The most recent credential-lifecycle audit events (issued/consumed/revoked/schema-denied/claim-redeemed/verify-ok/verify-failed), newest first, resolved for display: entity_ref is always the credential's ref (never a bare id), and consuming-party attribution is resolved where the underlying event supports it. event, if present, is a comma-separated subset of AuditAction names to filter to (unknown values are ignored); omit it for every eligible action. Requires a console session — no API key of any kind works here (same gate as GET /api/v1/stats).
          */
-        get: operations["list"];
+        get: operations["activity"];
         put?: never;
-        /**
-         * Create a new DRAFT credential schema (version 1)
-         * @description Requires the admin scope. Server-side validation rejects an empty claimsDef, a claim field with an unsupported type (text/number/date), a nameI18n or claim labelI18n missing en or ar, an sdFields entry not among the claim field names, or a code already registered at version 1 — all as KH-SCH-0400. The schema starts DRAFT and unavailable for issuance until POST /{id}/publish.
-         */
-        post: operations["create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/schemas/{id}/versions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Create a new DRAFT version of a PUBLISHED schema
-         * @description Requires the admin scope. Same code, version + 1. The console is responsible for prefilling the request body from the source schema's current fields — this endpoint validates the submitted body exactly like POST /api/v1/schemas, with no server-side default-merging.
-         */
-        post: operations["createVersion"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/schemas/{id}/publish": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Publish a DRAFT schema
-         * @description Requires the admin scope. DRAFT -> PUBLISHED — the immutability line: a published schema's claim fields can never be mutated again (no general update endpoint exists for a PUBLISHED schema); a mistake found later needs a new version (POST /{id}/versions) instead. A PUBLISHED schema becomes a valid issuance target for POST /api/v1/credentials/issue's schemaCode.
-         */
-        post: operations["publish"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/schemas/{id}/archive": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Archive a PUBLISHED schema
-         * @description Requires the admin scope. PUBLISHED -> ARCHIVED — stops NEW issuance against this schema (POST /api/v1/credentials/issue and the internal find-or-create path both reject it, KH-SCH-1409); every credential already issued against it, and its verification/consumption, is completely unaffected.
-         */
-        post: operations["archive"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/credentials/{id}/revoke": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Revoke a credential
-         * @description Immediately and permanently invalidates the credential — a subsequent /verify or /consume call reports it revoked. Requires the revoke scope and a console session (an API key is always 403 here). Irreversible.
-         */
-        post: operations["revoke"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/credentials/{id}/claim-code": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Mint a fresh wallet claim code for an already-issued credential
-         * @description The console-facing counterpart to POST /issue's one-time claim-code delivery — spec FS-1.2.1 D2's explicit recovery path: if a code never reached the wallet (lost response, expired unclaimed, or the issuer simply wants to hand the credential out again), the issuer mints a new one here rather than re-issuing the whole credential. Requires the exact sdJwt presentation string the original /issue call returned — the platform never stores disclosures outside a claim_code row (P1), so this endpoint cannot reconstruct them on its own; the caller is expected to have retained that one-time delivery for exactly this purpose.
-         *
-         *     Minting voids any prior still-live code for this credential (its disclosures_enc is zeroed, the same mechanism the redeem and expiry-sweep paths use) — at most one code is ever redeemable per credential at a time.
-         *
-         *     The response's code is a one-time delivery, exactly like /issue's sdJwt: it appears in this response and nowhere else, ever. It is what a console issue screen encodes into the QR v1 payload described on POST /api/v1/claims/redeem — {"v":1,"api":"<platform base URL>","code":"<this code>"} — for a wallet to scan and redeem at that endpoint.
-         */
-        post: operations["mintClaimCode"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/credentials/verify": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Verify an SD-JWT credential presentation
-         * @description Accepts the standard tilde-separated SD-JWT presentation, or a bare compact JWT. Passing a bare JWT with no disclosures at all is a valid zero-disclosure presentation (spec FS-0.4 §5) — it will typically (and correctly) fail with reason 'withheld_mandatory_claim' unless the schema's sd_fields happens to cover every claims_def field. A verification failure is always HTTP 200 with valid:false (spec FS-0.6a D1) — it is a domain result, never an error envelope. Only a completely blank sdJwt is rejected as a 400.
-         */
-        post: operations["verify"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/credentials/issue": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Issue a new SD-JWT verifiable credential
-         * @description Every claim becomes a salted, selectively-disclosable SD-JWT disclosure (spec FS-0.4 D1) — none of them appear as a plaintext value in the persisted, signed payload. The response's sdJwt is a one-time delivery of the full presentation (compact JWT plus every disclosure); the platform never stores it in that form.
-         */
-        post: operations["issue"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/credentials/consume": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Consume one use of a credential
-         * @description The atomic double-spend guard: a single-transaction conditional UPDATE decrements the remaining uses only if the credential is still ACTIVE and unexpired, so exactly one caller wins under concurrency. Requires the consume scope and a CONSUMING_PARTY API key (a console session, or a TENANT key even with the consume scope, is always 403 here). The caller's consuming party must also be scoped to the credential's schema via consuming_party_schema (KH-1.4.3, deny-by-default — an unconfigured party can consume nothing). An optional idempotencyKey makes repeated calls with the same key return the first outcome without re-running the UPDATE.
-         */
-        post: operations["consume"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/credentials/bulk": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Issue a batch of credentials against one schema
-         * @description The C3 console wizard's CSV-per-schema flow (KH-1.1.3) — up to 200 items, one schema per batch, each issued independently through the same single-issue path (no parallel issuance logic, no bypass of any single-issue guard). One bad row never rolls back the batch: the response reports every item's outcome by index, ISSUED or FAILED with its own error. Setting mintClaimCodes:true mints a one-time wallet claim code for every successfully issued item (the existing POST /{id}/claim-code path) and returns it in that item's result — shown here exactly once. Requires the same scope as /issue: session or TENANT API key (a CONSUMING_PARTY key is always 403 here).
-         */
-        post: operations["bulkIssue"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/claims/redeem": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Redeem a one-time wallet claim code
-         * @description The single-use exchange that hands a freshly issued credential to a wallet: the code is consumed atomically (locked, validated, decrypted, marked claimed, and the platform's only copy of the disclosures zeroed — all in one transaction, before this response is built) so exactly one caller can ever redeem a given code. Authenticates by possession of the code alone — no session or API key, ever (spec FS-1.2.1 §9); public, rate-limited per source address instead.
-         *
-         *     **QR contract v1** (spec FS-1.2.1 D8, stable): the QR payload a console issue screen renders is the JSON text `{"v":1,"api":"<platform base URL>","code":"<claim code>"}`. A wallet decodes it and POSTs `code` here, against `{api}/api/v1/claims/redeem`. `v` exists so a future incompatible QR shape can be introduced without breaking wallets still reading `v:1`.
-         *
-         *     The wallet is contractually obligated to persist the full response immediately on receipt, before any display — the platform cannot hand it out a second time. A lost response after a successful redeem (e.g. the connection drops) is not recoverable by retrying; the issuer must create a new claim code from the console.
-         *
-         *     The response's `maxUses`/`expiresAt` are a redeem-time snapshot of the credential row, for display only. There is deliberately no live "uses remaining" channel: the holder is anonymous by design (P1 — no PII, no holder identity to authorize a lookup against), and a polling endpoint keyed by a credential reference would itself be new attack surface. Out of scope by design, not an oversight.
-         */
-        post: operations["redeem"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/logout": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Console logout
-         * @description Invalidates the current session.
-         */
-        post: operations["logout"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/login": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Console login
-         * @description Authenticates a username/password pair for the current tenant and establishes a server-side session (Redis-backed, cookie KHATM_SESSION). Every failure reason — unknown user, wrong password, temporary lockout, administrative LOCKED/DISABLED — returns the identical generic 401 (spec FS-0.6b D7); the real reason is recorded only in the audit log.
-         */
-        post: operations["login"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/consuming-parties": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List consuming parties
-         * @description Every consuming party registered for the tenant (newest first), each with its status and resolved schema allowlist. Requires the admin scope.
-         */
-        get: operations["list_2"];
-        put?: never;
-        /**
-         * Register a consuming party
-         * @description Creates a party with the given code and bilingual name. The code is a lowercase slug (^[a-z0-9][a-z0-9-_]{1,62}$); the row's id is derived deterministically from (tenant, code), so this is idempotent by identity — but registering an already-registered code is a conflict (KH-CNS-0409), not a silent overwrite. Requires the admin scope.
-         */
-        post: operations["create_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/consuming-parties/{id}/suspend": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Suspend a consuming party
-         * @description Flips the party to SUSPENDED — its API keys immediately stop authenticating (KH-1.4.4 D4), the same outcome as a revoked key. Idempotent. Requires the admin scope.
-         */
-        post: operations["suspend"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/consuming-parties/{id}/api-keys": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Mint an API key for a consuming party
-         * @description Creates a CONSUMING_PARTY-owned API key (scope: consume) for the given party. The response's rawKey is shown exactly once — the platform stores only its SHA-256 hash and prefix (spec FS-0.6b §4). Revoke it later via POST /api/v1/admin/api-keys/{id}/revoke. Requires the admin scope.
-         */
-        post: operations["mintKey"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/consuming-parties/{id}/allowed-schemas": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Add a schema to a party's allowlist
-         * @description Scopes the party to consume credentials issued against the given schema (deny-by-default: a party with an empty allowlist can consume nothing). Idempotent. The schema must exist in the tenant (KH-CNS-1404 otherwise). Requires the admin scope.
-         */
-        post: operations["allowSchema"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/consuming-parties/{id}/activate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Reactivate a consuming party
-         * @description Flips a SUSPENDED party back to ACTIVE — its API keys authenticate again. Idempotent. Requires the admin scope.
-         */
-        post: operations["activate"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -446,7 +84,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/sl/{tenantSlug}/{listCode}": {
+    "/api/v1/admin/consuming-parties": {
         parameters: {
             query?: never;
             header?: never;
@@ -454,99 +92,123 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Fetch a signed status-list artifact
-         * @description The public, unauthenticated source of revocation truth for offline verifiers (spec FS-1.3 D2, SAD §6). Returns the list's signed bitstring as a compact JWS (application/jose) — a verifier validates its signature against the platform's JWKS, then base64url-decodes and gunzips the `bits` claim to read the per-credential revocation bit at the index named in the credential's `status` claim. The ETag is the list's `version`; a matching If-None-Match returns 304 with no body, so periodic polls stay cheap until a revoke bumps the version. Cached for 60s, matching NFR-06's revoke-to-publish budget.
+         * List consuming parties
+         * @description Every consuming party registered for the tenant (newest first), each with its status and resolved schema allowlist. Requires the admin scope.
          */
-        get: operations["getStatusList"];
+        get: operations["list_2"];
         put?: never;
-        post?: never;
+        /**
+         * Register a consuming party
+         * @description Creates a party with the given code and bilingual name. The code is a lowercase slug (^[a-z0-9][a-z0-9-_]{1,62}$); the row's id is derived deterministically from (tenant, code), so this is idempotent by identity — but registering an already-registered code is a conflict (KH-CNS-0409), not a silent overwrite. Requires the admin scope.
+         */
+        post: operations["create_1"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/stats": {
+    "/api/v1/admin/consuming-parties/{id}/activate": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * Fetch pilot-metrics counters
-         * @description A plain GROUP BY action aggregation over audit_log for the requested window — counters only, never claim content (P1). Defaults to the last 30 days when from/to are omitted. Requires a console session — no API key of any kind works here (see rbac.security.SecurityConfig's Javadoc).
-         */
-        get: operations["stats"];
+        get?: never;
         put?: never;
-        post?: never;
+        /**
+         * Reactivate a consuming party
+         * @description Flips a SUSPENDED party back to ACTIVE — its API keys authenticate again. Idempotent. Requires the admin scope.
+         */
+        post: operations["activate"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/stats/daily": {
+    "/api/v1/admin/consuming-parties/{id}/allowed-schemas": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * Fetch pilot-metrics counters broken down by day
-         * @description The same GROUP BY action aggregation as GET /api/v1/stats, bucketed per UTC day — backs the console's lifecycle chart. Defaults to the last 30 days when from/to are omitted. Same session-only gate as GET /api/v1/stats.
-         */
-        get: operations["dailyStats"];
+        get?: never;
         put?: never;
-        post?: never;
+        /**
+         * Add a schema to a party's allowlist
+         * @description Scopes the party to consume credentials issued against the given schema (deny-by-default: a party with an empty allowlist can consume nothing). Idempotent. The schema must exist in the tenant (KH-CNS-1404 otherwise). Requires the admin scope.
+         */
+        post: operations["allowSchema"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/stats/consuming-parties": {
+    "/api/v1/admin/consuming-parties/{id}/allowed-schemas/{schemaId}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * Fetch per-consuming-party call-volume stats
-         * @description Call volume (CREDENTIAL_CONSUMED) and denial count (CONSUME_SCHEMA_DENIED) per consuming party for the requested window, with a derived success rate. Defaults to the last 30 days when from/to are omitted. Same session-only gate as GET /api/v1/stats.
-         */
-        get: operations["consumingPartyStats"];
+        get?: never;
         put?: never;
         post?: never;
+        /**
+         * Remove a schema from a party's allowlist
+         * @description Idempotent — removing a pair that is not allowed (including for an unknown party) is a successful 204 no-op. Requires the admin scope.
+         */
+        delete: operations["disallowSchema"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/consuming-parties/{id}/api-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mint an API key for a consuming party
+         * @description Creates a CONSUMING_PARTY-owned API key (scope: consume) for the given party. The response's rawKey is shown exactly once — the platform stores only its SHA-256 hash and prefix (spec FS-0.6b §4). Revoke it later via POST /api/v1/admin/api-keys/{id}/revoke. Requires the admin scope.
+         */
+        post: operations["mintKey"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/credentials": {
+    "/api/v1/admin/consuming-parties/{id}/suspend": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * Search/list credentials
-         * @description Console-facing search over this tenant's credentials (KH-1.1.4) — proof/status metadata rows only, never claim content (P1 rule). Every filter is optional and AND-combined: ref (exact), pseudoRef (exact, resolved against the holder who was issued the credential), schemaId (exact), revoked (exact). Sorted by issuedAt descending; page/size are zero-based/1-100, defaulting to 0/20. Requires a console session — no API key of any kind works here (see rbac.security.SecurityConfig's Javadoc).
-         */
-        get: operations["list_1"];
+        get?: never;
         put?: never;
-        post?: never;
+        /**
+         * Suspend a consuming party
+         * @description Flips the party to SUSPENDED — its API keys immediately stop authenticating (KH-1.4.4 D4), the same outcome as a revoked key. Idempotent. Requires the admin scope.
+         */
+        post: operations["suspend"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/credentials/{id}": {
+    "/api/v1/admin/signing-keys": {
         parameters: {
             query?: never;
             header?: never;
@@ -554,30 +216,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Fetch a credential's current status
-         * @description Proof/status metadata only (ref, schema, status, uses remaining, timestamps) — never the claim values themselves, which only ever leave the platform inside a one-time sdJwt presentation (P1 rule). Requires any valid session or API key.
+         * List every signing key's lifecycle status
+         * @description Every signing key for the tenant, newest first, every state including RETIRED — lifecycle fields only (kid/state/validFrom/validTo), never the public JWK or any private material. Requires the admin scope (any actor kind).
          */
-        get: operations["get_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/me": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Current session's user
-         * @description Returns the authenticated user's username, display name, language, and scopes.
-         */
-        get: operations["me"];
+        get: operations["signingKeys"];
         put?: never;
         post?: never;
         delete?: never;
@@ -606,67 +248,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/signing-keys": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List every signing key's lifecycle status
-         * @description Every signing key for the tenant, newest first, every state including RETIRED — lifecycle fields only (kid/state/validFrom/validTo), never the public JWK or any private material. Requires the admin scope (any actor kind).
-         */
-        get: operations["signingKeys"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/activity": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Fetch the recent-activity feed
-         * @description The most recent credential-lifecycle audit events (issued/consumed/revoked/schema-denied/claim-redeemed/verify-ok/verify-failed), newest first, resolved for display: entity_ref is always the credential's ref (never a bare id), and consuming-party attribution is resolved where the underlying event supports it. event, if present, is a comma-separated subset of AuditAction names to filter to (unknown values are ignored); omit it for every eligible action. Requires a console session — no API key of any kind works here (same gate as GET /api/v1/stats).
-         */
-        get: operations["activity"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/.well-known/jwks.json": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Fetch the JWKS
-         * @description Public ACTIVE + RETIRING signing keys, no authentication required.
-         */
-        get: operations["jwks"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/consuming-parties/{id}/allowed-schemas/{schemaId}": {
+    "/api/v1/auth/login": {
         parameters: {
             query?: never;
             header?: never;
@@ -675,12 +257,430 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post?: never;
         /**
-         * Remove a schema from a party's allowlist
-         * @description Idempotent — removing a pair that is not allowed (including for an unknown party) is a successful 204 no-op. Requires the admin scope.
+         * Console login
+         * @description Authenticates a username/password pair for the current tenant and establishes a server-side session (Redis-backed, cookie KHATM_SESSION). Every failure reason — unknown user, wrong password, temporary lockout, administrative LOCKED/DISABLED — returns the identical generic 401 (spec FS-0.6b D7); the real reason is recorded only in the audit log.
          */
-        delete: operations["disallowSchema"];
+        post: operations["login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Console logout
+         * @description Invalidates the current session.
+         */
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Current session's user
+         * @description Returns the authenticated user's username, display name, language, and scopes.
+         */
+        get: operations["me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/claims/redeem": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Redeem a one-time wallet claim code
+         * @description The single-use exchange that hands a freshly issued credential to a wallet: the code is consumed atomically (locked, validated, decrypted, marked claimed, and the platform's only copy of the disclosures zeroed — all in one transaction, before this response is built) so exactly one caller can ever redeem a given code. Authenticates by possession of the code alone — no session or API key, ever (spec FS-1.2.1 §9); public, rate-limited per source address instead.
+         *
+         *     **QR contract v1** (spec FS-1.2.1 D8, stable): the QR payload a console issue screen renders is the JSON text `{"v":1,"api":"<platform base URL>","code":"<claim code>"}`. A wallet decodes it and POSTs `code` here, against `{api}/api/v1/claims/redeem`. `v` exists so a future incompatible QR shape can be introduced without breaking wallets still reading `v:1`.
+         *
+         *     The wallet is contractually obligated to persist the full response immediately on receipt, before any display — the platform cannot hand it out a second time. A lost response after a successful redeem (e.g. the connection drops) is not recoverable by retrying; the issuer must create a new claim code from the console.
+         *
+         *     The response's `maxUses`/`expiresAt` are a redeem-time snapshot of the credential row, for display only. There is deliberately no live "uses remaining" channel: the holder is anonymous by design (P1 — no PII, no holder identity to authorize a lookup against), and a polling endpoint keyed by a credential reference would itself be new attack surface. Out of scope by design, not an oversight.
+         */
+        post: operations["redeem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/credentials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search/list credentials
+         * @description Console-facing search over this tenant's credentials (KH-1.1.4) — proof/status metadata rows only, never claim content (P1 rule). Every filter is optional and AND-combined: ref (exact), pseudoRef (exact, resolved against the holder who was issued the credential), schemaId (exact), revoked (exact). Sorted by issuedAt descending; page/size are zero-based/1-100, defaulting to 0/20. Requires a console session — no API key of any kind works here (see rbac.security.SecurityConfig's Javadoc).
+         */
+        get: operations["list_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/credentials/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue a batch of credentials against one schema
+         * @description The C3 console wizard's CSV-per-schema flow (KH-1.1.3) — up to 200 items, one schema per batch, each issued independently through the same single-issue path (no parallel issuance logic, no bypass of any single-issue guard). One bad row never rolls back the batch: the response reports every item's outcome by index, ISSUED or FAILED with its own error. Setting mintClaimCodes:true mints a one-time wallet claim code for every successfully issued item (the existing POST /{id}/claim-code path) and returns it in that item's result — shown here exactly once. Requires the same scope as /issue: session or TENANT API key (a CONSUMING_PARTY key is always 403 here).
+         */
+        post: operations["bulkIssue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/credentials/consume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Consume one use of a credential
+         * @description The atomic double-spend guard: a single-transaction conditional UPDATE decrements the remaining uses only if the credential is still ACTIVE and unexpired, so exactly one caller wins under concurrency. Requires the consume scope and a CONSUMING_PARTY API key (a console session, or a TENANT key even with the consume scope, is always 403 here). The caller's consuming party must also be scoped to the credential's schema via consuming_party_schema (KH-1.4.3, deny-by-default — an unconfigured party can consume nothing). An optional idempotencyKey makes repeated calls with the same key return the first outcome without re-running the UPDATE.
+         */
+        post: operations["consume"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/credentials/issue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue a new SD-JWT verifiable credential
+         * @description Every claim becomes a salted, selectively-disclosable SD-JWT disclosure (spec FS-0.4 D1) — none of them appear as a plaintext value in the persisted, signed payload. The response's sdJwt is a one-time delivery of the full presentation (compact JWT plus every disclosure); the platform never stores it in that form.
+         */
+        post: operations["issue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/credentials/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify an SD-JWT credential presentation
+         * @description Accepts the standard tilde-separated SD-JWT presentation, or a bare compact JWT. Passing a bare JWT with no disclosures at all is a valid zero-disclosure presentation (spec FS-0.4 §5) — it will typically (and correctly) fail with reason 'withheld_mandatory_claim' unless the schema's sd_fields happens to cover every claims_def field. A verification failure is always HTTP 200 with valid:false (spec FS-0.6a D1) — it is a domain result, never an error envelope. Only a completely blank sdJwt is rejected as a 400.
+         */
+        post: operations["verify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/credentials/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fetch a credential's current status
+         * @description Proof/status metadata only (ref, schema, status, uses remaining, timestamps) — never the claim values themselves, which only ever leave the platform inside a one-time sdJwt presentation (P1 rule). Requires any valid session or API key.
+         */
+        get: operations["get_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/credentials/{id}/claim-code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mint a fresh wallet claim code for an already-issued credential
+         * @description The console-facing counterpart to POST /issue's one-time claim-code delivery — spec FS-1.2.1 D2's explicit recovery path: if a code never reached the wallet (lost response, expired unclaimed, or the issuer simply wants to hand the credential out again), the issuer mints a new one here rather than re-issuing the whole credential. Requires the exact sdJwt presentation string the original /issue call returned — the platform never stores disclosures outside a claim_code row (P1), so this endpoint cannot reconstruct them on its own; the caller is expected to have retained that one-time delivery for exactly this purpose.
+         *
+         *     Minting voids any prior still-live code for this credential (its disclosures_enc is zeroed, the same mechanism the redeem and expiry-sweep paths use) — at most one code is ever redeemable per credential at a time.
+         *
+         *     The response's code is a one-time delivery, exactly like /issue's sdJwt: it appears in this response and nowhere else, ever. It is what a console issue screen encodes into the QR v1 payload described on POST /api/v1/claims/redeem — {"v":1,"api":"<platform base URL>","code":"<this code>"} — for a wallet to scan and redeem at that endpoint.
+         */
+        post: operations["mintClaimCode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/credentials/{id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke a credential
+         * @description Immediately and permanently invalidates the credential — a subsequent /verify or /consume call reports it revoked. Requires the revoke scope and a console session (an API key is always 403 here). Irreversible.
+         */
+        post: operations["revoke"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/schemas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List credential schemas
+         * @description Read-only tenant metadata (id, display name, version, status) — every authenticated actor kind may call this, no specific scope required (a deliberate, documented decision: see rbac.security.SecurityConfig's Javadoc). The optional status filter (KH-1.1.1) lets the console's schema management view show DRAFT rows too; the issue-form picker keeps filtering to PUBLISHED client-side, as before.
+         */
+        get: operations["list"];
+        put?: never;
+        /**
+         * Create a new DRAFT credential schema (version 1)
+         * @description Requires the admin scope. Server-side validation rejects an empty claimsDef, a claim field with an unsupported type (text/number/date), a nameI18n or claim labelI18n missing en or ar, an sdFields entry not among the claim field names, or a code already registered at version 1 — all as KH-SCH-0400. The schema starts DRAFT and unavailable for issuance until POST /{id}/publish.
+         */
+        post: operations["create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/schemas/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fetch a credential schema's detail
+         * @description Adds the raw claims definition to the list view's fields, so a console issue screen can render the schema's claim fields. Same access rule as the list endpoint — authenticated, any scope.
+         */
+        get: operations["get"];
+        /**
+         * Rewrite a DRAFT schema's authoring fields in place
+         * @description Requires the admin scope. DRAFT only — fixes mistakes before publish. Validated identically to POST /api/v1/schemas.
+         */
+        put: operations["update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/schemas/{id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Archive a PUBLISHED schema
+         * @description Requires the admin scope. PUBLISHED -> ARCHIVED — stops NEW issuance against this schema (POST /api/v1/credentials/issue and the internal find-or-create path both reject it, KH-SCH-1409); every credential already issued against it, and its verification/consumption, is completely unaffected.
+         */
+        post: operations["archive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/schemas/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish a DRAFT schema
+         * @description Requires the admin scope. DRAFT -> PUBLISHED — the immutability line: a published schema's claim fields can never be mutated again (no general update endpoint exists for a PUBLISHED schema); a mistake found later needs a new version (POST /{id}/versions) instead. A PUBLISHED schema becomes a valid issuance target for POST /api/v1/credentials/issue's schemaCode.
+         */
+        post: operations["publish"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/schemas/{id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a new DRAFT version of a PUBLISHED schema
+         * @description Requires the admin scope. Same code, version + 1. The console is responsible for prefilling the request body from the source schema's current fields — this endpoint validates the submitted body exactly like POST /api/v1/schemas, with no server-side default-merging.
+         */
+        post: operations["createVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fetch pilot-metrics counters
+         * @description A plain GROUP BY action aggregation over audit_log for the requested window — counters only, never claim content (P1). Defaults to the last 30 days when from/to are omitted. Requires a console session — no API key of any kind works here (see rbac.security.SecurityConfig's Javadoc).
+         */
+        get: operations["stats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stats/consuming-parties": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fetch per-consuming-party call-volume stats
+         * @description Call volume (CREDENTIAL_CONSUMED) and denial count (CONSUME_SCHEMA_DENIED) per consuming party for the requested window, with a derived success rate. Defaults to the last 30 days when from/to are omitted. Same session-only gate as GET /api/v1/stats.
+         */
+        get: operations["consumingPartyStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stats/daily": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fetch pilot-metrics counters broken down by day
+         * @description The same GROUP BY action aggregation as GET /api/v1/stats, bucketed per UTC day — backs the console's lifecycle chart. Defaults to the last 30 days when from/to are omitted. Same session-only gate as GET /api/v1/stats.
+         */
+        get: operations["dailyStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sl/{tenantSlug}/{listCode}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fetch a signed status-list artifact
+         * @description The public, unauthenticated source of revocation truth for offline verifiers (spec FS-1.3 D2, SAD §6). Returns the list's signed bitstring as a compact JWS (application/jose) — a verifier validates its signature against the platform's JWKS, then base64url-decodes and gunzips the `bits` claim to read the per-credential revocation bit at the index named in the credential's `status` claim. The ETag is the list's `version`; a matching If-None-Match returns 304 with no body, so periodic polls stay cheap until a revoke bumps the version. Cached for 60s, matching NFR-06's revoke-to-publish budget.
+         */
+        get: operations["getStatusList"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -690,67 +690,94 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @description One field-level validation failure */
-        ErrorDetail: {
-            field?: string;
-            messageKey?: string;
-            message?: string;
-        };
-        /** @description Uniform error response for every non-2xx API response */
-        ErrorEnvelope: {
-            code?: string;
-            messageKey?: string;
-            message?: string;
-            traceId?: string;
+        /** @description One recent, display-ready audit event */
+        ActivityItem: {
+            action?: string;
+            actorType?: string;
+            consumingPartyCode?: string;
+            consumingPartyName?: components["schemas"]["LocalizedText"];
+            detail?: {
+                [key: string]: Record<string, never>;
+            };
+            entityRef?: string;
             /** Format: date-time */
-            timestamp?: string;
-            details?: components["schemas"]["ErrorDetail"][];
+            occurredAt?: string;
         };
-        ClaimFieldRequest: {
-            name: string;
-            type: string;
-            labelI18n: {
-                [key: string]: string;
-            };
+        /** @description Recent, display-ready credential activity */
+        ActivityResponse: {
+            items?: components["schemas"]["ActivityItem"][];
         };
-        SchemaAuthoringRequest: {
-            nameI18n: {
-                [key: string]: string;
-            };
-            claimsDef: components["schemas"]["ClaimFieldRequest"][];
-            sdFields?: string[];
-            /** Format: int32 */
-            defaultMaxUses?: number;
-            defaultValidity?: string;
-        };
-        LocalizedText: {
-            en?: string;
-            ar?: string;
-        };
-        SchemaDetail: {
+        AllowSchemaRequest: {
             /** Format: uuid */
-            id?: string;
-            code?: string;
-            nameI18n?: components["schemas"]["LocalizedText"];
-            /** Format: int32 */
-            version?: number;
-            status?: string;
-            claimsDefJson?: string;
-            sdFields?: string[];
-            /** Format: int32 */
-            defaultMaxUses?: number;
-            defaultValidity?: string;
+            schemaId: string;
         };
-        SchemaCreateRequest: {
-            code: string;
-            nameI18n: {
-                [key: string]: string;
+        AllowedSchema: {
+            schemaCode?: string;
+            /** Format: uuid */
+            schemaId?: string;
+        };
+        /** @description One actionable needs-attention item */
+        AttentionEntry: {
+            detail?: {
+                [key: string]: Record<string, never>;
             };
-            claimsDef: components["schemas"]["ClaimFieldRequest"][];
-            sdFields?: string[];
+            /** Format: date-time */
+            occurredAt?: string;
+            type?: string;
+        };
+        /** @description Itemized, actionable needs-attention feed */
+        AttentionResponse: {
+            items?: components["schemas"]["AttentionEntry"][];
+        };
+        /** @description Batch-wide defaults, overridable per item */
+        BulkIssueDefaults: {
             /** Format: int32 */
-            defaultMaxUses?: number;
-            defaultValidity?: string;
+            maxUses?: number;
+            /** Format: int32 */
+            validMinutes?: number;
+        };
+        /** @description One credential to issue within a bulk batch */
+        BulkIssueItem: {
+            claims?: {
+                [key: string]: Record<string, never>;
+            };
+            /** Format: int32 */
+            maxUses?: number;
+            pseudoRef?: string;
+            /** Format: int32 */
+            validMinutes?: number;
+        };
+        /** @description Why one bulk-issue item failed */
+        BulkIssueItemError: {
+            code?: string;
+            message?: string;
+        };
+        /** @description One bulk-issue row's outcome */
+        BulkIssueItemResult: {
+            claimCode?: string;
+            error?: components["schemas"]["BulkIssueItemError"];
+            id?: string;
+            /** Format: int32 */
+            index?: number;
+            ref?: string;
+            status?: string;
+        };
+        /** @description Request to issue a batch of credentials against one schema */
+        BulkIssueRequest: {
+            defaults?: components["schemas"]["BulkIssueDefaults"];
+            items?: components["schemas"]["BulkIssueItem"][];
+            mintClaimCodes?: boolean;
+            schemaCode: string;
+        };
+        /** @description Full per-item report of a bulk issuance batch */
+        BulkIssueResponse: {
+            /** Format: int32 */
+            failed?: number;
+            results?: components["schemas"]["BulkIssueItemResult"][];
+            /** Format: int32 */
+            succeeded?: number;
+            /** Format: int32 */
+            total?: number;
         };
         /** @description Request to mint a fresh wallet claim code for an already-issued credential */
         ClaimCodeMintRequest: {
@@ -764,105 +791,12 @@ export interface components {
             /** Format: date-time */
             expiresAt?: string;
         };
-        /** @description Request to verify an SD-JWT credential presentation */
-        VerifyRequest: {
-            sdJwt: string;
-        };
-        /** @description Result of an SD-JWT credential presentation verification */
-        VerifyResponse: {
-            valid?: boolean;
-            reason?: string;
-            reasonMessage?: string;
-            claims?: {
-                [key: string]: Record<string, never>;
+        ClaimFieldRequest: {
+            labelI18n: {
+                [key: string]: string;
             };
-            /** Format: int32 */
-            usesRemaining?: number;
-            revoked?: boolean;
-            statusListChecked?: boolean;
-            /** Format: int64 */
-            statusListVersion?: number;
-            statusListUri?: string;
-        };
-        /** @description Request to issue a new SD-JWT verifiable credential */
-        IssueRequest: {
-            schemaCode?: string;
-            holderRef: string;
-            /** Format: int32 */
-            maxUses?: number;
-            /** Format: int32 */
-            validMinutes?: number;
-            claims?: {
-                [key: string]: Record<string, never>;
-            };
-            sdFields?: string[];
-        };
-        /** @description Result of a successful SD-JWT credential issuance */
-        IssueResponse: {
-            id?: string;
-            ref?: string;
-            sdJwt?: string;
-        };
-        ConsumeRequest: {
-            id?: string;
-            consumer?: string;
-            idempotencyKey?: string;
-        };
-        ConsumeResponse: {
-            consumed?: boolean;
-            reason?: string;
-            /** Format: int32 */
-            usesRemaining?: number;
-        };
-        /** @description Batch-wide defaults, overridable per item */
-        BulkIssueDefaults: {
-            /** Format: int32 */
-            validMinutes?: number;
-            /** Format: int32 */
-            maxUses?: number;
-        };
-        /** @description One credential to issue within a bulk batch */
-        BulkIssueItem: {
-            claims?: {
-                [key: string]: Record<string, never>;
-            };
-            pseudoRef?: string;
-            /** Format: int32 */
-            validMinutes?: number;
-            /** Format: int32 */
-            maxUses?: number;
-        };
-        /** @description Request to issue a batch of credentials against one schema */
-        BulkIssueRequest: {
-            schemaCode: string;
-            defaults?: components["schemas"]["BulkIssueDefaults"];
-            items?: components["schemas"]["BulkIssueItem"][];
-            mintClaimCodes?: boolean;
-        };
-        /** @description Why one bulk-issue item failed */
-        BulkIssueItemError: {
-            code?: string;
-            message?: string;
-        };
-        /** @description One bulk-issue row's outcome */
-        BulkIssueItemResult: {
-            /** Format: int32 */
-            index?: number;
-            status?: string;
-            id?: string;
-            ref?: string;
-            claimCode?: string;
-            error?: components["schemas"]["BulkIssueItemError"];
-        };
-        /** @description Full per-item report of a bulk issuance batch */
-        BulkIssueResponse: {
-            /** Format: int32 */
-            total?: number;
-            /** Format: int32 */
-            succeeded?: number;
-            /** Format: int32 */
-            failed?: number;
-            results?: components["schemas"]["BulkIssueItemResult"][];
+            name: string;
+            type: string;
         };
         /** @description Request to redeem a one-time wallet claim code */
         ClaimRedeemRequest: {
@@ -870,17 +804,17 @@ export interface components {
         };
         /** @description Full, one-time delivery of a credential to a wallet (spec FS-1.2.1 D4) */
         ClaimRedeemResponse: {
-            ref?: string;
             credential?: string;
             disclosures?: string[];
-            schema?: components["schemas"]["ClaimSchemaRef"];
-            statusListUri?: string;
+            /** Format: date-time */
+            expiresAt?: string;
             /** Format: date-time */
             issuedAt?: string;
             /** Format: int32 */
             maxUses?: number;
-            /** Format: date-time */
-            expiresAt?: string;
+            ref?: string;
+            schema?: components["schemas"]["ClaimSchemaRef"];
+            statusListUri?: string;
         };
         /** @description The redeemed credential's schema, display shape */
         ClaimSchemaRef: {
@@ -890,32 +824,51 @@ export interface components {
             /** Format: int32 */
             version?: number;
         };
-        LoginRequest: {
-            username: string;
-            password: string;
+        ConsumeRequest: {
+            consumer?: string;
+            id?: string;
+            idempotencyKey?: string;
         };
-        CreateConsumingPartyRequest: {
-            code?: string;
-            nameI18n: components["schemas"]["NameI18nRequest"];
+        ConsumeResponse: {
+            consumed?: boolean;
+            reason?: string;
+            /** Format: int32 */
+            usesRemaining?: number;
         };
-        NameI18nRequest: {
-            en: string;
-            ar: string;
-        };
-        AllowedSchema: {
+        /** @description One consuming party's call-volume stats */
+        ConsumingPartyStatsEntry: {
+            /** Format: int64 */
+            consumed?: number;
+            /** Format: int64 */
+            denied?: number;
+            partyCode?: string;
             /** Format: uuid */
-            schemaId?: string;
-            schemaCode?: string;
+            partyId?: string;
+            partyName?: components["schemas"]["LocalizedText"];
+            /** Format: double */
+            successRate?: number;
+        };
+        /** @description Per-consuming-party call-volume stats */
+        ConsumingPartyStatsResponse: {
+            parties?: components["schemas"]["ConsumingPartyStatsEntry"][];
+            window?: components["schemas"]["StatsWindow"];
         };
         ConsumingPartyView: {
-            /** Format: uuid */
-            id?: string;
+            allowedSchemas?: components["schemas"]["AllowedSchema"][];
             code?: string;
-            nameI18n?: components["schemas"]["LocalizedText"];
-            status?: string;
             /** Format: date-time */
             createdAt?: string;
-            allowedSchemas?: components["schemas"]["AllowedSchema"][];
+            /** Format: uuid */
+            id?: string;
+            nameI18n?: components["schemas"]["LocalizedText"];
+            status?: string;
+        };
+        CreateApiKeyRequest: {
+            /** Format: uuid */
+            ownerId?: string;
+            /** @enum {string} */
+            ownerType: "TENANT" | "CONSUMING_PARTY";
+            scopes: string[];
         };
         CreateApiKeyResponse: {
             /** Format: uuid */
@@ -923,83 +876,9 @@ export interface components {
             keyPrefix?: string;
             rawKey?: string;
         };
-        AllowSchemaRequest: {
-            /** Format: uuid */
-            schemaId: string;
-        };
-        CreateApiKeyRequest: {
-            /** @enum {string} */
-            ownerType: "TENANT" | "CONSUMING_PARTY";
-            /** Format: uuid */
-            ownerId?: string;
-            scopes: string[];
-        };
-        /** @description Pilot-metrics counters for the requested window */
-        StatsCounters: {
-            /** Format: int64 */
-            issued?: number;
-            /** Format: int64 */
-            revoked?: number;
-            /** Format: int64 */
-            consumed?: number;
-            /** Format: int64 */
-            consumeDenied?: number;
-            /** Format: int64 */
-            claimsRedeemed?: number;
-            /** Format: int64 */
-            verifyOk?: number;
-            /** Format: int64 */
-            verifyFailed?: number;
-        };
-        /** @description Pilot-metrics counters for a time window */
-        StatsResponse: {
-            window?: components["schemas"]["StatsWindow"];
-            counters?: components["schemas"]["StatsCounters"];
-        };
-        /** @description The time window counters were aggregated over */
-        StatsWindow: {
-            /** Format: date-time */
-            from?: string;
-            /** Format: date-time */
-            to?: string;
-        };
-        /** @description One UTC day's pilot-metrics counters */
-        DailyStatsEntry: {
-            /** Format: date-time */
-            day?: string;
-            counters?: components["schemas"]["StatsCounters"];
-        };
-        /** @description Pilot-metrics counters broken down by UTC day */
-        DailyStatsResponse: {
-            window?: components["schemas"]["StatsWindow"];
-            days?: components["schemas"]["DailyStatsEntry"][];
-        };
-        /** @description One consuming party's call-volume stats */
-        ConsumingPartyStatsEntry: {
-            /** Format: uuid */
-            partyId?: string;
-            partyCode?: string;
-            partyName?: components["schemas"]["LocalizedText"];
-            /** Format: int64 */
-            consumed?: number;
-            /** Format: int64 */
-            denied?: number;
-            /** Format: double */
-            successRate?: number;
-        };
-        /** @description Per-consuming-party call-volume stats */
-        ConsumingPartyStatsResponse: {
-            window?: components["schemas"]["StatsWindow"];
-            parties?: components["schemas"]["ConsumingPartyStatsEntry"][];
-        };
-        SchemaSummary: {
-            /** Format: uuid */
-            id?: string;
+        CreateConsumingPartyRequest: {
             code?: string;
-            nameI18n?: components["schemas"]["LocalizedText"];
-            /** Format: int32 */
-            version?: number;
-            status?: string;
+            nameI18n: components["schemas"]["NameI18nRequest"];
         };
         CredentialPage: {
             items?: components["schemas"]["CredentialSummary"][];
@@ -1014,50 +893,139 @@ export interface components {
         };
         CredentialSummary: {
             id?: string;
-            ref?: string;
-            schemaCode?: string;
-            schemaName?: components["schemas"]["LocalizedText"];
             /** Format: date-time */
             issuedAt?: string;
-            /** Format: date-time */
-            validTo?: string;
             /** Format: int32 */
             maxUses?: number;
+            ref?: string;
+            revoked?: boolean;
+            schemaCode?: string;
+            schemaName?: components["schemas"]["LocalizedText"];
             /** Format: int32 */
             usesRemaining?: number;
-            revoked?: boolean;
+            /** Format: date-time */
+            validTo?: string;
         };
         CredentialView: {
             id?: string;
+            jwt?: string;
+            /** Format: int32 */
+            maxUses?: number;
             ref?: string;
+            revoked?: boolean;
             schemaCode?: string;
             /** Format: int32 */
             usesRemaining?: number;
-            /** Format: int32 */
-            maxUses?: number;
-            revoked?: boolean;
             /** Format: date-time */
             validTo?: string;
-            jwt?: string;
+        };
+        /** @description One UTC day's pilot-metrics counters */
+        DailyStatsEntry: {
+            counters?: components["schemas"]["StatsCounters"];
+            /** Format: date-time */
+            day?: string;
+        };
+        /** @description Pilot-metrics counters broken down by UTC day */
+        DailyStatsResponse: {
+            days?: components["schemas"]["DailyStatsEntry"][];
+            window?: components["schemas"]["StatsWindow"];
+        };
+        /** @description One field-level validation failure */
+        ErrorDetail: {
+            field?: string;
+            message?: string;
+            messageKey?: string;
+        };
+        /** @description Uniform error response for every non-2xx API response */
+        ErrorEnvelope: {
+            code?: string;
+            details?: components["schemas"]["ErrorDetail"][];
+            message?: string;
+            messageKey?: string;
+            /** Format: date-time */
+            timestamp?: string;
+            traceId?: string;
+        };
+        /** @description Request to issue a new SD-JWT verifiable credential */
+        IssueRequest: {
+            claims?: {
+                [key: string]: Record<string, never>;
+            };
+            holderRef: string;
+            /** Format: int32 */
+            maxUses?: number;
+            schemaCode?: string;
+            sdFields?: string[];
+            /** Format: int32 */
+            validMinutes?: number;
+        };
+        /** @description Result of a successful SD-JWT credential issuance */
+        IssueResponse: {
+            id?: string;
+            ref?: string;
+            sdJwt?: string;
+        };
+        LocalizedText: {
+            ar?: string;
+            en?: string;
+        };
+        LoginRequest: {
+            password: string;
+            username: string;
         };
         MeResponse: {
-            username?: string;
             displayNameI18n?: components["schemas"]["LocalizedText"];
             preferredLang?: string;
             scopes?: string[];
+            username?: string;
         };
-        /** @description One actionable needs-attention item */
-        AttentionEntry: {
-            type?: string;
-            /** Format: date-time */
-            occurredAt?: string;
-            detail?: {
-                [key: string]: Record<string, never>;
+        NameI18nRequest: {
+            ar: string;
+            en: string;
+        };
+        SchemaAuthoringRequest: {
+            claimsDef: components["schemas"]["ClaimFieldRequest"][];
+            /** Format: int32 */
+            defaultMaxUses?: number;
+            defaultValidity?: string;
+            nameI18n: {
+                [key: string]: string;
             };
+            sdFields?: string[];
         };
-        /** @description Itemized, actionable needs-attention feed */
-        AttentionResponse: {
-            items?: components["schemas"]["AttentionEntry"][];
+        SchemaCreateRequest: {
+            claimsDef: components["schemas"]["ClaimFieldRequest"][];
+            code: string;
+            /** Format: int32 */
+            defaultMaxUses?: number;
+            defaultValidity?: string;
+            nameI18n: {
+                [key: string]: string;
+            };
+            sdFields?: string[];
+        };
+        SchemaDetail: {
+            claimsDefJson?: string;
+            code?: string;
+            /** Format: int32 */
+            defaultMaxUses?: number;
+            defaultValidity?: string;
+            /** Format: uuid */
+            id?: string;
+            nameI18n?: components["schemas"]["LocalizedText"];
+            sdFields?: string[];
+            status?: string;
+            /** Format: int32 */
+            version?: number;
+        };
+        SchemaSummary: {
+            code?: string;
+            /** Format: uuid */
+            id?: string;
+            nameI18n?: components["schemas"]["LocalizedText"];
+            status?: string;
+            /** Format: int32 */
+            version?: number;
         };
         /** @description A signing key's lifecycle status, no JWK material */
         SigningKeyView: {
@@ -1072,22 +1040,54 @@ export interface components {
         SigningKeysResponse: {
             keys?: components["schemas"]["SigningKeyView"][];
         };
-        /** @description One recent, display-ready audit event */
-        ActivityItem: {
-            action?: string;
-            actorType?: string;
-            entityRef?: string;
-            consumingPartyCode?: string;
-            consumingPartyName?: components["schemas"]["LocalizedText"];
-            detail?: {
+        /** @description Pilot-metrics counters for the requested window */
+        StatsCounters: {
+            /** Format: int64 */
+            claimsRedeemed?: number;
+            /** Format: int64 */
+            consumeDenied?: number;
+            /** Format: int64 */
+            consumed?: number;
+            /** Format: int64 */
+            issued?: number;
+            /** Format: int64 */
+            revoked?: number;
+            /** Format: int64 */
+            verifyFailed?: number;
+            /** Format: int64 */
+            verifyOk?: number;
+        };
+        /** @description Pilot-metrics counters for a time window */
+        StatsResponse: {
+            counters?: components["schemas"]["StatsCounters"];
+            window?: components["schemas"]["StatsWindow"];
+        };
+        /** @description The time window counters were aggregated over */
+        StatsWindow: {
+            /** Format: date-time */
+            from?: string;
+            /** Format: date-time */
+            to?: string;
+        };
+        /** @description Request to verify an SD-JWT credential presentation */
+        VerifyRequest: {
+            sdJwt: string;
+        };
+        /** @description Result of an SD-JWT credential presentation verification */
+        VerifyResponse: {
+            claims?: {
                 [key: string]: Record<string, never>;
             };
-            /** Format: date-time */
-            occurredAt?: string;
-        };
-        /** @description Recent, display-ready credential activity */
-        ActivityResponse: {
-            items?: components["schemas"]["ActivityItem"][];
+            reason?: string;
+            reasonMessage?: string;
+            revoked?: boolean;
+            statusListChecked?: boolean;
+            statusListUri?: string;
+            /** Format: int64 */
+            statusListVersion?: number;
+            /** Format: int32 */
+            usesRemaining?: number;
+            valid?: boolean;
         };
     };
     responses: never;
@@ -1098,6 +1098,1124 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    jwks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+        };
+    };
+    activity: {
+        parameters: {
+            query?: {
+                limit?: number;
+                event?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Recent activity, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ActivityResponse"];
+                };
+            };
+            /** @description No valid session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Authenticated with an API key instead of a console session */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    createApiKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateApiKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description Key created */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CreateApiKeyResponse"];
+                };
+            };
+            /** @description Missing the admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    revokeApiKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked (or already inactive) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing the admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The tenant's consuming parties */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConsumingPartyView"][];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    create_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateConsumingPartyRequest"];
+            };
+        };
+        responses: {
+            /** @description Party registered */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConsumingPartyView"];
+                };
+            };
+            /** @description Bean Validation failed, or an invalid code format (KH-CNS-0400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description A party with this code already exists (KH-CNS-0409) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    activate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Party activated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConsumingPartyView"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No party with this id (KH-CNS-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    allowSchema: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AllowSchemaRequest"];
+            };
+        };
+        responses: {
+            /** @description Schema allowed; updated party view */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConsumingPartyView"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No such party (KH-CNS-0404) or schema (KH-CNS-1404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    disallowSchema: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                schemaId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed, or nothing to remove */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    mintKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Key minted (rawKey shown once) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CreateApiKeyResponse"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No party with this id (KH-CNS-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    suspend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Party suspended */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConsumingPartyView"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No party with this id (KH-CNS-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    signingKeys: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every signing key's lifecycle status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SigningKeysResponse"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Authenticated without the admin scope */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    attention: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current needs-attention items */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AttentionResponse"];
+                };
+            };
+            /** @description No valid session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Authenticated with an API key instead of a console session */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Login succeeded; session cookie set */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication failed (KH-RBC-0401, generic message) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Logged out */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current user */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MeResponse"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    redeem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimRedeemRequest"];
+            };
+        };
+        responses: {
+            /** @description Credential delivered */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ClaimRedeemResponse"];
+                };
+            };
+            /** @description Bean Validation failed (a blank code) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The code is unknown, malformed, expired, already claimed, or expiry-zeroed — one generic outcome (KH-CLM-0404) for every flavor, so an external caller cannot distinguish 'never existed' from 'someone already claimed it' (spec D5) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Too many redeem attempts from this source address within the current window (KH-CLM-0429, spec D6) */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list_1: {
+        parameters: {
+            query?: {
+                ref?: string;
+                pseudoRef?: string;
+                schemaId?: string;
+                revoked?: boolean;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Matching page of credential summaries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CredentialPage"];
+                };
+            };
+            /** @description No valid session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Authenticated with an API key instead of a console session */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    bulkIssue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkIssueRequest"];
+            };
+        };
+        responses: {
+            /** @description Per-item report (always 200) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BulkIssueResponse"];
+                };
+            };
+            /** @description The batch itself is invalid — empty items, or more than 200 (KH-CRD-0400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the issue scope, or called with a CONSUMING_PARTY API key instead of a console session or TENANT API key */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    consume: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsumeRequest"];
+            };
+        };
+        responses: {
+            /** @description Consumption outcome (accepted, already-exhausted, expired, or revoked — always a domain result, never an error envelope for a normal denial) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConsumeResponse"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the consume scope, called with a console session or a TENANT API key instead of a CONSUMING_PARTY key (KH-RBC-0403), or the credential's schema is not in the calling party's allowlist (KH-CNS-0403, KH-1.4.3) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    issue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueRequest"];
+            };
+        };
+        responses: {
+            /** @description Credential issued */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["IssueResponse"];
+                };
+            };
+            /** @description Bean Validation failed (e.g. a missing holderRef) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Signing failed (KH-KEY-0500) or another unexpected error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    verify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Verification result (always 200 for a well-formed request) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VerifyResponse"];
+                };
+            };
+            /** @description sdJwt was blank or missing */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Credential status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CredentialView"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No credential with this id (KH-CRD-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    mintClaimCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimCodeMintRequest"];
+            };
+        };
+        responses: {
+            /** @description Claim code minted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ClaimCodeMintResponse"];
+                };
+            };
+            /** @description Bean Validation failed (a blank sdJwt) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the issue scope, or called with a CONSUMING_PARTY API key instead of a console session or TENANT API key */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No credential with this id (KH-CRD-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The credential is revoked or has expired and can no longer accept a claim code (KH-CRD-0409) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    revoke: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the revoke scope, or called with an API key instead of a console session */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No credential with this id (KH-CRD-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list: {
+        parameters: {
+            query?: {
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every matching schema registered for the tenant */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SchemaSummary"][];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchemaCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Schema created (DRAFT) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SchemaDetail"];
+                };
+            };
+            /** @description Bean Validation failed, or a business-level check (KH-SCH-0400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the admin scope */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     get: {
         parameters: {
             query?: never;
@@ -1209,66 +2327,24 @@ export interface operations {
             };
         };
     };
-    list: {
+    archive: {
         parameters: {
-            query?: {
-                status?: string;
-            };
+            query?: never;
             header?: never;
-            path?: never;
+            path: {
+                id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Every matching schema registered for the tenant */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["SchemaSummary"][];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SchemaCreateRequest"];
-            };
-        };
-        responses: {
-            /** @description Schema created (DRAFT) */
+            /** @description Schema archived */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "*/*": components["schemas"]["SchemaDetail"];
-                };
-            };
-            /** @description Bean Validation failed, or a business-level check (KH-SCH-0400) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description No valid session or API key */
@@ -1282,6 +2358,82 @@ export interface operations {
             };
             /** @description Missing the admin scope */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No schema with this id (KH-SCH-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The schema is not PUBLISHED (KH-SCH-1409) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    publish: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Schema published */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SchemaDetail"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the admin scope */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No schema with this id (KH-SCH-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The schema is not DRAFT (KH-SCH-1409) */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1362,917 +2514,6 @@ export interface operations {
             };
         };
     };
-    publish: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Schema published */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["SchemaDetail"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the admin scope */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No schema with this id (KH-SCH-0404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description The schema is not DRAFT (KH-SCH-1409) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    archive: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Schema archived */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["SchemaDetail"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the admin scope */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No schema with this id (KH-SCH-0404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description The schema is not PUBLISHED (KH-SCH-1409) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    revoke: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Revoked */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the revoke scope, or called with an API key instead of a console session */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No credential with this id (KH-CRD-0404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    mintClaimCode: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ClaimCodeMintRequest"];
-            };
-        };
-        responses: {
-            /** @description Claim code minted */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ClaimCodeMintResponse"];
-                };
-            };
-            /** @description Bean Validation failed (a blank sdJwt) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the issue scope, or called with a CONSUMING_PARTY API key instead of a console session or TENANT API key */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No credential with this id (KH-CRD-0404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description The credential is revoked or has expired and can no longer accept a claim code (KH-CRD-0409) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    verify: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["VerifyRequest"];
-            };
-        };
-        responses: {
-            /** @description Verification result (always 200 for a well-formed request) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["VerifyResponse"];
-                };
-            };
-            /** @description sdJwt was blank or missing */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    issue: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["IssueRequest"];
-            };
-        };
-        responses: {
-            /** @description Credential issued */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["IssueResponse"];
-                };
-            };
-            /** @description Bean Validation failed (e.g. a missing holderRef) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Signing failed (KH-KEY-0500) or another unexpected error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    consume: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ConsumeRequest"];
-            };
-        };
-        responses: {
-            /** @description Consumption outcome (accepted, already-exhausted, expired, or revoked — always a domain result, never an error envelope for a normal denial) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ConsumeResponse"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the consume scope, called with a console session or a TENANT API key instead of a CONSUMING_PARTY key (KH-RBC-0403), or the credential's schema is not in the calling party's allowlist (KH-CNS-0403, KH-1.4.3) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    bulkIssue: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BulkIssueRequest"];
-            };
-        };
-        responses: {
-            /** @description Per-item report (always 200) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["BulkIssueResponse"];
-                };
-            };
-            /** @description The batch itself is invalid — empty items, or more than 200 (KH-CRD-0400) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the issue scope, or called with a CONSUMING_PARTY API key instead of a console session or TENANT API key */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    redeem: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ClaimRedeemRequest"];
-            };
-        };
-        responses: {
-            /** @description Credential delivered */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ClaimRedeemResponse"];
-                };
-            };
-            /** @description Bean Validation failed (a blank code) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description The code is unknown, malformed, expired, already claimed, or expiry-zeroed — one generic outcome (KH-CLM-0404) for every flavor, so an external caller cannot distinguish 'never existed' from 'someone already claimed it' (spec D5) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Too many redeem attempts from this source address within the current window (KH-CLM-0429, spec D6) */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    logout: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Logged out */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    login: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LoginRequest"];
-            };
-        };
-        responses: {
-            /** @description Login succeeded; session cookie set */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Authentication failed (KH-RBC-0401, generic message) */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    list_2: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The tenant's consuming parties */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ConsumingPartyView"][];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the admin scope (KH-RBC-0403) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    create_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateConsumingPartyRequest"];
-            };
-        };
-        responses: {
-            /** @description Party registered */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ConsumingPartyView"];
-                };
-            };
-            /** @description Bean Validation failed, or an invalid code format (KH-CNS-0400) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the admin scope (KH-RBC-0403) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description A party with this code already exists (KH-CNS-0409) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    suspend: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Party suspended */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ConsumingPartyView"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the admin scope (KH-RBC-0403) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No party with this id (KH-CNS-0404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    mintKey: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Key minted (rawKey shown once) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["CreateApiKeyResponse"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the admin scope (KH-RBC-0403) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No party with this id (KH-CNS-0404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    allowSchema: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AllowSchemaRequest"];
-            };
-        };
-        responses: {
-            /** @description Schema allowed; updated party view */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ConsumingPartyView"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the admin scope (KH-RBC-0403) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No such party (KH-CNS-0404) or schema (KH-CNS-1404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    activate: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Party activated */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ConsumingPartyView"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the admin scope (KH-RBC-0403) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No party with this id (KH-CNS-0404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    createApiKey: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateApiKeyRequest"];
-            };
-        };
-        responses: {
-            /** @description Key created */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["CreateApiKeyResponse"];
-                };
-            };
-            /** @description Missing the admin scope (KH-RBC-0403) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    revokeApiKey: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Revoked (or already inactive) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Missing the admin scope (KH-RBC-0403) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    getStatusList: {
-        parameters: {
-            query?: never;
-            header?: {
-                "If-None-Match"?: string;
-            };
-            path: {
-                /** @description the tenant's slug */
-                tenantSlug: string;
-                /** @description the status list's code */
-                listCode: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The signed status-list artifact */
-            200: {
-                headers: {
-                    /** @description max-age=60 */
-                    "Cache-Control"?: string;
-                    /** @description The list's version, quoted — weak entity tag for revalidation */
-                    ETag?: string;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/jose": string;
-                };
-            };
-            /** @description The client's If-None-Match matched the current version — body omitted */
-            304: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/jose": string;
-                };
-            };
-            /** @description No status list at this tenantSlug/listCode, or the tenantSlug is unknown (KH-STS-0404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/jose": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
     stats: {
         parameters: {
             query?: {
@@ -2292,56 +2533,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["StatsResponse"];
-                };
-            };
-            /** @description from/to was present but not a valid ISO-8601 instant */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No valid session */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Authenticated with an API key instead of a console session */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    dailyStats: {
-        parameters: {
-            query?: {
-                from?: string;
-                to?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Per-day counters for the resolved window */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["DailyStatsResponse"];
                 };
             };
             /** @description from/to was present but not a valid ISO-8601 instant */
@@ -2423,15 +2614,11 @@ export interface operations {
             };
         };
     };
-    list_1: {
+    dailyStats: {
         parameters: {
             query?: {
-                ref?: string;
-                pseudoRef?: string;
-                schemaId?: string;
-                revoked?: boolean;
-                page?: number;
-                size?: number;
+                from?: string;
+                to?: string;
             };
             header?: never;
             path?: never;
@@ -2439,13 +2626,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Matching page of credential summaries */
+            /** @description Per-day counters for the resolved window */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["CredentialPage"];
+                    "*/*": components["schemas"]["DailyStatsResponse"];
+                };
+            };
+            /** @description from/to was present but not a valid ISO-8601 instant */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description No valid session */
@@ -2468,247 +2664,51 @@ export interface operations {
             };
         };
     };
-    get_1: {
+    getStatusList: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "If-None-Match"?: string;
+            };
             path: {
-                id: string;
+                /** @description the tenant's slug */
+                tenantSlug: string;
+                /** @description the status list's code */
+                listCode: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Credential status */
+            /** @description The signed status-list artifact */
             200: {
                 headers: {
+                    /** @description max-age=60 */
+                    "Cache-Control"?: string;
+                    /** @description The list's version, quoted — weak entity tag for revalidation */
+                    ETag?: string;
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["CredentialView"];
+                    "application/jose": string;
                 };
             };
-            /** @description No valid session or API key */
-            401: {
+            /** @description The client's If-None-Match matched the current version — body omitted */
+            304: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
+                    "application/jose": string;
                 };
             };
-            /** @description No credential with this id (KH-CRD-0404) */
+            /** @description No status list at this tenantSlug/listCode, or the tenantSlug is unknown (KH-STS-0404) */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    me: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Current user */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["MeResponse"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    attention: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Current needs-attention items */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["AttentionResponse"];
-                };
-            };
-            /** @description No valid session */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Authenticated with an API key instead of a console session */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    signingKeys: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Every signing key's lifecycle status */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["SigningKeysResponse"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Authenticated without the admin scope */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    activity: {
-        parameters: {
-            query?: {
-                limit?: number;
-                event?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Recent activity, newest first */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ActivityResponse"];
-                };
-            };
-            /** @description No valid session */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Authenticated with an API key instead of a console session */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    jwks: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": string;
-                };
-            };
-        };
-    };
-    disallowSchema: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-                schemaId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Removed, or nothing to remove */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the admin scope (KH-RBC-0403) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
+                    "application/jose": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };

@@ -13,6 +13,21 @@
 
 ## Last completed
 
+- 2026-07-26 (Next-up #5, contract refresh sanity check): re-ran `npm run contract:update`
+  (normal `gh api` fallback path, the public raw URL still 404s on this private repo) now that
+  khatm-platform's KH-1.1.5-BE branch has merged to `main`, then `npm run gen:api`. Compared the
+  freshly pulled `contracts/openapi.json` against the one pulled directly from the live local
+  backend during the 2026-07-25 dashboard session by normalizing both (recursive key-sort) and
+  diffing: **zero semantic differences** in any path, schema, or field — the only diff line was
+  the `servers` block (`http://localhost:8080`) present in the locally-generated contract and
+  absent from the published one. Confirms the two contracts describe the identical API surface;
+  nothing to reconcile. `src/api/generated/schema.ts` regenerated (textually reshuffled by
+  `openapi-typescript` due to upstream key-order changes, semantically identical — same
+  operations, same types). Verified: `typecheck` clean, `lint` clean (only the pre-existing
+  `FormField.tsx` fast-refresh warning), all 184 tests pass, `npm run build` clean.
+  `format:check` still fails only on the pre-existing untracked `.vscode/extensions.json` (see
+  "Open decisions", unrelated to this branch). Closes Next-up item #5.
+
 - 2026-07-25 (Dashboard wired to real backend data): khatm-platform's KH-1.1.5-BE shipped the 5
   endpoints `docs/specs/dashboard-v2-backend-needs.md` asked for
   (`/api/v1/stats/daily`, `/api/v1/activity`, `/api/v1/attention`,
@@ -498,11 +513,10 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 3. KH-2.2-era RBAC changes, whatever those turn out to require.
 4. Unify the scope-gating placement convention (self-gating vs. App.tsx-level wrapping — see
    "Open decisions" above) across every gated page.
-5. Once khatm-platform's KH-1.1.5-BE branch merges to `main`, re-run `npm run contract:update`
-   (normal GitHub-fetch path) and confirm `contracts/openapi.json` matches what was pulled
-   directly from the live local backend this session — low risk, just a sanity check.
 
 Closed: Dashboard v2's four data-less panels — all wired to real khatm-platform data
 (KH-1.1.5-BE) 2026-07-25; see "Last completed". Closed: the full EN/AR + RTL click-through
 across every screen — Majd confirmed the Arabic
-layout and messages read correctly across the rebuilt container before merging PR #6.
+layout and messages read correctly across the rebuilt container before merging PR #6. Closed:
+item #5, contract refresh sanity check — re-ran 2026-07-26, zero semantic drift found; see
+"Last completed".
