@@ -17,7 +17,7 @@
 ## Last completed
 
 - 2026-07-27 (C5 Tenants management screen): Preamble gate held cleanly this time — `npm run
-  contract:update` + `npm run gen:api` against `origin/main` showed both required surfaces
+contract:update` + `npm run gen:api` against `origin/main` showed both required surfaces
   already present (platform PR #36 / KH-2.1-BE and KH-1.1.5-BE both merged): the full
   `tenants-admin` tag (`GET/POST /api/v1/admin/tenants`, `GET/POST .../{id}`,
   `.../{id}/activate`, `.../{id}/suspend`) and all five Dashboard v2 endpoints. No pause needed.
@@ -81,7 +81,7 @@
     URL shape, slug URL-encoding), `hooks.test.tsx` (3: create/suspend/activate each invalidate
     the list), `TenantsPage.test.tsx` (5: scope gating ×2, create-dialog validation
     including the type-required case, successful create → navigates to the new tenant's
-    detail view, KH-TNT-0409 lands on the slug field *and* the generic banner — asserted as
+    detail view, KH-TNT-0409 lands on the slug field _and_ the generic banner — asserted as
     ≥2 occurrences of the same localized text, not exactly 1, since both surfaces render it by
     design), `TenantDetailPage.test.tsx` (4: scope gating, full-field + same-origin JWKS-link
     render, suspend-after-confirm, activate-after-confirm).
@@ -94,14 +94,14 @@
   - **Live walkthrough — API-level only, not a real browser click-through**: this environment
     still has no browser-automation tool (same limitation noted for every prior session).
     Rebuilt the `khatm-console` container (`docker compose build` + `up -d --force-recreate`)
-    against the already-running platform stack, then drove the *exact* request pipeline the
+    against the already-running platform stack, then drove the _exact_ request pipeline the
     browser UI would use — through the console's own nginx-proxied origin
     (`http://localhost:3000`, not the API's `:8080` directly) — end to end: login → create a
     tenant with EN+AR names → confirmed it appears in the list (newest first) → fetched its
     detail → confirmed the JWKS link resolves `200` through the new `/t/` proxy (both while
     ACTIVE and immediately after suspending, per V4) → suspended → activated. Also grepped the
     built bundle for the shipped JWKS path and tenants-feature code as a static sanity check.
-    All steps returned the expected `200`s and payloads. What this does *not* cover: actually
+    All steps returned the expected `200`s and payloads. What this does _not_ cover: actually
     seeing the EN/AR + RTL rendering in a browser, clicking through the real form/dialog/confirm
     UI, or visually confirming the Arabic layout — **Majd's manual browser walkthrough (EN and
     AR passes) is still the real gate here and has not run yet**, consistent with this
