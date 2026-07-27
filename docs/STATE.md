@@ -4,6 +4,9 @@
 
 ## Current phase / task
 
+- C5 Tenants management screen — **DONE, PR open, not merged.** Branch
+  `feat/C5-tenants-screen`. Awaiting Majd's review + the Arabic-review gate (hard merge
+  blocker per the brief).
 - Dashboard live-data wiring — **DONE. PR #12** merged 2026-07-25, Majd-verified (EN/AR + RTL).
 - App shell sidebar redesign + toggle/button polish — **DONE. PR #13** merged 2026-07-25.
 - Post-V1 bugfix — LAN-IP secure-context crashes (consume-sim idempotency key, copy buttons) —
@@ -12,6 +15,101 @@
   manual EN/AR + RTL walkthrough of that specific banner was never explicitly logged as run.
 
 ## Last completed
+
+- 2026-07-27 (C5 Tenants management screen): Preamble gate held cleanly this time — `npm run
+contract:update` + `npm run gen:api` against `origin/main` showed both required surfaces
+  already present (platform PR #36 / KH-2.1-BE and KH-1.1.5-BE both merged): the full
+  `tenants-admin` tag (`GET/POST /api/v1/admin/tenants`, `GET/POST .../{id}`,
+  `.../{id}/activate`, `.../{id}/suspend`) and all five Dashboard v2 endpoints. No pause needed.
+  Delivered, mirroring the consuming-parties screen (C2b) per the brief's pattern authority:
+  - **Tenants admin plane** (`src/features/tenants/`), `RequireScope('admin')`, coarse stand-in
+    scope per the brief (KH-2.2 replaces it later):
+    - **List** (`/tenants`): slug, localized name, type, status badge, created — server data
+      as-is, newest first (the platform already sorts). Each row links to its detail page.
+    - **Onboarding form** (dialog on the list page): slug, name EN + name AR (both required
+      client-side), type (select: GOVERNMENT/EDUCATION/PRIVATE/OTHER), deploy mode (select,
+      defaults SAAS). On success, navigates to the new tenant's detail view.
+    - **Detail view** (`/tenants/:id`): full fields, status badge, plus a copyable public JWKS
+      link built client-side from the slug alone (`jwks.ts`'s `buildTenantJwksUrl` —
+      `{origin}/t/{slug}/.well-known/jwks.json`, no extra API call). `TenantView` exposes no
+      status-list reference field, so per the brief's fallback only the JWKS link is shown —
+      nothing improvised beyond the contract.
+    - **Suspend/Activate** live on the detail page (not the list row) — a deliberate deviation
+      from C2b, which has no detail page at all; C5's brief explicitly requires one, so the
+      list+detail split instead follows `schemaManagement`'s pattern (list page owns
+      create-nav, detail page owns full view + actions). Confirm-dialog copy was written to the
+      brief's exact spec V4 semantics (verified against the live suspend/activate endpoint
+      descriptions, not just the brief's paraphrase): suspend blocks new issuance and operator
+      sign-ins only — already-issued credentials keep verifying/consuming and the tenant's JWKS
+      stays public. Confirmed live: JWKS still returned `200` immediately after suspending a
+      test tenant.
+    - **KH-TNT-0400/KH-TNT-0409 mapped inline on the slug field** (in addition to the generic
+      `ApiErrorBanner`, mirroring `LoginForm`'s field-mapping idiom rather than C2b's
+      banner-only handling of the equivalent consuming-party errors) — a second deliberate
+      deviation, since the brief explicitly asked for inline slug-field surfacing here.
+      `CreateTenantDialog` owns a local try/catch around the parent-supplied async `onSubmit`
+      purely to reach `setError('slug', …)`; the parent still owns the mutation exactly like
+      every other dialog in this codebase, so `isSubmitting`/`error` props are unchanged in
+      shape. The exact messageKeys (`tenant.invalid-slug`, `tenant.duplicate-slug`) were
+      confirmed by probing the live local API directly (bean-validation `details[]` comes back
+      empty for both — the mapping has to key off `error.code`, not `details[].field`).
+    - Onboarding's server-side resumable-create semantics (brief item 2) needed zero client
+      code — confirmed live that retrying `POST` with a slug whose onboarding died partway
+      through succeeds rather than 409ing; a fully-onboarded duplicate still 409s
+      (`KH-TNT-0409`). No client-side retry-guarding was added, per the brief.
+  - **Platform-ask avoided, not needed**: no contract gap was hit — everything the brief asked
+    for (list/create/detail/suspend/activate, dual-language name, JWKS reachability) was fully
+    covered by the already-merged KH-2.1-BE contract.
+  - **Infra deviation, recorded per the brief's requirement to log deviations**: the tenant JWKS
+    path `/t/{slug}/.well-known/jwks.json` was not proxied by either `nginx.conf` (container) or
+    `vite.config.ts` (dev) — only `/api/` and `/.well-known/` were, so the detail page's JWKS
+    link would have 404'd (well, silently served the SPA shell via the catch-all route) instead
+    of resolving. Added a `/t/` proxy block to both, mirroring the existing `/.well-known/`
+    block verbatim (same target host, same "public well-known endpoint" shape, just
+    tenant-slug-prefixed) — keeps the console's "every request is same-origin, never
+    cross-origin" invariant (`api/client.ts`) intact rather than reaching for an env-var
+    override like the QR payload's `VITE_QR_API_BASE` (that override exists for a genuinely
+    different problem — a physical wallet device off the console's own network — which doesn't
+    apply here, since this link is opened directly in the admin's own browser).
+  - Sidebar: "Tenants" (admin-gated, new glyph `⌂`, appended after Consume Simulator).
+  - EN/AR i18n parity green (`tenants.*`, `nav.tenants`, `errors.tenant.*` added to both
+    `en.json`/`ar.json` in the same commit). RTL grep across every new `src/features/tenants`
+    stylesheet: zero physical left/right matches — logical properties only, reusing the shared
+    `.ltr-embed` global helper for the slug/JWKS values instead of re-declaring
+    `unicode-bidi`/`direction` locally.
+  - Tests: 198 total now (was 184) — 14 new across `src/features/tenants/`: `jwks.test.ts` (2:
+    URL shape, slug URL-encoding), `hooks.test.tsx` (3: create/suspend/activate each invalidate
+    the list), `TenantsPage.test.tsx` (5: scope gating ×2, create-dialog validation
+    including the type-required case, successful create → navigates to the new tenant's
+    detail view, KH-TNT-0409 lands on the slug field _and_ the generic banner — asserted as
+    ≥2 occurrences of the same localized text, not exactly 1, since both surfaces render it by
+    design), `TenantDetailPage.test.tsx` (4: scope gating, full-field + same-origin JWKS-link
+    render, suspend-after-confirm, activate-after-confirm).
+  - `npm run typecheck`, `npm run lint` (only the pre-existing `FormField.tsx` fast-refresh
+    warning), and `npm run test` (198/198) all clean. `format:check` clean on every tracked
+    file touched this session (had to `prettier --write` one file mid-session); still fails
+    only on the pre-existing untracked `.vscode/extensions.json` (see "Open decisions",
+    unrelated to this branch). `npm run build` clean (556 kB main chunk warning is pre-existing,
+    not newly introduced by this branch's size alone).
+  - **Live walkthrough — API-level only, not a real browser click-through**: this environment
+    still has no browser-automation tool (same limitation noted for every prior session).
+    Rebuilt the `khatm-console` container (`docker compose build` + `up -d --force-recreate`)
+    against the already-running platform stack, then drove the _exact_ request pipeline the
+    browser UI would use — through the console's own nginx-proxied origin
+    (`http://localhost:3000`, not the API's `:8080` directly) — end to end: login → create a
+    tenant with EN+AR names → confirmed it appears in the list (newest first) → fetched its
+    detail → confirmed the JWKS link resolves `200` through the new `/t/` proxy (both while
+    ACTIVE and immediately after suspending, per V4) → suspended → activated. Also grepped the
+    built bundle for the shipped JWKS path and tenants-feature code as a static sanity check.
+    All steps returned the expected `200`s and payloads. What this does _not_ cover: actually
+    seeing the EN/AR + RTL rendering in a browser, clicking through the real form/dialog/confirm
+    UI, or visually confirming the Arabic layout — **Majd's manual browser walkthrough (EN and
+    AR passes) is still the real gate here and has not run yet**, consistent with this
+    project's standing practice for every screen since C1. The two throwaway tenants created
+    while probing live error shapes and during this walkthrough (`probe-tenant-c5`,
+    `walkthrough-c5`) were left suspended rather than deleted — the contract exposes no tenant
+    delete endpoint at all (confirmed: only list/get/create/activate/suspend exist).
+  - PR opened, not merged (link recorded in "Current phase / task" above once created).
 
 - 2026-07-26 (Next-up #5, contract refresh sanity check): re-ran `npm run contract:update`
   (normal `gh api` fallback path, the public raw URL still 404s on this private repo) now that
@@ -412,9 +510,20 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 
 ## Environment facts
 
-- Dev: web on :5173, Vite proxies `/api` and `/.well-known` to `localhost:8080`.
-- Container: nginx on :3000→80, proxies `/api` and `/.well-known` to `http://khatm-api:8080`
-  over the external `khatm-net` network.
+- Dev: web on :5173, Vite proxies `/api`, `/.well-known`, and `/t` (per-tenant public
+  endpoints, added C5) to `localhost:8080`.
+- Container: nginx on :3000→80, proxies `/api`, `/.well-known`, and `/t` to
+  `http://khatm-api:8080` over the external `khatm-net` network.
+- **Probing session-cookie-authenticated mutating endpoints directly via `curl` needs the CSRF
+  header, not just the session cookie** (discovered C5, cost real time before found): the
+  platform's Spring Security CSRF protection 403s any non-`GET` request that carries the
+  `KHATM_SESSION` cookie without also echoing the `XSRF-TOKEN` cookie's value back as an
+  `X-XSRF-TOKEN` header — the browser's own fetch/XHR does this automatically via
+  `withCredentials`-aware CSRF handling, so it's invisible when testing through the actual UI,
+  but a bare `curl -b cookies.txt -X POST ...` gets a misleading `KH-RBC-0403` "forbidden" that
+  looks like a scope problem and isn't one. Pattern: `curl -c jar -X POST .../auth/login ...`
+  then `XSRF=$(grep XSRF-TOKEN jar | awk '{print $7}')` then pass `-H "X-XSRF-TOKEN: $XSRF"` on
+  every subsequent non-GET call using that same jar.
 - `khatm-platform` is a **private** repo — `npm run contract:update` falls back to `gh api`
   (works with the caller's own `gh` credentials). The contract, not platform source, is now
   sufficient for Issue request construction.
@@ -513,6 +622,9 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 3. KH-2.2-era RBAC changes, whatever those turn out to require.
 4. Unify the scope-gating placement convention (self-gating vs. App.tsx-level wrapping — see
    "Open decisions" above) across every gated page.
+5. **Blocking, not yet done:** Majd's manual EN/AR + RTL browser walkthrough of the C5 Tenants
+   screen (`feat/C5-tenants-screen`, PR open) — the session's own verification stopped at the
+   API/curl level (no browser-automation tool available); see "Last completed" 2026-07-27.
 
 Closed: Dashboard v2's four data-less panels — all wired to real khatm-platform data
 (KH-1.1.5-BE) 2026-07-25; see "Last completed". Closed: the full EN/AR + RTL click-through

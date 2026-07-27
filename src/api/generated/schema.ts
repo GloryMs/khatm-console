@@ -13,9 +13,10 @@ export interface paths {
         };
         /**
          * Fetch the JWKS
-         * @description Public ACTIVE + RETIRING signing keys, no authentication required.
+         * @deprecated
+         * @description Public ACTIVE + RETIRING signing keys, no authentication required. Deprecated (spec FS-2.1 V2): aliases the default tenant only — every other tenant's JWKS is at GET /t/{tenantSlug}/.well-known/jwks.json. Stays available through Phase 2.
          */
-        get: operations["jwks"];
+        get: operations["jwks_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -55,7 +56,7 @@ export interface paths {
         put?: never;
         /**
          * Create an API key
-         * @description The response's rawKey is shown exactly once — the platform stores only its SHA-256 hash and prefix (spec FS-0.6b §4). Requires the admin scope.
+         * @description The response's rawKey is shown exactly once — the platform stores only its SHA-256 hash and prefix (spec FS-0.6b §4). tenantId (spec FS-2.1) defaults to the caller's own tenant — a platform admin provisioning a newly onboarded tenant's first key names it explicitly. Requires the admin scope.
          */
         post: operations["createApiKey"];
         delete?: never;
@@ -95,13 +96,13 @@ export interface paths {
          * List consuming parties
          * @description Every consuming party registered for the tenant (newest first), each with its status and resolved schema allowlist. Requires the admin scope.
          */
-        get: operations["list_2"];
+        get: operations["list_3"];
         put?: never;
         /**
          * Register a consuming party
          * @description Creates a party with the given code and bilingual name. The code is a lowercase slug (^[a-z0-9][a-z0-9-_]{1,62}$); the row's id is derived deterministically from (tenant, code), so this is idempotent by identity — but registering an already-registered code is a conflict (KH-CNS-0409), not a silent overwrite. Requires the admin scope.
          */
-        post: operations["create_1"];
+        post: operations["create_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -121,7 +122,7 @@ export interface paths {
          * Reactivate a consuming party
          * @description Flips a SUSPENDED party back to ACTIVE — its API keys authenticate again. Idempotent. Requires the admin scope.
          */
-        post: operations["activate"];
+        post: operations["activate_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -201,7 +202,7 @@ export interface paths {
          * Suspend a consuming party
          * @description Flips the party to SUSPENDED — its API keys immediately stop authenticating (KH-1.4.4 D4), the same outcome as a revoked key. Idempotent. Requires the admin scope.
          */
-        post: operations["suspend"];
+        post: operations["suspend_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -222,6 +223,90 @@ export interface paths {
         get: operations["signingKeys"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/tenants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List tenants
+         * @description Every tenant registered on the platform (newest first). Requires the admin scope.
+         */
+        get: operations["list_2"];
+        put?: never;
+        /**
+         * Onboard a tenant
+         * @description Full onboarding: creates the tenant row, provisions its first ACTIVE signing key, and creates its default status list (<slug>-<year>, capacity 131072) before this call returns. Calling this again with a slug that already has a fully-onboarded tenant is a conflict (KH-TNT-0409); calling it again with a slug whose onboarding previously died partway through resumes it instead of conflicting. Requires the admin scope.
+         */
+        post: operations["create_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/tenants/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fetch a tenant
+         * @description One tenant by id. Requires the admin scope.
+         */
+        get: operations["get_2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/tenants/{id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reactivate a tenant
+         * @description Flips a SUSPENDED tenant back to ACTIVE — its users'/API keys' authentication resumes. Idempotent. Requires the admin scope.
+         */
+        post: operations["activate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/tenants/{id}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suspend a tenant
+         * @description Flips the tenant to SUSPENDED — its own users' sessions and API keys immediately stop authenticating (spec D7), the same outcome as a revoked key. Already-issued credentials keep verifying/consuming, and the tenant's JWKS + status lists stay public (spec V4) — suspension blocks new issuance only. Idempotent. Requires the admin scope.
+         */
+        post: operations["suspend"];
         delete?: never;
         options?: never;
         head?: never;
@@ -675,9 +760,29 @@ export interface paths {
         };
         /**
          * Fetch a signed status-list artifact
-         * @description The public, unauthenticated source of revocation truth for offline verifiers (spec FS-1.3 D2, SAD §6). Returns the list's signed bitstring as a compact JWS (application/jose) — a verifier validates its signature against the platform's JWKS, then base64url-decodes and gunzips the `bits` claim to read the per-credential revocation bit at the index named in the credential's `status` claim. The ETag is the list's `version`; a matching If-None-Match returns 304 with no body, so periodic polls stay cheap until a revoke bumps the version. Cached for 60s, matching NFR-06's revoke-to-publish budget.
+         * @description The public, unauthenticated source of revocation truth for offline verifiers (spec FS-1.3 D2, SAD §6). Returns the list's signed bitstring as a compact JWS (application/jose) — a verifier validates its signature against the tenant's own JWKS, then base64url-decodes and gunzips the `bits` claim to read the per-credential revocation bit at the index named in the credential's `status` claim. The ETag is the list's `version`; a matching If-None-Match returns 304 with no body. Cached for 60s.
          */
         get: operations["getStatusList"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/t/{tenantSlug}/.well-known/jwks.json": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fetch a tenant's JWKS
+         * @description Public ACTIVE + RETIRING signing keys for the named tenant, no authentication required. Stays available regardless of the tenant's suspension status (spec V4).
+         */
+        get: operations["jwks"];
         put?: never;
         post?: never;
         delete?: never;
@@ -869,6 +974,8 @@ export interface components {
             /** @enum {string} */
             ownerType: "TENANT" | "CONSUMING_PARTY";
             scopes: string[];
+            /** Format: uuid */
+            tenantId?: string;
         };
         CreateApiKeyResponse: {
             /** Format: uuid */
@@ -879,6 +986,12 @@ export interface components {
         CreateConsumingPartyRequest: {
             code?: string;
             nameI18n: components["schemas"]["NameI18nRequest"];
+        };
+        CreateTenantRequest: {
+            deployMode?: string;
+            nameI18n: components["schemas"]["NameI18nRequest"];
+            slug?: string;
+            type: string;
         };
         CredentialPage: {
             items?: components["schemas"]["CredentialSummary"][];
@@ -1069,6 +1182,17 @@ export interface components {
             /** Format: date-time */
             to?: string;
         };
+        TenantView: {
+            /** Format: date-time */
+            createdAt?: string;
+            deployMode?: string;
+            /** Format: uuid */
+            id?: string;
+            nameI18n?: components["schemas"]["LocalizedText"];
+            slug?: string;
+            status?: string;
+            type?: string;
+        };
         /** @description Request to verify an SD-JWT credential presentation */
         VerifyRequest: {
             sdJwt: string;
@@ -1098,7 +1222,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    jwks: {
+    jwks_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -1190,6 +1314,15 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
+            /** @description The named tenantId does not exist (KH-TNT-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
         };
     };
     revokeApiKey: {
@@ -1221,7 +1354,7 @@ export interface operations {
             };
         };
     };
-    list_2: {
+    list_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -1259,7 +1392,7 @@ export interface operations {
             };
         };
     };
-    create_1: {
+    create_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -1319,7 +1452,7 @@ export interface operations {
             };
         };
     };
-    activate: {
+    activate_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -1509,7 +1642,7 @@ export interface operations {
             };
         };
     };
-    suspend: {
+    suspend_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -1587,6 +1720,251 @@ export interface operations {
             };
             /** @description Authenticated without the admin scope */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The platform's tenants */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TenantView"][];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    create_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTenantRequest"];
+            };
+        };
+        responses: {
+            /** @description Tenant onboarded (or resumed) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TenantView"];
+                };
+            };
+            /** @description Bean Validation failed, or an invalid slug format (KH-TNT-0400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description A fully-onboarded tenant with this slug already exists (KH-TNT-0409) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The tenant */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TenantView"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No tenant with this id (KH-TNT-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    activate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tenant activated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TenantView"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No tenant with this id (KH-TNT-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    suspend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tenant suspended */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TenantView"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No tenant with this id (KH-TNT-0404) */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2702,13 +3080,45 @@ export interface operations {
                     "application/jose": string;
                 };
             };
-            /** @description No status list at this tenantSlug/listCode, or the tenantSlug is unknown (KH-STS-0404) */
+            /** @description No status list at this tenantSlug/listCode, or the tenantSlug is unknown (KH-TNT-0404/KH-STS-0404) */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/jose": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    jwks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description the tenant's slug */
+                tenantSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The tenant's JWKS */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+            /** @description No tenant with this slug (KH-TNT-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
