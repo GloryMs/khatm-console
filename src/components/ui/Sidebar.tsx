@@ -24,6 +24,7 @@ const NAV_ITEMS: NavItemDef[] = [
   { to: '/revoke', labelKey: 'nav.revoke', icon: '⊘' },
   { to: '/consumers', labelKey: 'nav.consumingParties', icon: '⚑', scope: 'admin' },
   { to: '/consume-sim', labelKey: 'nav.consumeSim', icon: '▷' },
+  { to: '/tenants', labelKey: 'nav.tenants', icon: '⌂', scope: 'admin' },
 ];
 
 function initials(name: string): string {

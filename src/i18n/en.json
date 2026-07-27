@@ -14,7 +14,8 @@
     "verify": "Verify",
     "revoke": "Revoke",
     "consumingParties": "Consuming Parties",
-    "consumeSim": "Consume Simulator"
+    "consumeSim": "Consume Simulator",
+    "tenants": "Tenants"
   },
   "shell": {
     "sidebarLabel": "Primary navigation",
@@ -150,6 +151,10 @@
       "invalid-code": "That code isn't a valid slug. Use lowercase letters, digits, hyphens or underscores, 2-63 characters, starting with a letter or digit.",
       "duplicate-code": "A consuming party with this code already exists.",
       "schema-not-allowed": "This consuming party isn't allowed to consume credentials of this schema — its allowlist is deny-by-default. Add the schema to the party's allowlist first."
+    },
+    "tenant": {
+      "invalid-slug": "The tenant slug is invalid. Use a lowercase slug (letters, digits, hyphen, underscore), 2 to 63 characters, starting with a letter or digit.",
+      "duplicate-slug": "A tenant with this slug already exists."
     },
     "error": {
       "rbc": {
@@ -427,6 +432,70 @@
       "successTitle": "API key minted",
       "shownOnce": "This key is shown once. Copy it now; the platform cannot reveal it again.",
       "done": "Done"
+    }
+  },
+  "tenants": {
+    "title": "Tenants",
+    "empty": "No tenants registered yet.",
+    "createCta": "Onboard tenant",
+    "columnSlug": "Slug",
+    "columnName": "Name",
+    "columnType": "Type",
+    "columnStatus": "Status",
+    "columnCreatedAt": "Created",
+    "statusActive": "Active",
+    "statusSuspended": "Suspended",
+    "type": {
+      "GOVERNMENT": "Government",
+      "EDUCATION": "Education",
+      "PRIVATE": "Private",
+      "OTHER": "Other"
+    },
+    "deployMode": {
+      "SAAS": "SaaS",
+      "ONPREM": "On-premises",
+      "FEDERATED": "Federated"
+    },
+    "create": {
+      "title": "Onboard tenant",
+      "slug": "Slug",
+      "slugHelp": "A lowercase slug (letters, digits, hyphen, underscore), 2-63 characters, starting with a letter or digit. Immutable once created.",
+      "slugRequired": "Slug is required",
+      "slugInvalid": "Use a lowercase slug (letters, digits, hyphen, underscore), 2 to 63 characters, starting with a letter or digit.",
+      "nameEn": "Name (English)",
+      "nameAr": "Name (Arabic)",
+      "nameRequired": "Both English and Arabic names are required",
+      "type": "Type",
+      "typePlaceholder": "Select a type…",
+      "typeRequired": "Type is required",
+      "deployMode": "Deployment mode",
+      "cancel": "Cancel",
+      "submit": "Onboard",
+      "submitting": "Onboarding…"
+    },
+    "detail": {
+      "backToList": "← Back to tenants",
+      "nameEn": "Name (English)",
+      "nameAr": "Name (Arabic)",
+      "deployMode": "Deployment mode",
+      "jwksTitle": "Public JWKS",
+      "jwksHelp": "This tenant's signing keys, served publicly for relying parties to verify credentials against. Stays reachable even while suspended.",
+      "actionSuspend": "Suspend",
+      "actionActivate": "Activate"
+    },
+    "suspendConfirm": {
+      "title": "Suspend this tenant?",
+      "body": "This blocks new credential issuance and operator sign-ins for this tenant only. Credentials already issued keep verifying and consuming normally, and this tenant's JWKS and status lists stay publicly reachable. You can reactivate at any time.",
+      "confirm": "Suspend now",
+      "suspending": "Suspending…",
+      "cancel": "Cancel"
+    },
+    "activateConfirm": {
+      "title": "Reactivate this tenant?",
+      "body": "New credential issuance and operator sign-ins resume for this tenant.",
+      "confirm": "Activate now",
+      "activating": "Activating…",
+      "cancel": "Cancel"
     }
   },
   "issueBulk": {

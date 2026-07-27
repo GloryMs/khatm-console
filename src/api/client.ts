@@ -26,8 +26,8 @@ async function parseErrorEnvelope(res: Response): Promise<Partial<ErrorEnvelope>
  * so no other module needs a raw `fetch`.
  *
  * Every request is same-origin: Vite's dev proxy or nginx (in the container)
- * forwards `/api` and `/.well-known` to the platform — the console never
- * points at a cross-origin API URL.
+ * forwards `/api`, `/.well-known`, and `/t` (per-tenant public endpoints) to
+ * the platform — the console never points at a cross-origin API URL.
  */
 export async function apiFetch<T>(path: string, init: ApiRequestInit = {}): Promise<T> {
   const method = (init.method ?? 'GET').toUpperCase();

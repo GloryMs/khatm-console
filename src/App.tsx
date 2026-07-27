@@ -18,6 +18,8 @@ import { SchemaBuilderPage } from '@/features/schemaManagement/SchemaBuilderPage
 import { SchemaManagementPage } from '@/features/schemaManagement/SchemaManagementPage';
 import { SchemaViewPage } from '@/features/schemaManagement/SchemaViewPage';
 import { SchemasPage } from '@/features/schemas/SchemasPage';
+import { TenantDetailPage } from '@/features/tenants/TenantDetailPage';
+import { TenantsPage } from '@/features/tenants/TenantsPage';
 import { VerifyPage } from '@/features/verify/VerifyPage';
 
 export function App() {
@@ -58,6 +60,8 @@ export function App() {
                   <Route path="/revoke" element={<RevokePage />} />
                   <Route path="/consumers" element={<ConsumingPartiesPage />} />
                   <Route path="/consume-sim" element={<ConsumeSimPage />} />
+                  <Route path="/tenants" element={<TenantsPage />} />
+                  <Route path="/tenants/:id" element={<TenantDetailPage />} />
                 </Route>
               </Route>
               <Route path="*" element={<Navigate to="/" replace />} />
