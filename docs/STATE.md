@@ -4,17 +4,22 @@
 
 ## Current phase / task
 
+- C6b status filter (chore follow-up to C6) — **self-stopped on its one code item**: the
+  refreshed contract (now the officially-merged `khatm-platform` `main`, see below) still exposes
+  no server-side `status` query param on `GET /api/v1/credentials`, so no filter-bar dropdown was
+  added (badge/uses rendering from C6 is unchanged). STATE hygiene (this section + the platform-ask
+  entries below) done in the same pass. See "Last completed" 2026-07-28.
 - C6 Credential lifecycle (search status badge/uses column, consume-sim remaining-uses) —
   **DONE. PR #16 merged 2026-07-28** (squash, branch deleted), Majd-approved. Self-stopped
   2026-07-27 at the preamble gate (contract lacked `status`/`usesConsumed`/`holder-status` at the
   time), resumed 2026-07-28 once spec FS-1.6 landed and khatm-platform's PR #39 (KH-1.6-BE) was
-  confirmed live on the local compose stack — see "Last completed" for both entries. **Still
-  vendored from the live local `khatm-api` running PR #39, which remains open, not yet merged to
-  `khatm-platform`'s `main`** — re-run the zero-diff contract sanity check once PR #39 actually
-  merges (tracked in "Next up").
-- C5 Tenants management screen — **DONE, PR open, not merged.** Branch
-  `feat/C5-tenants-screen`. Awaiting Majd's review + the Arabic-review gate (hard merge
-  blocker per the brief).
+  confirmed live on the local compose stack — see "Last completed" for both entries. The
+  pre-merge-vendor caveat is now closed: PR #39 merged to `khatm-platform` `main` 2026-07-28, and
+  the C6b chore's contract refresh confirmed zero semantic drift against what C6 had already
+  vendored.
+- C5 Tenants management screen — **DONE. PR #15 merged 2026-07-27**, Majd-verified (EN/AR/RTL
+  walkthrough done). _(This line previously and incorrectly still said "PR open, not merged" —
+  corrected by the C6b STATE-hygiene pass; PR #15 had in fact already merged.)_
 - Dashboard live-data wiring — **DONE. PR #12** merged 2026-07-25, Majd-verified (EN/AR + RTL).
 - App shell sidebar redesign + toggle/button polish — **DONE. PR #13** merged 2026-07-25.
 - Post-V1 bugfix — LAN-IP secure-context crashes (consume-sim idempotency key, copy buttons) —
@@ -23,6 +28,39 @@
   manual EN/AR + RTL walkthrough of that specific banner was never explicitly logged as run.
 
 ## Last completed
+
+- 2026-07-28 (chore/C6b-status-filter, micro follow-up to C6): Preamble ran `npm run
+contract:update` (`gh api` fallback) against `origin/main`. khatm-platform PR #39 (KH-1.6-BE)
+  had merged since C6 (confirmed via `gh pr list`: merged 2026-07-28T07:47:46Z), so this is now
+  the officially-published contract, not a pre-merge vendor.
+  - **Self-stop check on item 1**: read `GET /api/v1/credentials`'s `parameters` in the freshly
+    refreshed contract — still only `ref`/`pseudoRef`/`schemaId`/`revoked`(boolean)/`page`/`size`.
+    No `status` param. KH-1.6-BE's own D5 only added `status`/`usesConsumed` to the _response_
+    shapes (`CredentialSummary`/`CredentialView`), never touched the search endpoint's filter
+    parameters — confirmed against the platform source
+    (`credential/web/CredentialController.java`'s `list` handler) as well as the contract itself.
+    **Self-stopped on item 1**: no status dropdown was added to the filter bar; C6's badge/uses
+    rendering is unchanged. Recorded as a fresh platform ask (below) rather than building a
+    client-side-only filter over one paginated page, per this codebase's standing avoidance of
+    that kind of misleading partial feature (same reasoning as C6's own item-2 self-stop).
+  - **Bonus, in scope for the preamble's own contract refresh**: sorted-key-diffed the freshly
+    fetched contract against what C6 had already vendored pre-merge — **zero semantic
+    difference** (only the `servers` block, identical pattern to the 2026-07-26 Dashboard
+    contract-sanity session). Committed the officially-merged contract + regenerated types over
+    C6's pre-merge vendor, closing that residual caveat. `npm run typecheck` clean immediately
+    after regen.
+  - **Item 2, STATE hygiene**: `docs/STATE.md`'s "Current phase / task" section still read "C5
+    Tenants management screen — DONE, PR open, not merged" even though PR #15 had actually merged
+    2026-07-27 (confirmed via `gh pr view 15`) and Majd's EN/AR/RTL walkthrough of it is done per
+    this session's brief — corrected. Also fully closed out the 2026-07-27 platform-ask entry
+    under "Open decisions" (both the original ask and its now-resolved PR #39-merge residual) and
+    added the new status-filter-param ask from item 1 above in its place.
+  - Item 3 (EN/AR keys, RTL check) was moot — no new UI/label was added since item 1 self-stopped.
+  - No feature code touched, so no test changes; `npm run check` re-run for the contract-refresh
+    - docs changes: typecheck/lint/test all green (199/199), `format:check` clean on every file
+      this session touched (fails only on the pre-existing untracked `.vscode/extensions.json`,
+      unrelated).
+  - PR opened, not merged.
 
 - 2026-07-28 (C6 credential lifecycle, resumed and delivered): Majd reported the platform had
   been redeployed and asked for a fresh look at `docs/specs`. A new spec had landed —
@@ -694,14 +732,20 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 
 ## Open decisions / blockers
 
-- **Platform ask from 2026-07-27 — resolved 2026-07-28.** Spec FS-1.6 (Consumption Lifecycle
-  Visibility) landed and khatm-platform's KH-1.6-BE (PR #39) delivers exactly what was asked:
-  `status`/`usesConsumed` on `CredentialSummary`/`CredentialView`, and a public
-  `POST /api/v1/credentials/holder-status`. See "Last completed" 2026-07-28 for the C6 delivery
-  built against it. **Residual, not blocking:** PR #39 is open, not yet merged to
-  `khatm-platform`'s `main` — re-run the zero-diff sanity check (`npm run contract:update`
-  against `origin/main` + diff) once it merges, same pattern as the 2026-07-26 Dashboard
-  contract-sanity session.
+- **Platform ask from 2026-07-27 — fully closed 2026-07-28 (C6b chore).** Spec FS-1.6
+  (Consumption Lifecycle Visibility) landed and khatm-platform's KH-1.6-BE (PR #39) delivered
+  exactly what was asked: `status`/`usesConsumed` on `CredentialSummary`/`CredentialView`, and a
+  public `POST /api/v1/credentials/holder-status`. See "Last completed" 2026-07-28 for the C6
+  delivery built against it. The residual (PR #39 was still open at C6-delivery time) is now also
+  closed: PR #39 merged to `khatm-platform` `main` 2026-07-28T07:47:46Z, and the C6b chore's
+  `npm run contract:update` + a recursive-key-sorted diff against what C6 had already vendored
+  confirmed **zero semantic drift** (only the `servers` block differed, same as the 2026-07-26
+  Dashboard contract-sanity precedent).
+- **Platform ask, new 2026-07-28 (C6b status-filter chore, self-stopped):** `GET
+/api/v1/credentials` still has no server-side `status` query param — confirmed absent in the
+  now-fully-merged `khatm-platform` `main` contract (only `ref`/`pseudoRef`/`schemaId`/
+  `revoked`(boolean)/`page`/`size` exist). A status-filter dropdown in the credentials search UI
+  needs this param added server-side before it can be built; see "Last completed" 2026-07-28.
 - **`npm run check`'s `format:check` step fails on an untracked `.vscode/extensions.json`** —
   noticed 2026-07-23 during the qr-api-base-guard chore, pre-existing (not introduced by that
   branch or any tracked commit; present in the working tree, never staged). `typecheck`/`lint`/
@@ -769,13 +813,14 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 3. KH-2.2-era RBAC changes, whatever those turn out to require.
 4. Unify the scope-gating placement convention (self-gating vs. App.tsx-level wrapping — see
    "Open decisions" above) across every gated page.
-5. **Blocking, not yet done:** Majd's manual EN/AR + RTL browser walkthrough of the C5 Tenants
-   screen (`feat/C5-tenants-screen`, PR open) — the session's own verification stopped at the
-   API/curl level (no browser-automation tool available); see "Last completed" 2026-07-27.
-6. Re-run the contract zero-diff sanity check once khatm-platform PR #39 (KH-1.6-BE) merges to
-   `main` — C6 currently runs against a live pre-merge vendor of that branch.
+5. Credentials search status-filter dropdown — blocked on the platform ask logged 2026-07-28
+   (C6b): needs a `status` query param on `GET /api/v1/credentials` first.
 
-Closed: item #6 (was #5), C6 credential lifecycle Majd walkthrough — approved and merged as
+Closed: item #5 (was #6), contract zero-diff sanity check for KH-1.6-BE — PR #39 merged
+2026-07-28, C6b's re-run confirmed zero semantic drift; see "Last completed" and "Open
+decisions". Closed: item #5 (previously), Majd's C5 Tenants EN/AR/RTL walkthrough — done, PR #15
+merged 2026-07-27 (STATE's stale "PR open" line was corrected by the C6b hygiene pass). Closed:
+item #6 (was #5), C6 credential lifecycle Majd walkthrough — approved and merged as
 PR #16 2026-07-28; see "Last completed". Closed: Dashboard v2's four data-less panels — all
 wired to real khatm-platform data (KH-1.1.5-BE) 2026-07-25; see "Last completed". Closed: the
 full EN/AR + RTL click-through
