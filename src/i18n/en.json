@@ -15,6 +15,7 @@
     "revoke": "Revoke",
     "consumingParties": "Consuming Parties",
     "consumeSim": "Consume Simulator",
+    "users": "Users",
     "tenants": "Tenants"
   },
   "shell": {
@@ -52,8 +53,8 @@
       "title": "Signing keys",
       "emptyTitle": "No signing keys yet",
       "emptyBody": "No signing key has been created for this tenant.",
-      "adminOnlyTitle": "Admin access required",
-      "adminOnlyBody": "Signing-key status is only visible to admin-scoped operators.",
+      "adminOnlyTitle": "Not available",
+      "adminOnlyBody": "Signing-key status is only visible to operators with the key:manage scope.",
       "validFrom": "Valid from",
       "validTo": "Valid to",
       "noExpiry": "No expiry set",
@@ -133,7 +134,20 @@
       "submitting": "Signing in…"
     },
     "logout": "Log out",
-    "sessionLoading": "Loading session…"
+    "sessionLoading": "Loading session…",
+    "changePassword": {
+      "title": "Change your password",
+      "subtitle": "Your account has a temporary password. Set a new one to continue.",
+      "currentPassword": "Temporary (current) password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password",
+      "currentRequired": "Current password is required",
+      "newMinLength": "Password must be 8 to 128 characters",
+      "confirmRequired": "Please confirm the new password",
+      "mismatch": "The passwords don't match",
+      "submit": "Change password",
+      "submitting": "Changing password…"
+    }
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
@@ -273,7 +287,8 @@
     "reveal": "Reveal",
     "hide": "Hide",
     "shownOnce": "Shown once",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "done": "Done"
   },
   "schemaManagement": {
     "title": "Manage Schemas",
@@ -473,6 +488,14 @@
       "typePlaceholder": "Select a type…",
       "typeRequired": "Type is required",
       "deployMode": "Deployment mode",
+      "addInitialAdmin": "Add an initial administrator",
+      "addInitialAdminHelp": "Creates the tenant's first TENANT_ADMIN user with a one-time temporary password.",
+      "initialAdminUsername": "Administrator username",
+      "initialAdminUsernameRequired": "Administrator username is required",
+      "initialAdminNameEn": "Administrator name (English)",
+      "initialAdminNameAr": "Administrator name (Arabic)",
+      "initialAdminNameRequired": "Both English and Arabic administrator names are required",
+      "initialAdminPasswordTitle": "Initial administrator created",
       "cancel": "Cancel",
       "submit": "Onboard",
       "submitting": "Onboarding…"
@@ -485,7 +508,13 @@
       "jwksTitle": "Public JWKS",
       "jwksHelp": "This tenant's signing keys, served publicly for relying parties to verify credentials against. Stays reachable even while suspended.",
       "actionSuspend": "Suspend",
-      "actionActivate": "Activate"
+      "actionActivate": "Activate",
+      "tabDetails": "Details",
+      "tabUsers": "Users",
+      "onBehalfOfNotice": "You're acting on behalf of {{tenant}} — actions here are recorded as an on-behalf-of action.",
+      "usersListUnavailable": "Listing this tenant's existing users isn't available here yet. You can still add a new user below.",
+      "addUserCta": "Add user",
+      "addUserTitle": "Add a user to this tenant"
     },
     "suspendConfirm": {
       "title": "Suspend this tenant?",
@@ -500,6 +529,85 @@
       "confirm": "Activate now",
       "activating": "Activating…",
       "cancel": "Cancel"
+    }
+  },
+  "users": {
+    "title": "Users",
+    "empty": "No users registered yet.",
+    "createCta": "Create user",
+    "columnUsername": "Username",
+    "columnName": "Name",
+    "columnRoles": "Roles",
+    "columnStatus": "Status",
+    "columnActions": "Actions",
+    "noRoles": "No roles assigned.",
+    "status": {
+      "ACTIVE": "Active",
+      "LOCKED": "Locked",
+      "DISABLED": "Disabled"
+    },
+    "role": {
+      "TENANT_ADMIN": "Tenant admin",
+      "ISSUER_OPERATOR": "Issuer operator"
+    },
+    "actionEditRoles": "Edit roles",
+    "actionLock": "Lock",
+    "actionUnlock": "Unlock",
+    "actionDisable": "Disable",
+    "actionResetPassword": "Reset password",
+    "create": {
+      "title": "Create user",
+      "username": "Username",
+      "usernameRequired": "Username is required",
+      "nameEn": "Name (English)",
+      "nameAr": "Name (Arabic)",
+      "nameRequired": "Both English and Arabic names are required",
+      "roles": "Roles",
+      "rolesRequired": "At least one role is required",
+      "cancel": "Cancel",
+      "submit": "Create",
+      "submitting": "Creating…"
+    },
+    "editRoles": {
+      "title": "Edit roles — {{username}}",
+      "save": "Save roles",
+      "saving": "Saving…"
+    },
+    "lockConfirm": {
+      "title": "Lock {{username}}?",
+      "body": "The user cannot sign in until unlocked. This does not affect anything they've already issued or configured.",
+      "confirm": "Lock now",
+      "locking": "Locking…",
+      "cancel": "Cancel"
+    },
+    "unlockConfirm": {
+      "title": "Unlock {{username}}?",
+      "body": "The user can sign in again immediately.",
+      "confirm": "Unlock now",
+      "unlocking": "Unlocking…",
+      "cancel": "Cancel"
+    },
+    "disableConfirm": {
+      "title": "Disable {{username}}?",
+      "body": "The user cannot sign in until re-enabled by an administrator. This does not affect anything they've already issued or configured.",
+      "confirm": "Disable now",
+      "disabling": "Disabling…",
+      "cancel": "Cancel"
+    },
+    "resetConfirm": {
+      "title": "Reset password for {{username}}?",
+      "body": "A new one-time temporary password is generated and shown once. The user must change it at next sign-in.",
+      "confirm": "Reset now",
+      "resetting": "Resetting…",
+      "cancel": "Cancel"
+    },
+    "lastAdminGuard": {
+      "explanation": "This is the tenant's only active administrator. Promote or activate another tenant admin before locking, disabling, or removing this one's admin role."
+    },
+    "temporaryPassword": {
+      "title": "Temporary password",
+      "label": "Temporary password",
+      "helper": "Shown once — copy it now and hand it to the user. It cannot be revealed again; use \"Reset password\" to generate a new one."
     }
   },
   "issueBulk": {

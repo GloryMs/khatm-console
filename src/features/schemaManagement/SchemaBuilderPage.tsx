@@ -58,7 +58,7 @@ function buildAuthoringBody(values: SchemaBuilderFormValues): SchemaAuthoringReq
 
 export function SchemaBuilderPage({ mode }: SchemaBuilderPageProps) {
   return (
-    <RequireScope scope="admin">
+    <RequireScope scope="schema:manage">
       <SchemaBuilderPageBody mode={mode} />
     </RequireScope>
   );

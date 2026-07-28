@@ -2,21 +2,30 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ApiErrorBanner } from '@/components/ui/ApiErrorBanner';
+import { Banner } from '@/components/ui/Banner';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge';
+import { TemporaryPasswordDialog } from '@/components/ui/TemporaryPasswordDialog';
 import { Toast } from '@/components/ui/Toast';
 import { copyToClipboard } from '@/components/ui/clipboard';
 import { useErrorMessage } from '@/api/useErrorMessage';
 import { useLocalizedText } from '@/hooks/useLocalizedText';
 import { RequireScope } from '@/features/auth/RequireScope';
+import {
+  CreateUserDialog,
+  type CreateUserFormValues,
+} from '@/features/users/components/CreateUserDialog';
+import type { CreateUserResponse } from './api';
 import { buildTenantJwksUrl } from './jwks';
-import { useActivateTenant, useSuspendTenant, useTenant } from './hooks';
+import { useActivateTenant, useCreateUserInTenant, useSuspendTenant, useTenant } from './hooks';
 import styles from './TenantDetailPage.module.css';
+
+type DetailTab = 'details' | 'users';
 
 export function TenantDetailPage() {
   return (
-    <RequireScope scope="admin">
+    <RequireScope scope="platform:admin">
       <TenantDetailPageBody />
     </RequireScope>
   );
@@ -30,8 +39,12 @@ function TenantDetailPageBody() {
   const tenant = useTenant(params.id);
   const suspend = useSuspendTenant();
   const activate = useActivateTenant();
+  const createUserInTenant = useCreateUserInTenant();
   const [confirmAction, setConfirmAction] = useState<'suspend' | 'activate' | null>(null);
   const [copied, setCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState<DetailTab>('details');
+  const [createUserOpen, setCreateUserOpen] = useState(false);
+  const [createdUser, setCreatedUser] = useState<CreateUserResponse | null>(null);
 
   if (tenant.isPending) return <p>{t('common.loading')}</p>;
   if (tenant.isError) return <ApiErrorBanner error={tenant.error} />;
@@ -59,6 +72,20 @@ function TenantDetailPageBody() {
 
   const activeMutation = confirmAction === 'suspend' ? suspend : activate;
 
+  const onCreateUserSubmit = async (values: CreateUserFormValues) => {
+    const result = await createUserInTenant.mutateAsync({
+      tenantId: id,
+      req: {
+        username: values.username,
+        displayNameI18n: { en: values.nameEn, ar: values.nameAr },
+        roles: values.roles,
+      },
+    });
+    setCreateUserOpen(false);
+    createUserInTenant.reset();
+    setCreatedUser(result);
+  };
+
   return (
     <section className={styles.page}>
       <Link className={styles.back} to="/tenants">
@@ -72,65 +99,136 @@ function TenantDetailPageBody() {
         </StatusBadge>
       </div>
 
-      <div className={styles.fieldGrid}>
-        <span className={styles.fieldLabel}>{t('tenants.columnSlug')}</span>
-        <span className={`${styles.fieldValue} ltr-embed`}>{data.slug}</span>
-
-        <span className={styles.fieldLabel}>{t('tenants.detail.nameEn')}</span>
-        <span className={styles.fieldValue}>{data.nameI18n?.en}</span>
-
-        <span className={styles.fieldLabel}>{t('tenants.detail.nameAr')}</span>
-        <span className={styles.fieldValue}>{data.nameI18n?.ar}</span>
-
-        <span className={styles.fieldLabel}>{t('tenants.columnType')}</span>
-        <span className={styles.fieldValue}>{data.type ? t(`tenants.type.${data.type}`) : ''}</span>
-
-        <span className={styles.fieldLabel}>{t('tenants.detail.deployMode')}</span>
-        <span className={styles.fieldValue}>
-          {data.deployMode ? t(`tenants.deployMode.${data.deployMode}`) : ''}
-        </span>
-
-        <span className={styles.fieldLabel}>{t('tenants.columnCreatedAt')}</span>
-        <span className={styles.fieldValue}>{createdAt}</span>
+      <div className={styles.tabs} role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'details'}
+          className={activeTab === 'details' ? styles.tabActive : styles.tab}
+          onClick={() => setActiveTab('details')}
+        >
+          {t('tenants.detail.tabDetails')}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'users'}
+          className={activeTab === 'users' ? styles.tabActive : styles.tab}
+          onClick={() => setActiveTab('users')}
+        >
+          {t('tenants.detail.tabUsers')}
+        </button>
       </div>
 
-      <div className={styles.jwksCard}>
-        <h2 className={styles.fieldLabel}>{t('tenants.detail.jwksTitle')}</h2>
-        <p>{t('tenants.detail.jwksHelp')}</p>
-        <div className={styles.jwksRow}>
-          <a
-            className={`${styles.jwksLink} ltr-embed`}
-            href={jwksUrl}
-            target="_blank"
-            rel="noreferrer"
-          >
-            {jwksUrl}
-          </a>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              void copyToClipboard(jwksUrl);
-              setCopied(true);
-              window.setTimeout(() => setCopied(false), 2000);
-            }}
-          >
-            {t('common.copy')}
-          </Button>
+      {activeTab === 'details' && (
+        <>
+          <div className={styles.fieldGrid}>
+            <span className={styles.fieldLabel}>{t('tenants.columnSlug')}</span>
+            <span className={`${styles.fieldValue} ltr-embed`}>{data.slug}</span>
+
+            <span className={styles.fieldLabel}>{t('tenants.detail.nameEn')}</span>
+            <span className={styles.fieldValue}>{data.nameI18n?.en}</span>
+
+            <span className={styles.fieldLabel}>{t('tenants.detail.nameAr')}</span>
+            <span className={styles.fieldValue}>{data.nameI18n?.ar}</span>
+
+            <span className={styles.fieldLabel}>{t('tenants.columnType')}</span>
+            <span className={styles.fieldValue}>
+              {data.type ? t(`tenants.type.${data.type}`) : ''}
+            </span>
+
+            <span className={styles.fieldLabel}>{t('tenants.detail.deployMode')}</span>
+            <span className={styles.fieldValue}>
+              {data.deployMode ? t(`tenants.deployMode.${data.deployMode}`) : ''}
+            </span>
+
+            <span className={styles.fieldLabel}>{t('tenants.columnCreatedAt')}</span>
+            <span className={styles.fieldValue}>{createdAt}</span>
+          </div>
+
+          <div className={styles.jwksCard}>
+            <h2 className={styles.fieldLabel}>{t('tenants.detail.jwksTitle')}</h2>
+            <p>{t('tenants.detail.jwksHelp')}</p>
+            <div className={styles.jwksRow}>
+              <a
+                className={`${styles.jwksLink} ltr-embed`}
+                href={jwksUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {jwksUrl}
+              </a>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  void copyToClipboard(jwksUrl);
+                  setCopied(true);
+                  window.setTimeout(() => setCopied(false), 2000);
+                }}
+              >
+                {t('common.copy')}
+              </Button>
+            </div>
+            {copied && <Toast tone="success">{t('common.copied')}</Toast>}
+          </div>
+
+          <div className={styles.actionsRow}>
+            {isActive ? (
+              <Button variant="secondary" onClick={() => setConfirmAction('suspend')}>
+                {t('tenants.detail.actionSuspend')}
+              </Button>
+            ) : (
+              <Button variant="primary" onClick={() => setConfirmAction('activate')}>
+                {t('tenants.detail.actionActivate')}
+              </Button>
+            )}
+          </div>
+        </>
+      )}
+
+      {activeTab === 'users' && (
+        <div className={styles.usersTab}>
+          <Banner tone="info">
+            <p>
+              {t('tenants.detail.onBehalfOfNotice', {
+                tenant: localize(data.nameI18n) || data.slug,
+              })}
+            </p>
+          </Banner>
+          <Banner tone="warning">
+            <p>{t('tenants.detail.usersListUnavailable')}</p>
+          </Banner>
+          <div className={styles.actionsRow}>
+            <Button variant="primary" onClick={() => setCreateUserOpen(true)}>
+              {t('tenants.detail.addUserCta')}
+            </Button>
+          </div>
         </div>
-        {copied && <Toast tone="success">{t('common.copied')}</Toast>}
-      </div>
+      )}
 
-      <div className={styles.actionsRow}>
-        {isActive ? (
-          <Button variant="secondary" onClick={() => setConfirmAction('suspend')}>
-            {t('tenants.detail.actionSuspend')}
-          </Button>
-        ) : (
-          <Button variant="primary" onClick={() => setConfirmAction('activate')}>
-            {t('tenants.detail.actionActivate')}
-          </Button>
-        )}
-      </div>
+      {createUserOpen && (
+        <CreateUserDialog
+          titleId="on-behalf-of-create-user-title"
+          title={t('tenants.detail.addUserTitle')}
+          isSubmitting={createUserInTenant.isPending}
+          error={createUserInTenant.isError ? createUserInTenant.error : undefined}
+          onSubmit={onCreateUserSubmit}
+          onCancel={() => {
+            setCreateUserOpen(false);
+            createUserInTenant.reset();
+          }}
+        />
+      )}
+
+      {createdUser?.temporaryPassword && (
+        <TemporaryPasswordDialog
+          titleId="on-behalf-of-temporary-password-title"
+          title={t('users.temporaryPassword.title')}
+          username={createdUser.username ?? ''}
+          password={createdUser.temporaryPassword}
+          onClose={() => setCreatedUser(null)}
+        />
+      )}
 
       {confirmAction && (
         <ConfirmDialog

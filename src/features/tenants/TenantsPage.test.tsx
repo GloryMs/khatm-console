@@ -15,10 +15,14 @@ const baseAuth: AuthContextValue = {
   user: null,
   login: async () => undefined,
   logout: async () => undefined,
+  refresh: async () => undefined,
   hasScope: () => false,
 };
 
-const adminAuth: AuthContextValue = { ...baseAuth, hasScope: (scope) => scope === 'admin' };
+const adminAuth: AuthContextValue = {
+  ...baseAuth,
+  hasScope: (scope) => scope === 'platform:admin',
+};
 
 const tenants: tenantsApi.TenantView[] = [
   {
@@ -55,12 +59,12 @@ function renderPage(auth: AuthContextValue) {
 describe('TenantsPage scope gating', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it('renders no-permission without the admin scope', () => {
+  it('renders no-permission without the platform:admin scope', () => {
     renderPage(baseAuth);
     expect(screen.getByRole('alert')).toHaveTextContent(i18n.t('errors.noPermission.title'));
   });
 
-  it('renders the tenant list with the admin scope', async () => {
+  it('renders the tenant list with the platform:admin scope', async () => {
     vi.spyOn(tenantsApi, 'listTenants').mockResolvedValue(tenants);
     renderPage(adminAuth);
     expect(await screen.findByText('Demo Tenant')).toBeInTheDocument();
@@ -153,5 +157,67 @@ describe('TenantsPage create dialog', () => {
     // (mirrors LoginForm's dual-display idiom for field-mapped ApiErrors).
     const occurrences = await screen.findAllByText(i18n.t('errors.tenant.duplicate-slug'));
     expect(occurrences.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('sends an initialAdmin when checked, and shows the one-time password before navigating', async () => {
+    vi.spyOn(tenantsApi, 'listTenants').mockResolvedValue([]);
+    const create = vi.spyOn(tenantsApi, 'createTenant').mockResolvedValue({
+      id: 'tenant-3',
+      slug: 'with-admin',
+      nameI18n: { en: 'With Admin', ar: 'بمدير' },
+      type: 'PRIVATE',
+      deployMode: 'SAAS',
+      status: 'ACTIVE',
+      createdAt: '2026-07-28T06:00:00Z',
+      initialAdmin: { username: 'firstadmin', temporaryPassword: 'temp-initial-pass' },
+    });
+    vi.spyOn(tenantsApi, 'getTenant').mockResolvedValue({
+      id: 'tenant-3',
+      slug: 'with-admin',
+      nameI18n: { en: 'With Admin', ar: 'بمدير' },
+      type: 'PRIVATE',
+      deployMode: 'SAAS',
+      status: 'ACTIVE',
+      createdAt: '2026-07-28T06:00:00Z',
+    });
+    const user = userEvent.setup();
+    renderPage(adminAuth);
+
+    await user.click(await screen.findByRole('button', { name: i18n.t('tenants.createCta') }));
+    await user.type(screen.getByLabelText(i18n.t('tenants.create.slug')), 'with-admin');
+    await user.type(screen.getByLabelText(i18n.t('tenants.create.nameEn')), 'With Admin');
+    await user.type(screen.getByLabelText(i18n.t('tenants.create.nameAr')), 'بمدير');
+    await user.selectOptions(screen.getByLabelText(i18n.t('tenants.create.type')), 'PRIVATE');
+    await user.click(screen.getByLabelText(i18n.t('tenants.create.addInitialAdmin')));
+    await user.type(
+      screen.getByLabelText(i18n.t('tenants.create.initialAdminUsername')),
+      'firstadmin',
+    );
+    await user.type(
+      screen.getByLabelText(i18n.t('tenants.create.initialAdminNameEn')),
+      'First Admin',
+    );
+    await user.type(screen.getByLabelText(i18n.t('tenants.create.initialAdminNameAr')), 'أول مدير');
+    await user.click(screen.getByRole('button', { name: i18n.t('tenants.create.submit') }));
+
+    await waitFor(() =>
+      expect(create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          slug: 'with-admin',
+          initialAdmin: {
+            username: 'firstadmin',
+            displayNameI18n: { en: 'First Admin', ar: 'أول مدير' },
+          },
+        }),
+      ),
+    );
+
+    // The one-time password is shown before navigating away.
+    await user.click(await screen.findByRole('button', { name: i18n.t('common.reveal') }));
+    expect(await screen.findByText('temp-initial-pass')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'With Admin' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: i18n.t('common.done') }));
+    expect(await screen.findByRole('heading', { name: 'With Admin' })).toBeInTheDocument();
   });
 });

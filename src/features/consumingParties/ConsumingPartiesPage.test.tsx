@@ -16,6 +16,7 @@ const baseAuth: AuthContextValue = {
   user: null,
   login: async () => undefined,
   logout: async () => undefined,
+  refresh: async () => undefined,
   hasScope: () => false,
 };
 
@@ -52,15 +53,15 @@ function renderPage(auth: AuthContextValue) {
 describe('ConsumingPartiesPage scope gating', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it('renders no-permission without the admin scope', () => {
+  it('renders no-permission without the consumer:manage scope', () => {
     renderPage(baseAuth);
     expect(screen.getByRole('alert')).toHaveTextContent(i18n.t('errors.noPermission.title'));
   });
 
-  it('renders the party list with the admin scope', async () => {
+  it('renders the party list with the consumer:manage scope', async () => {
     vi.spyOn(consumingPartiesApi, 'listConsumingParties').mockResolvedValue(parties);
     vi.spyOn(schemasApi, 'listSchemas').mockResolvedValue([]);
-    renderPage({ ...baseAuth, hasScope: (scope) => scope === 'admin' });
+    renderPage({ ...baseAuth, hasScope: (scope) => scope === 'consumer:manage' });
     expect(await screen.findByText('Demo Party')).toBeInTheDocument();
   });
 });
@@ -73,7 +74,7 @@ describe('ConsumingPartiesPage create dialog', () => {
     vi.spyOn(schemasApi, 'listSchemas').mockResolvedValue([]);
     const create = vi.spyOn(consumingPartiesApi, 'createConsumingParty');
     const user = userEvent.setup();
-    renderPage({ ...baseAuth, hasScope: (scope) => scope === 'admin' });
+    renderPage({ ...baseAuth, hasScope: (scope) => scope === 'consumer:manage' });
 
     await user.click(
       await screen.findByRole('button', { name: i18n.t('consumingParties.createCta') }),
@@ -103,7 +104,7 @@ describe('ConsumingPartiesPage create dialog', () => {
       allowedSchemas: [],
     });
     const user = userEvent.setup();
-    renderPage({ ...baseAuth, hasScope: (scope) => scope === 'admin' });
+    renderPage({ ...baseAuth, hasScope: (scope) => scope === 'consumer:manage' });
 
     await user.click(
       await screen.findByRole('button', { name: i18n.t('consumingParties.createCta') }),
@@ -136,7 +137,7 @@ describe('ConsumingPartiesPage mint-key flow', () => {
       rawKey: 'khk_test_abcd1234.superSecretRawKeyValue',
     });
     const user = userEvent.setup();
-    renderPage({ ...baseAuth, hasScope: (scope) => scope === 'admin' });
+    renderPage({ ...baseAuth, hasScope: (scope) => scope === 'consumer:manage' });
 
     await user.click(
       await screen.findByRole('button', { name: i18n.t('consumingParties.actionMintKey') }),

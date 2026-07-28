@@ -59,8 +59,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasScope = useCallback((scope: string) => user?.scopes?.includes(scope) ?? false, [user]);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ status, user, login, logout, hasScope }),
-    [status, user, login, logout, hasScope],
+    () => ({ status, user, login, logout, hasScope, refresh: bootstrap }),
+    [status, user, login, logout, hasScope, bootstrap],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -18,13 +18,14 @@ const NAV_ITEMS: NavItemDef[] = [
   { to: '/issue', labelKey: 'nav.issue', icon: '＋' },
   { to: '/issue/bulk', labelKey: 'nav.issueBulk', icon: '≡' },
   { to: '/schemas', labelKey: 'nav.schemas', icon: '▤' },
-  { to: '/schemas/manage', labelKey: 'nav.schemaManage', icon: '✎', scope: 'admin' },
+  { to: '/schemas/manage', labelKey: 'nav.schemaManage', icon: '✎', scope: 'schema:manage' },
   { to: '/credentials', labelKey: 'nav.credentials', icon: '◈' },
   { to: '/verify', labelKey: 'nav.verify', icon: '✓' },
   { to: '/revoke', labelKey: 'nav.revoke', icon: '⊘' },
-  { to: '/consumers', labelKey: 'nav.consumingParties', icon: '⚑', scope: 'admin' },
+  { to: '/consumers', labelKey: 'nav.consumingParties', icon: '⚑', scope: 'consumer:manage' },
   { to: '/consume-sim', labelKey: 'nav.consumeSim', icon: '▷' },
-  { to: '/tenants', labelKey: 'nav.tenants', icon: '⌂', scope: 'admin' },
+  { to: '/users', labelKey: 'nav.users', icon: '☺', scope: 'tenant:admin' },
+  { to: '/tenants', labelKey: 'nav.tenants', icon: '⌂', scope: 'platform:admin' },
 ];
 
 function initials(name: string): string {

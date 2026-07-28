@@ -14,6 +14,7 @@ const baseAuth: AuthContextValue = {
   user: null,
   login: async () => undefined,
   logout: async () => undefined,
+  refresh: async () => undefined,
   hasScope: () => false,
 };
 
@@ -54,14 +55,14 @@ function renderPage(auth: AuthContextValue) {
 describe('SchemaManagementPage scope gating', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it('renders no-permission without the admin scope', () => {
+  it('renders no-permission without the schema:manage scope', () => {
     renderPage(baseAuth);
     expect(screen.getByRole('alert')).toHaveTextContent(i18n.t('errors.noPermission.title'));
   });
 
-  it('renders the management list with the admin scope', async () => {
+  it('renders the management list with the schema:manage scope', async () => {
     vi.spyOn(schemasApi, 'listSchemas').mockResolvedValue(summaries);
-    renderPage({ ...baseAuth, hasScope: (scope) => scope === 'admin' });
+    renderPage({ ...baseAuth, hasScope: (scope) => scope === 'schema:manage' });
     expect(await screen.findByText('Draft schema')).toBeInTheDocument();
   });
 });
@@ -73,7 +74,7 @@ describe('SchemaManagementPage publish-confirm guard', () => {
     vi.spyOn(schemasApi, 'listSchemas').mockResolvedValue(summaries);
     const publish = vi.spyOn(schemasApi, 'publishSchema').mockResolvedValue(summaries[0]);
     const user = userEvent.setup();
-    renderPage({ ...baseAuth, hasScope: (scope) => scope === 'admin' });
+    renderPage({ ...baseAuth, hasScope: (scope) => scope === 'schema:manage' });
 
     await user.click(
       await screen.findByRole('button', { name: i18n.t('schemaManagement.actionPublish') }),
@@ -94,7 +95,7 @@ describe('SchemaManagementPage publish-confirm guard', () => {
     vi.spyOn(schemasApi, 'listSchemas').mockResolvedValue(summaries);
     const publish = vi.spyOn(schemasApi, 'publishSchema').mockResolvedValue(summaries[0]);
     const user = userEvent.setup();
-    renderPage({ ...baseAuth, hasScope: (scope) => scope === 'admin' });
+    renderPage({ ...baseAuth, hasScope: (scope) => scope === 'schema:manage' });
 
     await user.click(
       await screen.findByRole('button', { name: i18n.t('schemaManagement.actionPublish') }),

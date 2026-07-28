@@ -12,7 +12,7 @@ import styles from './SchemaManagementPage.module.css';
 
 export function SchemaManagementPage() {
   return (
-    <RequireScope scope="admin">
+    <RequireScope scope="schema:manage">
       <SchemaManagementPageBody />
     </RequireScope>
   );

@@ -13,7 +13,8 @@ const adminAuth: AuthContextValue = {
   user: null,
   login: async () => undefined,
   logout: async () => undefined,
-  hasScope: (scope) => scope === 'admin',
+  refresh: async () => undefined,
+  hasScope: (scope) => scope === 'schema:manage',
 };
 
 const publishedDetail: schemasApi.SchemaDetail = {

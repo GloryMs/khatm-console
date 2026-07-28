@@ -56,7 +56,7 @@ export interface paths {
         put?: never;
         /**
          * Create an API key
-         * @description The response's rawKey is shown exactly once — the platform stores only its SHA-256 hash and prefix (spec FS-0.6b §4). tenantId (spec FS-2.1) defaults to the caller's own tenant — a platform admin provisioning a newly onboarded tenant's first key names it explicitly. Requires the admin scope.
+         * @description The response's rawKey is shown exactly once — the platform stores only its SHA-256 hash and prefix (spec FS-0.6b §4). tenantId (spec FS-2.1) defaults to the caller's own tenant, requiring only the tenant:admin scope (spec FS-2.2 V4). Naming a tenantId other than the caller's own — a platform admin provisioning a newly onboarded tenant's first key — additionally requires the platform:admin scope (spec FS-2.2 D4), enforced by shared.OnBehalfOfExecutor and recorded as AuditAction.ON_BEHALF_OF.
          */
         post: operations["createApiKey"];
         delete?: never;
@@ -76,7 +76,7 @@ export interface paths {
         put?: never;
         /**
          * Revoke an API key
-         * @description The key stops authenticating on the very next request (spec FS-0.6b DoD #5). Idempotent — revoking an already-revoked or unknown key still returns 200.
+         * @description The key stops authenticating on the very next request (spec FS-0.6b DoD #5). Idempotent — revoking an already-revoked or unknown key still returns 200. Requires the tenant:admin scope (spec FS-2.2 V4); RLS scopes visibility to the caller's own tenant's keys regardless.
          */
         post: operations["revokeApiKey"];
         delete?: never;
@@ -94,13 +94,13 @@ export interface paths {
         };
         /**
          * List consuming parties
-         * @description Every consuming party registered for the tenant (newest first), each with its status and resolved schema allowlist. Requires the admin scope.
+         * @description Every consuming party registered for the tenant (newest first), each with its status and resolved schema allowlist. Requires the consumer:manage scope.
          */
-        get: operations["list_3"];
+        get: operations["list_4"];
         put?: never;
         /**
          * Register a consuming party
-         * @description Creates a party with the given code and bilingual name. The code is a lowercase slug (^[a-z0-9][a-z0-9-_]{1,62}$); the row's id is derived deterministically from (tenant, code), so this is idempotent by identity — but registering an already-registered code is a conflict (KH-CNS-0409), not a silent overwrite. Requires the admin scope.
+         * @description Creates a party with the given code and bilingual name. The code is a lowercase slug (^[a-z0-9][a-z0-9-_]{1,62}$); the row's id is derived deterministically from (tenant, code), so this is idempotent by identity — but registering an already-registered code is a conflict (KH-CNS-0409), not a silent overwrite. Requires the consumer:manage scope.
          */
         post: operations["create_2"];
         delete?: never;
@@ -120,7 +120,7 @@ export interface paths {
         put?: never;
         /**
          * Reactivate a consuming party
-         * @description Flips a SUSPENDED party back to ACTIVE — its API keys authenticate again. Idempotent. Requires the admin scope.
+         * @description Flips a SUSPENDED party back to ACTIVE — its API keys authenticate again. Idempotent. Requires the consumer:manage scope.
          */
         post: operations["activate_1"];
         delete?: never;
@@ -161,7 +161,7 @@ export interface paths {
         post?: never;
         /**
          * Remove a schema from a party's allowlist
-         * @description Idempotent — removing a pair that is not allowed (including for an unknown party) is a successful 204 no-op. Requires the admin scope.
+         * @description Idempotent — removing a pair that is not allowed (including for an unknown party) is a successful 204 no-op. Requires the consumer:manage scope.
          */
         delete: operations["disallowSchema"];
         options?: never;
@@ -180,7 +180,7 @@ export interface paths {
         put?: never;
         /**
          * Mint an API key for a consuming party
-         * @description Creates a CONSUMING_PARTY-owned API key (scope: consume) for the given party. The response's rawKey is shown exactly once — the platform stores only its SHA-256 hash and prefix (spec FS-0.6b §4). Revoke it later via POST /api/v1/admin/api-keys/{id}/revoke. Requires the admin scope.
+         * @description Creates a CONSUMING_PARTY-owned API key (scope: consume) for the given party. The response's rawKey is shown exactly once — the platform stores only its SHA-256 hash and prefix (spec FS-0.6b §4). Revoke it later via POST /api/v1/admin/api-keys/{id}/revoke. Requires the consumer:manage scope.
          */
         post: operations["mintKey"];
         delete?: never;
@@ -200,7 +200,7 @@ export interface paths {
         put?: never;
         /**
          * Suspend a consuming party
-         * @description Flips the party to SUSPENDED — its API keys immediately stop authenticating (KH-1.4.4 D4), the same outcome as a revoked key. Idempotent. Requires the admin scope.
+         * @description Flips the party to SUSPENDED — its API keys immediately stop authenticating (KH-1.4.4 D4), the same outcome as a revoked key. Idempotent. Requires the consumer:manage scope.
          */
         post: operations["suspend_1"];
         delete?: never;
@@ -218,7 +218,7 @@ export interface paths {
         };
         /**
          * List every signing key's lifecycle status
-         * @description Every signing key for the tenant, newest first, every state including RETIRED — lifecycle fields only (kid/state/validFrom/validTo), never the public JWK or any private material. Requires the admin scope (any actor kind).
+         * @description Every signing key for the tenant, newest first, every state including RETIRED — lifecycle fields only (kid/state/validFrom/validTo), never the public JWK or any private material. Requires the key:manage scope (any actor kind).
          */
         get: operations["signingKeys"];
         put?: never;
@@ -240,13 +240,13 @@ export interface paths {
          * List tenants
          * @description Every tenant registered on the platform (newest first). Requires the admin scope.
          */
-        get: operations["list_2"];
+        get: operations["list_3"];
         put?: never;
         /**
          * Onboard a tenant
-         * @description Full onboarding: creates the tenant row, provisions its first ACTIVE signing key, and creates its default status list (<slug>-<year>, capacity 131072) before this call returns. Calling this again with a slug that already has a fully-onboarded tenant is a conflict (KH-TNT-0409); calling it again with a slug whose onboarding previously died partway through resumes it instead of conflicting. Requires the admin scope.
+         * @description Full onboarding: tenant row + first ACTIVE signing key + default status list (delegated to tenant::api), the three-role catalog seeded, and — when initialAdmin is present — the tenant's first TENANT_ADMIN with a one-time temporary password. Resumable: a retried slug fills whatever a prior partial onboarding left missing (catalog and/or admin), never duplicates. Requires the platform:admin scope.
          */
-        post: operations["create_1"];
+        post: operations["onboard"];
         delete?: never;
         options?: never;
         head?: never;
@@ -262,7 +262,7 @@ export interface paths {
         };
         /**
          * Fetch a tenant
-         * @description One tenant by id. Requires the admin scope.
+         * @description One tenant by id. Requires the platform:admin scope.
          */
         get: operations["get_2"];
         put?: never;
@@ -284,7 +284,7 @@ export interface paths {
         put?: never;
         /**
          * Reactivate a tenant
-         * @description Flips a SUSPENDED tenant back to ACTIVE — its users'/API keys' authentication resumes. Idempotent. Requires the admin scope.
+         * @description Flips a SUSPENDED tenant back to ACTIVE — its users'/API keys' authentication resumes. Idempotent. Requires the platform:admin scope.
          */
         post: operations["activate"];
         delete?: never;
@@ -304,9 +304,29 @@ export interface paths {
         put?: never;
         /**
          * Suspend a tenant
-         * @description Flips the tenant to SUSPENDED — its own users' sessions and API keys immediately stop authenticating (spec D7), the same outcome as a revoked key. Already-issued credentials keep verifying/consuming, and the tenant's JWKS + status lists stay public (spec V4) — suspension blocks new issuance only. Idempotent. Requires the admin scope.
+         * @description Flips the tenant to SUSPENDED — its own users' sessions and API keys immediately stop authenticating (spec D7), the same outcome as a revoked key. Already-issued credentials keep verifying/consuming, and the tenant's JWKS + status lists stay public (spec V4) — suspension blocks new issuance only. Idempotent. Requires the platform:admin scope.
          */
         post: operations["suspend"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/tenants/{id}/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a user to an existing tenant
+         * @description Creates a user in a tenant other than the caller's own — the same creation shape as a tenant admin's own-user create, run on behalf of the named tenant via OnBehalfOfExecutor (audited ON_BEHALF_OF). Requires the platform:admin scope.
+         */
+        post: operations["createUserInTenant"];
         delete?: never;
         options?: never;
         head?: never;
@@ -382,7 +402,7 @@ export interface paths {
         };
         /**
          * Current session's user
-         * @description Returns the authenticated user's username, display name, language, and scopes.
+         * @description Returns the authenticated user's username, display name, language, scopes, and mustChangePassword (spec FS-2.2 D5). This is the one endpoint exempt from the forced-password-change gate (rbac.security.PasswordChangeEnforcementFilter) — every other authenticated call returns 403 KH-USR-0403 while mustChangePassword is true, so a client should call this endpoint right after login to detect the state and route to the change screen before attempting anything else.
          */
         get: operations["me"];
         put?: never;
@@ -428,9 +448,9 @@ export interface paths {
         };
         /**
          * Search/list credentials
-         * @description Console-facing search over this tenant's credentials (KH-1.1.4) — proof/status metadata rows only, never claim content (P1 rule). Every filter is optional and AND-combined: ref (exact), pseudoRef (exact, resolved against the holder who was issued the credential), schemaId (exact), revoked (exact). Sorted by issuedAt descending; page/size are zero-based/1-100, defaulting to 0/20. Requires a console session — no API key of any kind works here (see rbac.security.SecurityConfig's Javadoc).
+         * @description Console-facing search over this tenant's credentials (KH-1.1.4) — proof/status metadata rows only, never claim content (P1 rule). Every filter is optional and AND-combined: ref (exact), pseudoRef (exact, resolved against the holder who was issued the credential), schemaId (exact), revoked (exact), status (repeatable — ACTIVE/EXHAUSTED/REVOKED/SUSPENDED/EXPIRED; multiple status values OR together, e.g. ?status=EXHAUSTED&status=REVOKED). status is the same explicit lifecycle value each row's own status field carries (spec FS-1.6 D1/D5) — filtered server-side against that identical derivation, so a row can never appear in a status filter's results while displaying a different status itself. Sorted by issuedAt descending; page/size are zero-based/1-100, defaulting to 0/20. Requires a console session — no API key of any kind works here (see rbac.security.SecurityConfig's Javadoc).
          */
-        get: operations["list_1"];
+        get: operations["list_2"];
         put?: never;
         post?: never;
         delete?: never;
@@ -614,13 +634,13 @@ export interface paths {
          * List credential schemas
          * @description Read-only tenant metadata (id, display name, version, status) — every authenticated actor kind may call this, no specific scope required (a deliberate, documented decision: see rbac.security.SecurityConfig's Javadoc). The optional status filter (KH-1.1.1) lets the console's schema management view show DRAFT rows too; the issue-form picker keeps filtering to PUBLISHED client-side, as before.
          */
-        get: operations["list"];
+        get: operations["list_1"];
         put?: never;
         /**
          * Create a new DRAFT credential schema (version 1)
-         * @description Requires the admin scope. Server-side validation rejects an empty claimsDef, a claim field with an unsupported type (text/number/date), a nameI18n or claim labelI18n missing en or ar, an sdFields entry not among the claim field names, or a code already registered at version 1 — all as KH-SCH-0400. The schema starts DRAFT and unavailable for issuance until POST /{id}/publish.
+         * @description Requires the schema:manage scope. Server-side validation rejects an empty claimsDef, a claim field with an unsupported type (text/number/date), a nameI18n or claim labelI18n missing en or ar, an sdFields entry not among the claim field names, or a code already registered at version 1 — all as KH-SCH-0400. The schema starts DRAFT and unavailable for issuance until POST /{id}/publish.
          */
-        post: operations["create"];
+        post: operations["create_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -641,7 +661,7 @@ export interface paths {
         get: operations["get"];
         /**
          * Rewrite a DRAFT schema's authoring fields in place
-         * @description Requires the admin scope. DRAFT only — fixes mistakes before publish. Validated identically to POST /api/v1/schemas.
+         * @description Requires the schema:manage scope. DRAFT only — fixes mistakes before publish. Validated identically to POST /api/v1/schemas.
          */
         put: operations["update"];
         post?: never;
@@ -662,7 +682,7 @@ export interface paths {
         put?: never;
         /**
          * Archive a PUBLISHED schema
-         * @description Requires the admin scope. PUBLISHED -> ARCHIVED — stops NEW issuance against this schema (POST /api/v1/credentials/issue and the internal find-or-create path both reject it, KH-SCH-1409); every credential already issued against it, and its verification/consumption, is completely unaffected.
+         * @description Requires the schema:manage scope. PUBLISHED -> ARCHIVED — stops NEW issuance against this schema (POST /api/v1/credentials/issue and the internal find-or-create path both reject it, KH-SCH-1409); every credential already issued against it, and its verification/consumption, is completely unaffected.
          */
         post: operations["archive"];
         delete?: never;
@@ -682,7 +702,7 @@ export interface paths {
         put?: never;
         /**
          * Publish a DRAFT schema
-         * @description Requires the admin scope. DRAFT -> PUBLISHED — the immutability line: a published schema's claim fields can never be mutated again (no general update endpoint exists for a PUBLISHED schema); a mistake found later needs a new version (POST /{id}/versions) instead. A PUBLISHED schema becomes a valid issuance target for POST /api/v1/credentials/issue's schemaCode.
+         * @description Requires the schema:manage scope. DRAFT -> PUBLISHED — the immutability line: a published schema's claim fields can never be mutated again (no general update endpoint exists for a PUBLISHED schema); a mistake found later needs a new version (POST /{id}/versions) instead. A PUBLISHED schema becomes a valid issuance target for POST /api/v1/credentials/issue's schemaCode.
          */
         post: operations["publish"];
         delete?: never;
@@ -702,7 +722,7 @@ export interface paths {
         put?: never;
         /**
          * Create a new DRAFT version of a PUBLISHED schema
-         * @description Requires the admin scope. Same code, version + 1. The console is responsible for prefilling the request body from the source schema's current fields — this endpoint validates the submitted body exactly like POST /api/v1/schemas, with no server-side default-merging.
+         * @description Requires the schema:manage scope. Same code, version + 1. The console is responsible for prefilling the request body from the source schema's current fields — this endpoint validates the submitted body exactly like POST /api/v1/schemas, with no server-side default-merging.
          */
         post: operations["createVersion"];
         delete?: never;
@@ -765,6 +785,150 @@ export interface paths {
         get: operations["dailyStats"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List tenant users
+         * @description Every user of the caller's tenant, newest first. Requires the tenant:admin scope.
+         */
+        get: operations["list"];
+        put?: never;
+        /**
+         * Create a tenant user
+         * @description Creates a user with a generated temporary password (shown once) and forces a change at first login. Roles are chosen from the fixed seeded catalog. Requires the tenant:admin scope.
+         */
+        post: operations["create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/me/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change own password
+         * @description The self-service password change — the one call a temporary-password user may make while must_change_password is set, and the call that clears it. Any authenticated console user may call it; the target user is taken from the session principal, never the body.
+         */
+        post: operations["changeMyPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{id}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Disable a user
+         * @description Sets the user DISABLED. Requires the tenant:admin scope. Refused with 409 (KH-USR-0423) if this is the tenant's last active administrator.
+         */
+        post: operations["disable"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{id}/lock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Lock a user
+         * @description Sets the user LOCKED. Requires the tenant:admin scope. Refused with 409 (KH-USR-0423) if this is the tenant's last active administrator.
+         */
+        post: operations["lock"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{id}/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset a user's password
+         * @description Generates a new temporary password (shown once) and forces a change at next login. Requires the tenant:admin scope.
+         */
+        post: operations["resetPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{id}/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Replace a user's roles
+         * @description Replaces the user's entire role set. Requires the tenant:admin scope. Refused with 409 (KH-USR-0423) if it would remove the tenant's last active administrator.
+         */
+        post: operations["replaceRoles"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{id}/unlock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unlock a user
+         * @description Restores a LOCKED/DISABLED user to ACTIVE. Requires the tenant:admin scope.
+         */
+        post: operations["unlock"];
         delete?: never;
         options?: never;
         head?: never;
@@ -904,6 +1068,10 @@ export interface components {
             /** Format: int32 */
             total?: number;
         };
+        ChangePasswordRequest: {
+            currentPassword: string;
+            newPassword: string;
+        };
         /** @description Request to mint a fresh wallet claim code for an already-issued credential */
         ClaimCodeMintRequest: {
             sdJwt: string;
@@ -1007,11 +1175,16 @@ export interface components {
             code?: string;
             nameI18n: components["schemas"]["NameI18nRequest"];
         };
-        CreateTenantRequest: {
-            deployMode?: string;
-            nameI18n: components["schemas"]["NameI18nRequest"];
-            slug?: string;
-            type: string;
+        CreateUserRequest: {
+            displayNameI18n: components["schemas"]["DisplayNameI18nRequest"];
+            roles?: string[];
+            username: string;
+        };
+        CreateUserResponse: {
+            /** Format: uuid */
+            id?: string;
+            temporaryPassword?: string;
+            username?: string;
         };
         CredentialPage: {
             items?: components["schemas"]["CredentialSummary"][];
@@ -1069,6 +1242,10 @@ export interface components {
             days?: components["schemas"]["DailyStatsEntry"][];
             window?: components["schemas"]["StatsWindow"];
         };
+        DisplayNameI18nRequest: {
+            ar: string;
+            en: string;
+        };
         /** @description One field-level validation failure */
         ErrorDetail: {
             field?: string;
@@ -1099,6 +1276,16 @@ export interface components {
             /** Format: int32 */
             usesRemaining?: number;
         };
+        /** @description The tenant's first administrator (optional) */
+        InitialAdminRequest: {
+            displayNameI18n: components["schemas"]["DisplayNameI18nRequest"];
+            username: string;
+        };
+        /** @description The first administrator (null when none was requested) */
+        InitialAdminResponse: {
+            temporaryPassword?: string;
+            username?: string;
+        };
         /** @description Request to issue a new SD-JWT verifiable credential */
         IssueRequest: {
             claims?: {
@@ -1128,6 +1315,7 @@ export interface components {
         };
         MeResponse: {
             displayNameI18n?: components["schemas"]["LocalizedText"];
+            mustChangePassword?: boolean;
             preferredLang?: string;
             scopes?: string[];
             username?: string;
@@ -1135,6 +1323,30 @@ export interface components {
         NameI18nRequest: {
             ar: string;
             en: string;
+        };
+        /** @description Onboard a tenant, optionally with its first administrator */
+        OnboardTenantRequest: {
+            deployMode?: string;
+            initialAdmin?: components["schemas"]["InitialAdminRequest"];
+            nameI18n: components["schemas"]["DisplayNameI18nRequest"];
+            slug: string;
+            type: string;
+        };
+        /** @description An onboarded tenant, optionally with its first administrator's one-time password */
+        OnboardTenantResponse: {
+            /** Format: date-time */
+            createdAt?: string;
+            deployMode?: string;
+            /** Format: uuid */
+            id?: string;
+            initialAdmin?: components["schemas"]["InitialAdminResponse"];
+            nameI18n?: components["schemas"]["LocalizedText"];
+            slug?: string;
+            status?: string;
+            type?: string;
+        };
+        ReplaceRolesRequest: {
+            roles?: string[];
         };
         SchemaAuthoringRequest: {
             claimsDef: components["schemas"]["ClaimFieldRequest"][];
@@ -1232,6 +1444,16 @@ export interface components {
             slug?: string;
             status?: string;
             type?: string;
+        };
+        UserSummary: {
+            /** Format: date-time */
+            createdAt?: string;
+            displayNameI18n?: components["schemas"]["LocalizedText"];
+            /** Format: uuid */
+            id?: string;
+            roles?: string[];
+            status?: string;
+            username?: string;
         };
         /** @description Request to verify an SD-JWT credential presentation */
         VerifyRequest: {
@@ -1345,7 +1567,7 @@ export interface operations {
                     "*/*": components["schemas"]["CreateApiKeyResponse"];
                 };
             };
-            /** @description Missing the admin scope (KH-RBC-0403) */
+            /** @description Missing the tenant:admin scope, or (when tenantId names another tenant) missing the platform:admin scope (KH-RBC-0403) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1383,7 +1605,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Missing the admin scope (KH-RBC-0403) */
+            /** @description Missing the tenant:admin scope (KH-RBC-0403) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1394,7 +1616,7 @@ export interface operations {
             };
         };
     };
-    list_3: {
+    list_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -1421,7 +1643,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Missing the admin scope (KH-RBC-0403) */
+            /** @description Missing the consumer:manage scope (KH-RBC-0403) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1472,7 +1694,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Missing the admin scope (KH-RBC-0403) */
+            /** @description Missing the consumer:manage scope (KH-RBC-0403) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1521,7 +1743,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Missing the admin scope (KH-RBC-0403) */
+            /** @description Missing the consumer:manage scope (KH-RBC-0403) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1574,7 +1796,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Missing the admin scope (KH-RBC-0403) */
+            /** @description Missing the consumer:manage scope (KH-RBC-0403) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1622,7 +1844,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Missing the admin scope (KH-RBC-0403) */
+            /** @description Missing the consumer:manage scope (KH-RBC-0403) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1662,7 +1884,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Missing the admin scope (KH-RBC-0403) */
+            /** @description Missing the consumer:manage scope (KH-RBC-0403) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1711,7 +1933,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Missing the admin scope (KH-RBC-0403) */
+            /** @description Missing the consumer:manage scope (KH-RBC-0403) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1758,7 +1980,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Authenticated without the admin scope */
+            /** @description Authenticated without the key:manage scope */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1769,7 +1991,7 @@ export interface operations {
             };
         };
     };
-    list_2: {
+    list_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -1796,7 +2018,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Missing the admin scope (KH-RBC-0403) */
+            /** @description Missing the platform:admin scope (KH-RBC-0403) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1807,7 +2029,7 @@ export interface operations {
             };
         };
     };
-    create_1: {
+    onboard: {
         parameters: {
             query?: never;
             header?: never;
@@ -1816,7 +2038,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateTenantRequest"];
+                "application/json": components["schemas"]["OnboardTenantRequest"];
             };
         };
         responses: {
@@ -1826,10 +2048,10 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["TenantView"];
+                    "*/*": components["schemas"]["OnboardTenantResponse"];
                 };
             };
-            /** @description Bean Validation failed, or an invalid slug format (KH-TNT-0400) */
+            /** @description Bean Validation failed, or an invalid slug (KH-TNT-0400) */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1847,7 +2069,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Missing the admin scope (KH-RBC-0403) */
+            /** @description Missing the platform:admin scope (KH-RBC-0403) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1896,7 +2118,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Missing the admin scope (KH-RBC-0403) */
+            /** @description Missing the platform:admin scope (KH-RBC-0403) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1945,7 +2167,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Missing the admin scope (KH-RBC-0403) */
+            /** @description Missing the platform:admin scope (KH-RBC-0403) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1994,7 +2216,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Missing the admin scope (KH-RBC-0403) */
+            /** @description Missing the platform:admin scope (KH-RBC-0403) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2005,6 +2227,77 @@ export interface operations {
             };
             /** @description No tenant with this id (KH-TNT-0404) */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    createUserInTenant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateUserRequest"];
+            };
+        };
+        responses: {
+            /** @description User created; temporary password returned once */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CreateUserResponse"];
+                };
+            };
+            /** @description Invalid username or role code (KH-USR-0400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the platform:admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Target tenant not found (KH-TNT-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Username already exists in that tenant (KH-USR-0409) */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2181,13 +2474,14 @@ export interface operations {
             };
         };
     };
-    list_1: {
+    list_2: {
         parameters: {
             query?: {
                 ref?: string;
                 pseudoRef?: string;
                 schemaId?: string;
                 revoked?: boolean;
+                status?: string[];
                 page?: number;
                 size?: number;
             };
@@ -2204,6 +2498,15 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["CredentialPage"];
+                };
+            };
+            /** @description A status value is not one of the recognized statuses (KH-SYS-0400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description No valid session */
@@ -2594,7 +2897,7 @@ export interface operations {
             };
         };
     };
-    list: {
+    list_1: {
         parameters: {
             query?: {
                 status?: string;
@@ -2625,7 +2928,7 @@ export interface operations {
             };
         };
     };
-    create: {
+    create_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -2665,7 +2968,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Missing the admin scope */
+            /** @description Missing the schema:manage scope */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2758,7 +3061,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Missing the admin scope */
+            /** @description Missing the schema:manage scope */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2816,7 +3119,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Missing the admin scope */
+            /** @description Missing the schema:manage scope */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2874,7 +3177,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Missing the admin scope */
+            /** @description Missing the schema:manage scope */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2945,7 +3248,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Missing the admin scope */
+            /** @description Missing the schema:manage scope */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3115,6 +3418,375 @@ export interface operations {
             };
             /** @description Authenticated with an API key instead of a console session */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The tenant's users */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserSummary"][];
+                };
+            };
+            /** @description No valid session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateUserRequest"];
+            };
+        };
+        responses: {
+            /** @description User created; temporary password returned once */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CreateUserResponse"];
+                };
+            };
+            /** @description Invalid username or role code (KH-USR-0400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Username already exists (KH-USR-0409) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    changeMyPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Password changed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Current password incorrect (KH-USR-0400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No valid session */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    disable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description User disabled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserSummary"];
+                };
+            };
+            /** @description Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description User not found (KH-USR-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Would remove the last active administrator (KH-USR-0423) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    lock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description User locked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserSummary"];
+                };
+            };
+            /** @description Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description User not found (KH-USR-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Would remove the last active administrator (KH-USR-0423) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    resetPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Password reset; temporary password returned once */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CreateUserResponse"];
+                };
+            };
+            /** @description Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description User not found (KH-USR-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    replaceRoles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplaceRolesRequest"];
+            };
+        };
+        responses: {
+            /** @description Roles replaced */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserSummary"];
+                };
+            };
+            /** @description Unknown role code (KH-USR-0400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description User not found (KH-USR-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Would remove the last active administrator (KH-USR-0423) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    unlock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description User unlocked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserSummary"];
+                };
+            };
+            /** @description Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description User not found (KH-USR-0404) */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

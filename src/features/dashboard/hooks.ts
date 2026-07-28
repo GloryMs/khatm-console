@@ -77,9 +77,9 @@ export function useAttention() {
 }
 
 /**
- * Every signing key's lifecycle status — the signing-keys panel. Admin-scoped
- * on the server; pass `enabled: hasScope('admin')` so a non-admin operator's
- * dashboard never fires a request that can only 403.
+ * Every signing key's lifecycle status — the signing-keys panel.
+ * `key:manage`-scoped on the server; pass `enabled: hasScope('key:manage')`
+ * so an operator without that scope never fires a request that can only 403.
  */
 export function useSigningKeyStatuses(enabled: boolean) {
   return useQuery({

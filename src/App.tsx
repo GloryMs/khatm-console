@@ -4,6 +4,7 @@ import { queryClient } from '@/api/queryClient';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { AppShell } from '@/components/ui/AppShell';
 import { AuthProvider } from '@/features/auth/AuthProvider';
+import { ChangePasswordPage } from '@/features/auth/ChangePasswordPage';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { RequireAuth } from '@/features/auth/RequireAuth';
 import { RequireScope } from '@/features/auth/RequireScope';
@@ -20,6 +21,7 @@ import { SchemaViewPage } from '@/features/schemaManagement/SchemaViewPage';
 import { SchemasPage } from '@/features/schemas/SchemasPage';
 import { TenantDetailPage } from '@/features/tenants/TenantDetailPage';
 import { TenantsPage } from '@/features/tenants/TenantsPage';
+import { UsersPage } from '@/features/users/UsersPage';
 import { VerifyPage } from '@/features/verify/VerifyPage';
 
 export function App() {
@@ -31,6 +33,7 @@ export function App() {
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route element={<RequireAuth />}>
+                <Route path="/change-password" element={<ChangePasswordPage />} />
                 <Route element={<AppShell />}>
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route path="/dashboard" element={<DashboardPage />} />
@@ -60,6 +63,7 @@ export function App() {
                   <Route path="/revoke" element={<RevokePage />} />
                   <Route path="/consumers" element={<ConsumingPartiesPage />} />
                   <Route path="/consume-sim" element={<ConsumeSimPage />} />
+                  <Route path="/users" element={<UsersPage />} />
                   <Route path="/tenants" element={<TenantsPage />} />
                   <Route path="/tenants/:id" element={<TenantDetailPage />} />
                 </Route>

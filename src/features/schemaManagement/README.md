@@ -7,7 +7,8 @@ any-operator catalog.
 Routes: `/schemas/manage` (list), `/schemas/manage/new` (create),
 `/schemas/manage/:id/edit` (DRAFT only), `/schemas/manage/:id/version` (from a
 PUBLISHED source), `/schemas/manage/:id` (read-only, ARCHIVED view). All
-gated behind `RequireScope('admin')`.
+gated behind `RequireScope('schema:manage')` (spec FS-2.2 D2 — replaces the
+former coarse `admin` scope).
 
 Queries/mutations: `useManagedSchemas` (all statuses), `useManagedSchema(id)`,
 `useCreateSchema`, `useUpdateSchema`, `usePublishSchema`, `useArchiveSchema`,
