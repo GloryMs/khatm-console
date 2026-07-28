@@ -4,11 +4,12 @@
 
 ## Current phase / task
 
-- C6b status filter (chore follow-up to C6) — **self-stopped on its one code item**: the
-  refreshed contract (now the officially-merged `khatm-platform` `main`, see below) still exposes
-  no server-side `status` query param on `GET /api/v1/credentials`, so no filter-bar dropdown was
-  added (badge/uses rendering from C6 is unchanged). STATE hygiene (this section + the platform-ask
-  entries below) done in the same pass. See "Last completed" 2026-07-28.
+- C6b status filter (chore follow-up to C6) — **PR #17 open, not merged.** Self-stopped on its
+  one code item: the refreshed contract (now the officially-merged `khatm-platform` `main`, see
+  below) still exposes no server-side `status` query param on `GET /api/v1/credentials`, so no
+  filter-bar dropdown was added (badge/uses rendering from C6 is unchanged). STATE hygiene (this
+  section + the platform-ask entries below) done in the same pass. See "Last completed"
+  2026-07-28.
 - C6 Credential lifecycle (search status badge/uses column, consume-sim remaining-uses) —
   **DONE. PR #16 merged 2026-07-28** (squash, branch deleted), Majd-approved. Self-stopped
   2026-07-27 at the preamble gate (contract lacked `status`/`usesConsumed`/`holder-status` at the
@@ -60,7 +61,7 @@ contract:update` (`gh api` fallback) against `origin/main`. khatm-platform PR #3
     - docs changes: typecheck/lint/test all green (199/199), `format:check` clean on every file
       this session touched (fails only on the pre-existing untracked `.vscode/extensions.json`,
       unrelated).
-  - PR opened, not merged.
+  - PR #17 opened, not merged.
 
 - 2026-07-28 (C6 credential lifecycle, resumed and delivered): Majd reported the platform had
   been redeployed and asked for a fresh look at `docs/specs`. A new spec had landed —
