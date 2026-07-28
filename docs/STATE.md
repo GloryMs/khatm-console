@@ -742,11 +742,15 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
   `npm run contract:update` + a recursive-key-sorted diff against what C6 had already vendored
   confirmed **zero semantic drift** (only the `servers` block differed, same as the 2026-07-26
   Dashboard contract-sanity precedent).
-- **Platform ask, new 2026-07-28 (C6b status-filter chore, self-stopped):** `GET
-/api/v1/credentials` still has no server-side `status` query param — confirmed absent in the
-  now-fully-merged `khatm-platform` `main` contract (only `ref`/`pseudoRef`/`schemaId`/
-  `revoked`(boolean)/`page`/`size` exist). A status-filter dropdown in the credentials search UI
-  needs this param added server-side before it can be built; see "Last completed" 2026-07-28.
+- **Platform ask, logged 2026-07-28 (C6b status-filter chore, self-stopped) — ADDRESSED ON THE
+  PLATFORM SIDE, not yet in a console-consumable contract:** `khatm-platform` session
+  `chore/credential-search-status-filter` added the server-side `status` query param this ask
+  named — **PR #41 opened on `khatm-platform`, NOT YET MERGED.** Do not run `npm run
+  contract:update` against this until #41 merges (it is still on a feature branch, not `main`).
+  Once merged: re-run the preamble contract refresh, confirm `status` (repeatable,
+  `ACTIVE|EXHAUSTED|REVOKED|SUSPENDED|EXPIRED`, OR-combined) appears on `GET
+  /api/v1/credentials`'s `parameters`, and the status-filter dropdown (item 5 under "Next up") is
+  unblocked.
 - **`npm run check`'s `format:check` step fails on an untracked `.vscode/extensions.json`** —
   noticed 2026-07-23 during the qr-api-base-guard chore, pre-existing (not introduced by that
   branch or any tracked commit; present in the working tree, never staged). `typecheck`/`lint`/
@@ -814,8 +818,10 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 3. KH-2.2-era RBAC changes, whatever those turn out to require.
 4. Unify the scope-gating placement convention (self-gating vs. App.tsx-level wrapping — see
    "Open decisions" above) across every gated page.
-5. Credentials search status-filter dropdown — blocked on the platform ask logged 2026-07-28
-   (C6b): needs a `status` query param on `GET /api/v1/credentials` first.
+5. Credentials search status-filter dropdown — the platform ask logged 2026-07-28 (C6b) is
+   addressed on `khatm-platform`'s side via PR #41 (`chore/credential-search-status-filter`), but
+   that PR is **not yet merged** — still blocked until it lands on `khatm-platform` `main` and this
+   repo's `npm run contract:update` picks it up. See "Open decisions" above.
 
 Closed: item #5 (was #6), contract zero-diff sanity check for KH-1.6-BE — PR #39 merged
 2026-07-28, C6b's re-run confirmed zero semantic drift; see "Last completed" and "Open
