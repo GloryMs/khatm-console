@@ -4,6 +4,15 @@
 
 ## Current phase / task
 
+- C6 Credential lifecycle (search status badge/uses column, consume-sim remaining-uses) —
+  **DONE, PR #16 open, not merged.** Branch `feat/C6-credential-lifecycle`. Self-stopped 2026-07-27
+  at the preamble gate (contract lacked `status`/`usesConsumed`/`holder-status` at the time),
+  resumed 2026-07-28 once spec FS-1.6 landed and khatm-platform's PR #39 (KH-1.6-BE) was
+  confirmed live on the local compose stack — see "Last completed" for both entries. **Vendored
+  from the live local `khatm-api` running PR #39, which is open but not yet merged to
+  `khatm-platform`'s `main`** — a deliberate, precedented call (same as the 2026-07-25 Dashboard
+  session); re-run the zero-diff sanity check once PR #39 actually merges. Awaiting Majd's
+  review + the Arabic-review gate.
 - C5 Tenants management screen — **DONE, PR open, not merged.** Branch
   `feat/C5-tenants-screen`. Awaiting Majd's review + the Arabic-review gate (hard merge
   blocker per the brief).
@@ -15,6 +24,137 @@
   manual EN/AR + RTL walkthrough of that specific banner was never explicitly logged as run.
 
 ## Last completed
+
+- 2026-07-28 (C6 credential lifecycle, resumed and delivered): Majd reported the platform had
+  been redeployed and asked for a fresh look at `docs/specs`. A new spec had landed —
+  `FS-1.6-consumption-lifecycle-visibility.md` (approved 2026-07-27) — with khatm-platform's
+  KH-1.6-BE brief attached. Re-checked the 2026-07-27 self-stop gate:
+  - `npm run contract:update` against `origin/main` (`gh api` fallback) + `npm run gen:api`: **no
+    change** — khatm-platform PR #39 (`feat/KH-1.6-BE-consumption-lifecycle`, KH-1.6-BE) is open
+    but **not yet merged**, so the GitHub-published contract still lacks everything from
+    2026-07-27's self-stop.
+  - Confirmed via `gh pr list` and the local `khatm-platform` checkout that PR #39 exists and its
+    branch is checked out; confirmed via `docker ps` that the local compose stack's `khatm-api`
+    container has been up for the current session (built from that branch, not `main`).
+  - Probed the live container directly (`curl http://localhost:8080/v3/api-docs`, investigation
+    only, not for codegen per the standing rule) and confirmed it actually serves the new surface:
+    `CredentialSummary`/`CredentialView` both carry `status` (`ACTIVE`/`EXHAUSTED`/`REVOKED`/
+    `SUSPENDED`/`EXPIRED`) and `usesConsumed`; `POST /api/v1/credentials/holder-status` exists
+    (public, bare-JWT body, unified 404 anti-enumeration per spec D3). Both self-stop conditions
+    are now satisfied — but only against this pre-merge branch, not `origin/main`.
+  - **Judgment call, confirmed with Majd before proceeding**: vendor `contracts/openapi.json`
+    directly from the live local `khatm-api` (`/v3/api-docs`, sorted-key-pretty-printed to match
+    the existing file's style) rather than waiting for PR #39 to merge — exact precedent from the
+    2026-07-25 Dashboard session (pulled live when the platform's GitHub branch wasn't merged
+    yet, sanity-diffed once it was). `npm run gen:api` regenerated types clean; `npm run
+typecheck` green immediately after.
+  - Read the platform source (`credential/domain/CredentialStatus.java`,
+    `credential/api/CredentialSummary.java`/`CredentialView.java`) to ground the exact enum
+    vocabulary and precedence rather than guessing from the OpenAPI string type alone: `ACTIVE`,
+    `EXHAUSTED`, `REVOKED`, `SUSPENDED`, `EXPIRED` — derived at read time (no new column),
+    precedence `REVOKED` > `EXHAUSTED` > `EXPIRED` > `ACTIVE`. `SUSPENDED` is part of the
+    published vocabulary for forward stability but **not reachable yet** — no mechanism suspends
+    an individual credential today (tenant suspension, KH-2.1, deliberately does not touch
+    already-issued credentials). `usesConsumed = maxUses - usesRemaining`, computed server-side.
+  - Delivered, scoped to exactly the brief's three items (a small session, per its own framing):
+    1. **Credentials search rows** (`ResultsTable.tsx`) and **the revoke-lookup detail view**
+       (`revoke/components/CredentialSummary.tsx` — confirmed this is the only existing
+       "detail surface" for a single credential; there is no standalone `/credentials/:id`
+       route) both now render the server's real `status` via a shared new helper,
+       `components/ui/credentialStatus.ts` (tone + i18n-key mapping for all five values,
+       `neutral`/`common.unknown` fallback for anything unrecognized) — replacing each file's
+       own client-derived `revoked`/`validTo` guess from before KH-1.6-BE existed. The "uses"
+       column/field now renders `usesConsumed/maxUses` (e.g. `2/2`) via a new
+       `revoke.usesConsumedValue` key, replacing the old "X of Y remaining" phrasing (kept as
+       `revoke.usesValue`, now unused by these two call sites but left in place — no other
+       caller was touched this session, not worth a speculative removal).
+    2. **Status filter dropdown — deliberately not added.** `GET /api/v1/credentials`'s own
+       `parameters` (confirmed in both the pre-merge and now-current contract) still only
+       exposes `ref`/`pseudoRef`/`schemaId`/`revoked`(boolean)/`page`/`size` — no `status` query
+       param. Per the brief's own fallback ("client-side column display only... instead of
+       improvising"), no dropdown was built: a client-side-only filter over one server-paginated
+       page of up to 20 rows would silently only filter what's currently visible, not the actual
+       result set, which is exactly the kind of misleading partial feature this codebase's past
+       sessions have consistently avoided (bulk-CSV chunking, C5's JWKS-only fallback, etc.).
+       Recorded as a fresh platform ask below.
+    3. **Consume simulator — no code change needed.** `ConsumeResponse.usesRemaining` already
+       existed pre-KH-1.6-BE and `ConsumeSimPage`'s result panel already renders it
+       (`consumeSim.result.usesRemaining`, shipped since C2b/the LAN-IP bugfix session) — the
+       brief's item 3 was already satisfied by prior work; confirmed by reading both the live
+       `ConsumeResponse` schema (unchanged: `{consumed, reason, usesRemaining}`) and
+       `ConsumeSimPage.tsx`'s existing `ResultPanel`.
+  - i18n: `common.unknown`, `revoke.statusExhausted`, `revoke.statusSuspended`,
+    `revoke.usesConsumedValue` added to both `en.json`/`ar.json` in the same commit;
+    `credentials.table.uses`/`revoke.uses` header labels updated from "Uses remaining" to "Uses"
+    (no longer accurate once the column shows consumed/total, not remaining). No new CSS touched,
+    so the existing RTL grep stays clean without a re-run being meaningful.
+  - Tests: 199 total now (was 198) — extended `CredentialsPage.test.tsx` (new assertion: real
+    `status`/`usesConsumed` fixture renders the "Active" badge and `1/3`) and
+    `RevokePage.test.tsx` (same, `0/3`); no new test _files_, since both surfaces were already
+    covered by existing suites.
+  - **Live verification, API-level (no browser-automation tool available, same standing
+    limitation)**: rebuilt and recreated the `khatm-console` container against the already-running
+    stack; logged in via the console's own proxy (`localhost:3000`, CSRF header pattern from C5's
+    STATE note); issued a fresh `maxUses=2` credential, consumed it twice via the real consume
+    endpoint (2nd call returned `usesRemaining:0`), a 3rd call correctly got
+    `already_consumed`/`usesRemaining:0` — then confirmed **all three surfaces agree**:
+    `holder-status` → `EXHAUSTED, 0/2 remaining`; the search endpoint (through the console's own
+    proxy) → `status:"EXHAUSTED", usesConsumed:2, maxUses:2`; the detail endpoint → identical.
+    This is the exact DoD walkthrough the KH-1.6-BE brief itself specifies. Grepped the built,
+    served bundle for `EXHAUSTED`/`statusExhausted`/`usesConsumed` as a static confirmation the
+    new code actually shipped. What this does **not** cover: seeing the badge/uses column
+    rendered in an actual browser or the Arabic/RTL layout — **Majd's manual EN/AR browser
+    walkthrough is still the real merge gate**, consistent with every prior session.
+  - `npm run typecheck`, `npm run lint` (only the pre-existing `FormField.tsx` fast-refresh
+    warning), `npm run test` (199/199), and `npm run build` all clean. `format:check` clean on
+    every file this session touched or added (including the new `FS-1.6` spec doc, reformatted
+    with `prettier --write` before committing); still fails only on the pre-existing untracked
+    `.vscode/extensions.json` (see "Open decisions", unrelated to this branch).
+  - PR #16 opened, not merged.
+
+- 2026-07-27 (C6 credential lifecycle, self-stopped at preamble): Brief asked for a status badge +
+  `usesConsumed/maxUses` "uses" column on the credentials search rows, a server-side status filter
+  (only if the contract exposes one), and surfacing remaining-uses after a consume-sim call —
+  explicitly self-stopping first if `status`/`usesConsumed`/`maxUses` are absent from the
+  credential search schema or if `holder-status` is absent from the contract at all. Ran the
+  preamble: `npm run contract:update` (`gh api` fallback, as usual for this private upstream) +
+  `npm run gen:api` — **zero diff against the already-committed contract/generated types**
+  (confirmed via `git status`/`git diff --stat`, both empty), so this is the same contract C5
+  already vendored, not a stale local copy. Inspected `CredentialSummary`/`CredentialPage`
+  (backing `GET /api/v1/credentials`) and `CredentialView` (backing `GET /api/v1/credentials/{id}`)
+  directly in `contracts/openapi.json`:
+  - Fields present: `id`, `ref`, `schemaCode`, `schemaName` (summary only), `issuedAt` (summary
+    only), `validTo`, `maxUses`, `usesRemaining`, `revoked` (boolean).
+  - **`status` and `usesConsumed` are both absent** — the closest things are the boolean `revoked`
+    flag and `usesRemaining` (an uses-left count, not a uses-consumed count; `maxUses -
+usesRemaining` could be derived client-side, but the brief's self-stop condition names
+    `usesConsumed` specifically, not a derived value, and there's no `status` enum at all to badge
+    against — `revoked` alone can't express e.g. "expired" or "exhausted" distinctly).
+  - `GET /api/v1/credentials`'s own `parameters` list confirms no server-side status/filter param
+    beyond the boolean `revoked` — so item 2 of the brief (status dropdown, server-side only if
+    exposed) would have had no contract surface to bind to even if item 1's gate had passed.
+  - **`holder-status` does not exist anywhere in the contract** — grepped the raw
+    `openapi.json` for `holderStatus`/`holder_status`/`holder-status` (case-insensitive), zero
+    hits. The only unrelated `"status"` occurrences in the file are `BulkIssueItemResult.status`,
+    `SchemaSummary.status`, `TenantView.status`, `SigningKeyView.status`, the `/schemas` list's
+    `status` query param, and the `status`-tagged status-list-artifact endpoints (`/t/{tenantSlug}/…`)
+    — none of these are a credential-holder status concept.
+  - Both self-stop conditions in the brief are independently true (missing search-schema fields
+    **and** missing holder-status), so per the brief's own protocol: **no UI code was written this
+    session.** Recording the platform ask below rather than improvising a client-derived status
+    badge or a client-only filter that the brief explicitly said not to invent.
+  - **Platform ask (new, concrete)**: `CredentialSummary`/`CredentialView` need either a `status`
+    enum field (e.g. `ACTIVE`/`EXPIRED`/`EXHAUSTED`/`REVOKED`) or enough raw fields for the console
+    to derive one correctly without guessing, plus a `usesConsumed` count (or confirm
+    `maxUses - usesRemaining` is the intended derivation) — and a "holder status" concept needs to
+    exist in the contract at all before any UI can surface it (unclear from this session alone
+    whether that means a claim-redemption/holder-side state distinct from the credential's own
+    revoked/uses state, or the same status enum above — needs platform-side clarification on what
+    "holder-status" is meant to represent).
+  - `npm run typecheck`/`lint`/`test` not re-run (no code touched); `git status` confirms the
+    working tree is clean apart from the untracked, pre-existing `.claude/`/`.vscode/`/
+    `docs/sessions/` noted in every recent session's preamble.
+  - No branch created, no PR opened — there is nothing to review yet.
 
 - 2026-07-27 (C5 Tenants management screen): Preamble gate held cleanly this time — `npm run
 contract:update` + `npm run gen:api` against `origin/main` showed both required surfaces
@@ -555,6 +695,14 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 
 ## Open decisions / blockers
 
+- **Platform ask from 2026-07-27 — resolved 2026-07-28.** Spec FS-1.6 (Consumption Lifecycle
+  Visibility) landed and khatm-platform's KH-1.6-BE (PR #39) delivers exactly what was asked:
+  `status`/`usesConsumed` on `CredentialSummary`/`CredentialView`, and a public
+  `POST /api/v1/credentials/holder-status`. See "Last completed" 2026-07-28 for the C6 delivery
+  built against it. **Residual, not blocking:** PR #39 is open, not yet merged to
+  `khatm-platform`'s `main` — re-run the zero-diff sanity check (`npm run contract:update`
+  against `origin/main` + diff) once it merges, same pattern as the 2026-07-26 Dashboard
+  contract-sanity session.
 - **`npm run check`'s `format:check` step fails on an untracked `.vscode/extensions.json`** —
   noticed 2026-07-23 during the qr-api-base-guard chore, pre-existing (not introduced by that
   branch or any tracked commit; present in the working tree, never staged). `typecheck`/`lint`/
@@ -625,6 +773,11 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 5. **Blocking, not yet done:** Majd's manual EN/AR + RTL browser walkthrough of the C5 Tenants
    screen (`feat/C5-tenants-screen`, PR open) — the session's own verification stopped at the
    API/curl level (no browser-automation tool available); see "Last completed" 2026-07-27.
+6. **Blocking, not yet done:** Majd's manual EN/AR browser walkthrough of C6's credential
+   status badge/uses column (`feat/C6-credential-lifecycle`, PR #16 open) — same API-level-only
+   limitation; see "Last completed" 2026-07-28.
+7. Re-run the contract zero-diff sanity check once khatm-platform PR #39 (KH-1.6-BE) merges to
+   `main` — C6 currently runs against a live pre-merge vendor of that branch.
 
 Closed: Dashboard v2's four data-less panels — all wired to real khatm-platform data
 (KH-1.1.5-BE) 2026-07-25; see "Last completed". Closed: the full EN/AR + RTL click-through

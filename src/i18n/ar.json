@@ -244,8 +244,11 @@
     "statusActive": "نشط",
     "statusRevoked": "مبطل",
     "statusExpired": "منتهي الصلاحية",
-    "uses": "الاستخدامات المتبقية",
+    "statusExhausted": "مستنفد",
+    "statusSuspended": "موقوف",
+    "uses": "الاستخدامات",
     "usesValue": "متبقٍّ {{remaining}} من {{max}}",
+    "usesConsumedValue": "{{consumed}}/{{max}}",
     "usesUnlimited": "غير محدود",
     "validTo": "صالح حتى",
     "noExpiry": "بلا انتهاء صلاحية",
@@ -269,7 +272,8 @@
     "back": "رجوع",
     "reveal": "إظهار",
     "hide": "إخفاء",
-    "shownOnce": "يُعرض مرة واحدة"
+    "shownOnce": "يُعرض مرة واحدة",
+    "unknown": "غير معروف"
   },
   "schemaManagement": {
     "title": "إدارة المخططات",
@@ -360,7 +364,7 @@
       "schema": "المخطط",
       "issuedAt": "تاريخ الإصدار",
       "status": "الحالة",
-      "uses": "الاستخدامات المتبقية",
+      "uses": "الاستخدامات",
       "actions": "الإجراءات"
     },
     "pagination": {

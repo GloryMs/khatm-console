@@ -30,6 +30,8 @@ const page1: credentialsApi.CredentialPage = {
       revoked: false,
       usesRemaining: 2,
       maxUses: 3,
+      status: 'ACTIVE',
+      usesConsumed: 1,
     },
   ],
   page: 0,
@@ -68,6 +70,16 @@ describe('CredentialsPage', () => {
     expect(revokeLink).toHaveAttribute('href', '/revoke?id=cred-1');
     const consumeLink = screen.getByRole('link', { name: i18n.t('credentials.rowConsume') });
     expect(consumeLink).toHaveAttribute('href', '/consume-sim?id=cred-1');
+  });
+
+  it('renders the server status badge and the usesConsumed/maxUses uses column', async () => {
+    vi.spyOn(schemasApi, 'listSchemas').mockResolvedValue(schemas);
+    vi.spyOn(credentialsApi, 'searchCredentials').mockResolvedValue(page1);
+    renderPage();
+
+    const row = (await screen.findByText('CRD-2026-0001')).closest('tr') as HTMLElement;
+    expect(within(row).getByText(i18n.t('revoke.statusActive'))).toBeInTheDocument();
+    expect(within(row).getByText('1/3')).toBeInTheDocument();
   });
 
   it('re-queries with the typed ref filter and resets to page 0', async () => {

@@ -1,21 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { credentialStatusMessageKey, credentialStatusTone } from '@/components/ui/credentialStatus';
 import type { CredentialView } from '../api';
 import styles from './CredentialSummary.module.css';
-
-type DerivedStatus = 'active' | 'revoked' | 'expired';
-
-function deriveStatus(view: CredentialView, now: number): DerivedStatus {
-  if (view.revoked) return 'revoked';
-  if (view.validTo && new Date(view.validTo).getTime() < now) return 'expired';
-  return 'active';
-}
-
-const STATUS_TONE: Record<DerivedStatus, StatusTone> = {
-  active: 'success',
-  revoked: 'danger',
-  expired: 'warning',
-};
 
 function useFormattedDate(): (iso: string | undefined) => string | null {
   const { i18n } = useTranslation();
@@ -40,25 +27,24 @@ function useFormattedDate(): (iso: string | undefined) => string | null {
 export function CredentialSummary({ view }: { view: CredentialView }) {
   const { t } = useTranslation();
   const formatDate = useFormattedDate();
-  const status = deriveStatus(view, Date.now());
-
-  const statusLabel = t(`revoke.status${status[0].toUpperCase()}${status.slice(1)}`);
+  const statusMessageKey = credentialStatusMessageKey(view.status);
+  const statusLabel = statusMessageKey ? t(statusMessageKey) : t('common.unknown');
   const validToText = formatDate(view.validTo);
 
   let usesText: string;
-  if (view.usesRemaining !== undefined && view.maxUses !== undefined) {
-    usesText = t('revoke.usesValue', { remaining: view.usesRemaining, max: view.maxUses });
+  if (view.usesConsumed !== undefined && view.maxUses !== undefined) {
+    usesText = t('revoke.usesConsumedValue', { consumed: view.usesConsumed, max: view.maxUses });
   } else if (view.maxUses === undefined) {
     usesText = t('revoke.usesUnlimited');
   } else {
-    usesText = `${view.usesRemaining ?? ''}`;
+    usesText = `${view.usesConsumed ?? ''}`;
   }
 
   return (
     <div className={styles.summary} data-testid="credential-summary">
       <div className={styles.head}>
         <span className={`${styles.ref} ltr-embed`}>{view.ref}</span>
-        <StatusBadge tone={STATUS_TONE[status]}>{statusLabel}</StatusBadge>
+        <StatusBadge tone={credentialStatusTone(view.status)}>{statusLabel}</StatusBadge>
       </div>
       <div className={styles.grid}>
         <div className={styles.metaItem}>

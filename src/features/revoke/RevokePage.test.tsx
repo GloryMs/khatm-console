@@ -44,6 +44,8 @@ describe('RevokePage deep-link preload', () => {
       revoked: false,
       usesRemaining: 3,
       maxUses: 3,
+      status: 'ACTIVE',
+      usesConsumed: 0,
     });
 
     renderAt('/revoke?id=cred-1');
@@ -51,6 +53,8 @@ describe('RevokePage deep-link preload', () => {
     expect(screen.getByLabelText(i18n.t('revoke.lookupLabel'))).toHaveValue('cred-1');
     expect(await screen.findByTestId('credential-summary')).toBeInTheDocument();
     expect(screen.getByText('CRD-2026-0001')).toBeInTheDocument();
+    expect(screen.getByText(i18n.t('revoke.statusActive'))).toBeInTheDocument();
+    expect(screen.getByText('0/3')).toBeInTheDocument();
   });
 
   it('starts blank when no id param is present', () => {

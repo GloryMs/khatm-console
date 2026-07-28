@@ -244,8 +244,11 @@
     "statusActive": "Active",
     "statusRevoked": "Revoked",
     "statusExpired": "Expired",
-    "uses": "Uses remaining",
+    "statusExhausted": "Exhausted",
+    "statusSuspended": "Suspended",
+    "uses": "Uses",
     "usesValue": "{{remaining}} of {{max}} remaining",
+    "usesConsumedValue": "{{consumed}}/{{max}}",
     "usesUnlimited": "Unlimited",
     "validTo": "Valid until",
     "noExpiry": "No expiry",
@@ -269,7 +272,8 @@
     "back": "Back",
     "reveal": "Reveal",
     "hide": "Hide",
-    "shownOnce": "Shown once"
+    "shownOnce": "Shown once",
+    "unknown": "Unknown"
   },
   "schemaManagement": {
     "title": "Manage Schemas",
@@ -360,7 +364,7 @@
       "schema": "Schema",
       "issuedAt": "Issued",
       "status": "Status",
-      "uses": "Uses remaining",
+      "uses": "Uses",
       "actions": "Actions"
     },
     "pagination": {

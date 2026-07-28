@@ -479,6 +479,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/credentials/holder-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check a credential's lifecycle status by proof of possession
+         * @description Public endpoint, like /verify — no session or API key (spec FS-1.6 D3, a deliberate, explicit reversal of PR #33's original 'no live uses-remaining channel' stance). The request body's jwt is the bare compact SD-JWT (no disclosures); proving possession of a validly signed token is the only authentication this endpoint needs — it never reads or returns claim content (P1 rule), only status/maxUses/usesRemaining/lastConsumedAt. An invalid signature or an unresolvable credential both collapse to the same 404 (KH-CRD-0404) so an external caller cannot distinguish 'not a real credential' from 'forged' (anti-enumeration).
+         */
+        post: operations["holderStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/credentials/issue": {
         parameters: {
             query?: never;
@@ -1014,6 +1034,9 @@ export interface components {
             revoked?: boolean;
             schemaCode?: string;
             schemaName?: components["schemas"]["LocalizedText"];
+            status?: string;
+            /** Format: int32 */
+            usesConsumed?: number;
             /** Format: int32 */
             usesRemaining?: number;
             /** Format: date-time */
@@ -1027,6 +1050,9 @@ export interface components {
             ref?: string;
             revoked?: boolean;
             schemaCode?: string;
+            status?: string;
+            /** Format: int32 */
+            usesConsumed?: number;
             /** Format: int32 */
             usesRemaining?: number;
             /** Format: date-time */
@@ -1058,6 +1084,20 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             traceId?: string;
+        };
+        /** @description Request to check a credential's lifecycle status by proof of possession */
+        HolderStatusRequest: {
+            jwt: string;
+        };
+        /** @description A credential's current lifecycle status */
+        HolderStatusResponse: {
+            /** Format: date-time */
+            lastConsumedAt?: string;
+            /** Format: int32 */
+            maxUses?: number;
+            status?: string;
+            /** Format: int32 */
+            usesRemaining?: number;
         };
         /** @description Request to issue a new SD-JWT verifiable credential */
         IssueRequest: {
@@ -2270,6 +2310,48 @@ export interface operations {
             };
             /** @description Missing the consume scope, called with a console session or a TENANT API key instead of a CONSUMING_PARTY key (KH-RBC-0403), or the credential's schema is not in the calling party's allowlist (KH-CNS-0403, KH-1.4.3) */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    holderStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HolderStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description The credential's current status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["HolderStatusResponse"];
+                };
+            };
+            /** @description Bean Validation failed (a blank jwt) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The jwt is malformed, its signature does not verify, or it does not resolve to a known credential (KH-CRD-0404, unified for anti-enumeration) */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
