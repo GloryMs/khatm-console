@@ -14,7 +14,7 @@
   (`tenant:admin`), the forced-password-change take-over screen, tenant onboarding's
   `initialAdmin` + an on-behalf-of Users tab on the tenant detail page (create-only —
   self-stopped on the missing `GET` for listing a tenant's users, see "Open decisions"), and
-  full EN/AR + RTL. **PR opened, not merged** — Majd's EN/AR/RTL browser walkthrough is the
+  full EN/AR + RTL. **PR #19 opened, not merged** — Majd's EN/AR/RTL browser walkthrough is the
   merge gate, per standing practice. A significant platform-side finding surfaced during the
   live API-level walkthrough: `POST /api/v1/auth/login` can only ever authenticate users in the
   platform's _default_ tenant (confirmed by reading `AuthService`/`TenantContext` source) —
@@ -196,8 +196,8 @@
     console limitation. Recorded as a platform ask below. The throwaway `c7-walkthrough` tenant
     created while probing this was left `SUSPENDED` (no delete endpoint exists, same as C5's
     precedent).
-  - PR opened, not merged — Majd's EN/AR/RTL browser walkthrough is the actual merge gate, same
-    as every prior screen since C1.
+  - PR #19 opened, not merged — Majd's EN/AR/RTL browser walkthrough is the actual merge gate,
+    same as every prior screen since C1.
 
 - 2026-07-28 (C7 users & scope-gating, spec FS-2.2 D7 — self-stopped at the preamble): Spec
   `FS-2.2-rbac-granularity.md` (approved 2026-07-28) landed, replacing the coarse `admin` scope
@@ -1115,8 +1115,8 @@ unknown_user` in the audit log every time. This blocks the spec's own exit-walkt
    and this repo's `npm run contract:update` picks it up. See "Open decisions" above.
 
 Closed: item #3 (was #3, KH-2.2-era RBAC), C7 users & scope-gating (spec FS-2.2 D7) delivered
-2026-07-28 after resuming from the same day's preamble self-stop; PR opened, Majd's walkthrough
-now the remaining gate (item #3 above). Closed: item #5 (was #6), contract zero-diff sanity
+2026-07-28 after resuming from the same day's preamble self-stop; PR #19 opened, Majd's
+walkthrough now the remaining gate (item #3 above). Closed: item #5 (was #6), contract zero-diff sanity
 check for KH-1.6-BE — PR #39 merged 2026-07-28, C6b's re-run confirmed zero semantic drift; see
 "Last completed" and "Open decisions". Closed: item #5 (previously), Majd's C5 Tenants EN/AR/RTL
 walkthrough — done, PR #15 merged 2026-07-27 (STATE's stale "PR open" line was corrected by the
