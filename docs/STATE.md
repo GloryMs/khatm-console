@@ -5,7 +5,7 @@
 ## Current phase / task
 
 - C6 Credential lifecycle (search status badge/uses column, consume-sim remaining-uses) —
-  **DONE, PR open, not merged.** Branch `feat/C6-credential-lifecycle`. Self-stopped 2026-07-27
+  **DONE, PR #16 open, not merged.** Branch `feat/C6-credential-lifecycle`. Self-stopped 2026-07-27
   at the preamble gate (contract lacked `status`/`usesConsumed`/`holder-status` at the time),
   resumed 2026-07-28 once spec FS-1.6 landed and khatm-platform's PR #39 (KH-1.6-BE) was
   confirmed live on the local compose stack — see "Last completed" for both entries. **Vendored
@@ -110,7 +110,7 @@ typecheck` green immediately after.
     every file this session touched or added (including the new `FS-1.6` spec doc, reformatted
     with `prettier --write` before committing); still fails only on the pre-existing untracked
     `.vscode/extensions.json` (see "Open decisions", unrelated to this branch).
-  - PR opened, not merged.
+  - PR #16 opened, not merged.
 
 - 2026-07-27 (C6 credential lifecycle, self-stopped at preamble): Brief asked for a status badge +
   `usesConsumed/maxUses` "uses" column on the credentials search rows, a server-side status filter
@@ -773,6 +773,11 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 5. **Blocking, not yet done:** Majd's manual EN/AR + RTL browser walkthrough of the C5 Tenants
    screen (`feat/C5-tenants-screen`, PR open) — the session's own verification stopped at the
    API/curl level (no browser-automation tool available); see "Last completed" 2026-07-27.
+6. **Blocking, not yet done:** Majd's manual EN/AR browser walkthrough of C6's credential
+   status badge/uses column (`feat/C6-credential-lifecycle`, PR #16 open) — same API-level-only
+   limitation; see "Last completed" 2026-07-28.
+7. Re-run the contract zero-diff sanity check once khatm-platform PR #39 (KH-1.6-BE) merges to
+   `main` — C6 currently runs against a live pre-merge vendor of that branch.
 
 Closed: Dashboard v2's four data-less panels — all wired to real khatm-platform data
 (KH-1.1.5-BE) 2026-07-25; see "Last completed". Closed: the full EN/AR + RTL click-through
