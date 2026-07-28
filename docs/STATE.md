@@ -4,6 +4,12 @@
 
 ## Current phase / task
 
+- C7 users & scope-gating (spec FS-2.2 D7) — **self-stopped at the preamble gate, 2026-07-28.**
+  `npm run contract:update` against `origin/main` picked up a large new surface (773
+  insertions/61 deletions vs. the previously-vendored contract) — but one of the four required
+  gate items, the forced-password-change error code, is not discoverable anywhere in it. No UI
+  code was written. See "Last completed" 2026-07-28 for the full gate breakdown and the new
+  platform ask under "Open decisions".
 - C6b status filter (chore follow-up to C6) — **DONE. PR #17 merged 2026-07-28** (squash, branch
   deleted), Majd-approved. Self-stopped on its one code item: the refreshed contract (now the
   officially-merged `khatm-platform` `main`) still exposes no server-side `status` query param on
@@ -29,6 +35,76 @@
   manual EN/AR + RTL walkthrough of that specific banner was never explicitly logged as run.
 
 ## Last completed
+
+- 2026-07-28 (C7 users & scope-gating, spec FS-2.2 D7 — self-stopped at the preamble): Spec
+  `FS-2.2-rbac-granularity.md` (approved 2026-07-28) landed, replacing the coarse `admin` scope
+  debt tracked since C2b/C5 with the granular registry (`issue, verify, consume, revoke,
+schema:manage, consumer:manage, key:manage, tenant:admin, platform:admin`) and opening
+  tenant-user management. Ran the mandated preamble first, on a fresh branch
+  (`feat/C7-users-and-scope-gating`): `npm run contract:update` against `origin/main` (`gh api`
+  fallback, as always for this private upstream) pulled a substantially larger contract than
+  what C6b had vendored (773 insertions / 61 deletions). Checked all four required gate items
+  plus the security-scheme check directly in the refreshed `contracts/openapi.json` before
+  writing any code:
+  - **`/api/v1/users` family — present.** `GET/POST /api/v1/users`, `POST .../{id}/roles`,
+    `.../lock`, `.../unlock`, `.../disable`, `.../reset-password`, and the self-service
+    `POST /api/v1/users/me/password` all exist, tagged `users`.
+  - **`initialAdmin` on tenant creation — present.** `OnboardTenantRequest.initialAdmin` and its
+    description ("Full onboarding: ... and — when initialAdmin is present — the tenant's first
+    TENANT_ADMIN with a one-time temporary password. Resumable...") on `POST
+/api/v1/admin/tenants`.
+  - **`/admin/tenants/{id}/users` — present.**
+  - **Legacy `admin` scope in `components.securitySchemes` — absent, as required.** The block
+    only declares `apiKeyBearer`/`sessionCookie` (bearer/cookie schemes, no OAuth2-style scope
+    enum at all), so there's structurally nowhere for a literal `"admin"` scope name to appear.
+    Noted, not a gate failure: two operation _descriptions_ still read "Requires the admin
+    scope" verbatim (`allowSchema` — `POST
+/api/v1/admin/consuming-parties/{id}/allowed-schemas` — and tenants' `GET
+/api/v1/admin/tenants`) — stale prose the platform team missed during the D2 re-gating pass.
+    Their actual `403` response descriptions correctly cite the granular scopes
+    (`consumer:manage` and `platform:admin` respectively), confirming enforcement itself was
+    re-gated correctly; only two docstrings lag. Worth a platform-side doc cleanup, not a
+    blocker — recorded under "Open decisions" below.
+  - **The forced-password-change error code — absent. Gate fails here.** The only trace of the
+    concept anywhere in the contract is one line of prose on `POST /api/v1/users/me/password`:
+    "the one call a temporary-password user may make while `must_change_password` is set, and
+    the call that clears it." Nothing else exposes that state to a client: `POST
+/api/v1/auth/login`'s `200` response has no body/schema at all (bodyless — just "Login
+    succeeded; session cookie set"); `MeResponse` (`GET /api/v1/auth/me`) exposes only
+    `displayNameI18n`/`preferredLang`/`scopes`/`username`, no boolean flag; and grepping every
+    distinct `KH-*` error code referenced anywhere in the contract (30 total) turns up nothing
+    password-change-related — only the expected `KH-USR-0400/0404/0409/0423` for user
+    management and the generic `KH-RBC-0401/0403` for auth/scope failures. There is no way for
+    the console to detect "this session must change its password before anything else" from the
+    contract as published.
+  - Per the preamble's own protocol ("self-stop if any of these are absent... don't improvise"),
+    **the entire session stopped here — no UI code was written**, matching this repo's standing
+    practice for a failed hard gate (C2, C2b, C6 2026-07-27). This is a whole-session gate, not
+    a per-item one: even though item 1 (RE-GATING) and item 4 (tenants additions) don't
+    themselves depend on the password-change signal, D7 is one coherent deliverable (item 2's
+    users screen and item 3's forced-change flow are directly coupled — a users screen that can
+    mint temporary passwords with no way to route into a forced change afterward is an
+    incomplete, misleading feature), so nothing was built rather than half-building around the
+    gap.
+  - **Contract deliberately not vendored this session.** Regenerating types against the new
+    contract (`npm run gen:api`) broke `typecheck`: the platform renamed
+    `CreateTenantRequest` → `OnboardTenantRequest` (now documented as "Onboard a tenant,
+    optionally with its first administrator"), and C5's already-shipped
+    `src/features/tenants/api.ts` imports the old name. Fixing that reference is a real code
+    change to already-shipped, unrelated-to-this-brief code — out of scope for a self-stopped
+    session per the same "don't improvise" instruction — so both `contracts/openapi.json` and
+    `src/api/generated/schema.ts` were reverted back to the committed `main` versions
+    (`git checkout -- ...`) rather than committing a contract the repo can't build against yet.
+    Whoever picks up C7 next will need to do this rename alongside their own gate re-check
+    regardless, since a fresh `contract:update` will hit the same rename again.
+  - No branch pushed, no PR opened — there is nothing to review. The local branch
+    `feat/C7-users-and-scope-gating` was created for this session but carries no commits (work
+    happened on it, then was reverted); safe to reuse or delete whenever the next C7 attempt
+    starts.
+  - `npm run check` re-confirmed green on the untouched `main` baseline (only the pre-existing
+    `FormField.tsx` fast-refresh lint warning) before this STATE update was written; no feature
+    code touched, so no test count change.
+  - **Platform ask (new, concrete) — see "Open decisions".**
 
 - 2026-07-28 (chore/C6b-status-filter, micro follow-up to C6): Preamble ran `npm run
 contract:update` (`gh api` fallback) against `origin/main`. khatm-platform PR #39 (KH-1.6-BE)
@@ -733,6 +809,23 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 
 ## Open decisions / blockers
 
+- **Platform ask, new 2026-07-28 (C7 preamble, self-stopped):** the console needs a
+  contract-discoverable signal for "this session must change its password before doing anything
+  else" (spec FS-2.2 D5/D6's temporary-password flow). Right now the only trace of the concept
+  is prose on `POST /api/v1/users/me/password` referencing an internal `must_change_password`
+  state — nothing exposes it to a client. Either of these would unblock C7 item 3: (a) a boolean
+  flag (e.g. `mustChangePassword`) on `MeResponse` and/or the login response so the console can
+  route right after authenticating, or (b) a distinct, stable error code (contract currently has
+  no `KH-*` code for this at all) that every protected endpoint returns while the flag is set,
+  which the console's existing global error-handling layer could catch and redirect on. Also
+  flagging, low-priority: two operation descriptions in the same refreshed contract still read
+  "Requires the admin scope" verbatim (`allowSchema` —
+  `POST /api/v1/admin/consuming-parties/{id}/allowed-schemas` — and `GET
+/api/v1/admin/tenants`) even though their own `403` responses correctly cite the new granular
+  scopes (`consumer:manage`/`platform:admin`) — stale docstrings from the D2 re-gating pass,
+  worth a cleanup pass but not blocking. See "Last completed" 2026-07-28 for the full gate
+  breakdown (all three other gate items — `/api/v1/users` family, `initialAdmin`,
+  `/admin/tenants/{id}/users` — are already present and confirmed).
 - **Platform ask from 2026-07-27 — fully closed 2026-07-28 (C6b chore).** Spec FS-1.6
   (Consumption Lifecycle Visibility) landed and khatm-platform's KH-1.6-BE (PR #39) delivered
   exactly what was asked: `status`/`usesConsumed` on `CredentialSummary`/`CredentialView`, and a
@@ -815,7 +908,12 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 2. Visual identity — **DONE**. Remainder: migrate the last ~12 duplicated button blocks onto
    `Button` and adopt `.khatm-input` across remaining forms; revisit whether a real charting
    library belongs in the dashboard.
-3. KH-2.2-era RBAC changes, whatever those turn out to require.
+3. C7 users & scope-gating (spec FS-2.2 D7) — self-stopped 2026-07-28 at the preamble gate,
+   blocked on the platform ask logged the same date: a contract-discoverable
+   forced-password-change signal (`MeResponse`/login flag, or a dedicated error code). Retry
+   once that lands — re-run `npm run contract:update` (will also need the
+   `CreateTenantRequest` → `OnboardTenantRequest` rename in `src/features/tenants/api.ts` picked
+   up along the way, see "Last completed").
 4. Unify the scope-gating placement convention (self-gating vs. App.tsx-level wrapping — see
    "Open decisions" above) across every gated page.
 5. Credentials search status-filter dropdown — the platform ask logged 2026-07-28 (C6b) is
