@@ -3,29 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { useLocalizedText } from '@/hooks/useLocalizedText';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { credentialStatusMessageKey, credentialStatusTone } from '@/components/ui/credentialStatus';
 import type { CredentialSummary } from '../api';
 import styles from './ResultsTable.module.css';
-
-type DerivedStatus = 'active' | 'revoked' | 'expired';
-
-function deriveStatus(row: CredentialSummary, now: number): DerivedStatus {
-  if (row.revoked) return 'revoked';
-  if (row.validTo && new Date(row.validTo).getTime() < now) return 'expired';
-  return 'active';
-}
-
-const STATUS_KEY: Record<DerivedStatus, string> = {
-  active: 'revoke.statusActive',
-  revoked: 'revoke.statusRevoked',
-  expired: 'revoke.statusExpired',
-};
-
-const STATUS_TONE: Record<DerivedStatus, StatusTone> = {
-  active: 'success',
-  revoked: 'danger',
-  expired: 'warning',
-};
 
 interface ResultsTableProps {
   rows: CredentialSummary[];
@@ -34,7 +15,6 @@ interface ResultsTableProps {
 export function ResultsTable({ rows }: ResultsTableProps) {
   const { t, i18n } = useTranslation();
   const localize = useLocalizedText();
-  const now = Date.now();
 
   const columns: DataTableColumn<CredentialSummary>[] = [
     {
@@ -64,16 +44,20 @@ export function ResultsTable({ rows }: ResultsTableProps) {
       key: 'status',
       header: t('credentials.table.status'),
       cell: (row) => {
-        const status = deriveStatus(row, now);
-        return <StatusBadge tone={STATUS_TONE[status]}>{t(STATUS_KEY[status])}</StatusBadge>;
+        const messageKey = credentialStatusMessageKey(row.status);
+        return (
+          <StatusBadge tone={credentialStatusTone(row.status)}>
+            {messageKey ? t(messageKey) : t('common.unknown')}
+          </StatusBadge>
+        );
       },
     },
     {
       key: 'uses',
       header: t('credentials.table.uses'),
       cell: (row) =>
-        row.usesRemaining !== undefined && row.maxUses !== undefined
-          ? t('revoke.usesValue', { remaining: row.usesRemaining, max: row.maxUses })
+        row.usesConsumed !== undefined && row.maxUses !== undefined
+          ? t('revoke.usesConsumedValue', { consumed: row.usesConsumed, max: row.maxUses })
           : t('revoke.usesUnlimited'),
     },
     {
