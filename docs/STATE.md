@@ -14,12 +14,14 @@
   (`tenant:admin`), the forced-password-change take-over screen, tenant onboarding's
   `initialAdmin` + an on-behalf-of Users tab on the tenant detail page (create-only —
   self-stopped on the missing `GET` for listing a tenant's users, see "Open decisions"), and
-  full EN/AR + RTL. **PR #19 opened, not merged** — Majd's EN/AR/RTL browser walkthrough is the
-  merge gate, per standing practice. A significant platform-side finding surfaced during the
-  live API-level walkthrough: `POST /api/v1/auth/login` can only ever authenticate users in the
-  platform's _default_ tenant (confirmed by reading `AuthService`/`TenantContext` source) —
-  not a console bug, but it blocks demonstrating a newly-onboarded tenant's own users logging
-  in end-to-end. See "Last completed" 2026-07-28 (the second, later entry) for the full record.
+  full EN/AR + RTL. **PR #19 merged to `main` 2026-07-29** (squash) after Majd's manual
+  walkthrough raised several RBAC clarification questions (answered live against the running
+  stack, no bugs found — see "Last completed" and §7 below) and one copy fix (the initial-admin
+  checkbox help text). A significant platform-side finding surfaced during the live API-level
+  walkthrough: `POST /api/v1/auth/login` can only ever authenticate users in the platform's
+  _default_ tenant (confirmed by reading `AuthService`/`TenantContext` source) — not a console
+  bug, but it blocks demonstrating a newly-onboarded tenant's own users logging in end-to-end.
+  See "Last completed" 2026-07-28 (the second, later entry) for the full record.
 - C6b status filter (chore follow-up to C6) — **DONE. PR #17 merged 2026-07-28** (squash, branch
   deleted), Majd-approved. Self-stopped on its one code item: the refreshed contract (now the
   officially-merged `khatm-platform` `main`) still exposes no server-side `status` query param on
@@ -196,8 +198,67 @@
     console limitation. Recorded as a platform ask below. The throwaway `c7-walkthrough` tenant
     created while probing this was left `SUSPENDED` (no delete endpoint exists, same as C5's
     precedent).
-  - PR #19 opened, not merged — Majd's EN/AR/RTL browser walkthrough is the actual merge gate,
-    same as every prior screen since C1.
+  - PR #19 opened 2026-07-28, then merged to `main` 2026-07-29 (squash, branch deleted) after
+    Majd's manual walkthrough raised the RBAC clarification questions answered below, plus a
+    copy fix — see the 2026-07-29 entry.
+
+- 2026-07-29 (C7 follow-up — Majd's manual walkthrough, RBAC clarifications + doc): Majd ran the
+  EN/AR/RTL browser walkthrough against the rebuilt local container and raised six numbered
+  observations/questions about the new RBAC screens. Investigated each directly against the
+  running stack (`psql` queries against `app_user`/`user_role`/`role`, reading platform source)
+  rather than answering from memory:
+  - **Q1/Q2 (role meanings, tenant-onboarding semantics)** — answered from the spec/contract;
+    no code issue. `TENANT_ADMIN` = every scope except `platform:admin`; `ISSUER_OPERATOR` =
+    `issue`/`verify`/`revoke` only. A tenant itself carries no role; the onboarding form's
+    "Add an initial administrator" checkbox creates one brand-new, separate `TENANT_ADMIN` user
+    in the new tenant — confirmed this does **not** touch the caller's own session, contrary to
+    how the original help copy read (fixed, see below).
+  - **Q3/Q5 (can't find a new tenant's users anywhere, even as `PLATFORM_ADMIN`)** — verified
+    directly via `psql` that both users Majd created in a new tenant (`tenant_admin_test`'s
+    child users) exist correctly (`ACTIVE`, correct tenant, correct role) — **not a data or
+    console bug**. This is the already-known platform gap: `POST
+/admin/tenants/{id}/users` has no matching `GET`, and the tenant-scoped `/users` screen only
+    ever shows the caller's own tenant, which for any `PLATFORM_ADMIN` session is always the
+    platform's default tenant, never a tenant it onboarded on someone else's behalf.
+  - **Q4** — confirmed working exactly as delivered: forced-password-change cycle, EN/AR/RTL,
+    and `ISSUER_OPERATOR`'s nav correctly hiding Users/Tenants/Manage Schemas/Consuming Parties.
+  - **Q6 (a follow-up round, same session)** — Majd tested two more things and asked for
+    clarification: (a) a `TENANT_ADMIN` user (`tenant_admin_test`) sees the identical `/users`
+    list as the `PLATFORM_ADMIN` session that created it, and (b) that same `TENANT_ADMIN` user
+    could disable/lock "the only/last admin." Investigated both against the live DB and
+    `UserAdminService`/`AppUserRepository` source rather than assuming either was a bug:
+    - (a) is **not a privilege leak** — `/users` is tenant-scoped, not role-scoped, and both
+      accounts happen to sit in the same (default) tenant in this demo/seed setup, so they
+      necessarily see the same rows. A `TENANT_ADMIN` created in a genuinely different tenant
+      sees only that tenant's own users.
+    - (b) — Majd had **three** `tenant:admin`-holding users in the default tenant at the time
+      (`admin`/PLATFORM_ADMIN, `tenant_admin_test`, `tenant_issuer_admin`), so disabling one
+      correctly left two — the guard only fires at zero remaining, and it counts by the
+      `tenant:admin` **scope**, not a specific role code, so `PLATFORM_ADMIN` counts toward the
+      total too (verified live earlier in the original C7 session: disabling the sole `admin`
+      account did correctly 409 `KH-USR-0423`). Not a bug; a genuinely underdocumented nuance.
+  - **No code changes from Q1–Q5 or Q6** — every observation traced to already-correct behavior
+    or an already-known platform gap. **One copy fix**: `tenants.create.addInitialAdminHelp`
+    (`en.json`/`ar.json`) reworded from "Creates the tenant's first TENANT_ADMIN user..." to
+    explicitly state it creates a new, separate account, not the caller's own — the ambiguity
+    that prompted Q2.
+  - **New deliverable**: `docs/rbac-roles-and-hierarchy.md` — scope registry, the three roles'
+    exact scope sets, a nav-visibility matrix, the tenant-vs-user and on-behalf-of models, a
+    "known gaps" list, and a quick-answers FAQ section addressing exactly the questions above.
+    Its §7 ("Known gaps / rough edges") is mirrored into this file's own new §7 below, per
+    Majd's request, so STATE.md stays the single source of truth for open issues without
+    requiring a second document to be read to find them.
+  - `npm run typecheck`/`test` re-confirmed green (216/216) after the copy fix; rebuilt and
+    recreated the `khatm-console` container to serve the corrected copy.
+  - **PRs merged 2026-07-29**: #18 (docs-only, records that khatm-platform PR #41 addresses the
+    C6b status-filter ask) and #19 (this C7 delivery) both squash-merged to `main`, per Majd's
+    explicit request to merge all open PRs (checks bypassed by request; no required review gate
+    exists on this repo, confirmed by the plain `gh pr merge` succeeding without `--admin` for
+    #18). #19 needed a rebase onto #18 first (both touched STATE.md's "Next up" list) — resolved
+    by hand, folding both branches' edits together; verified no duplicated/garbled "Last
+    completed" entries remained before pushing. Both feature branches deleted on merge; local
+    `main` was reset to `origin/main` afterward (local `main` had a stale, now-superseded commit
+    from mid-session that predated both PRs' rebases — content-equivalent, safely discarded).
 
 - 2026-07-28 (C7 users & scope-gating, spec FS-2.2 D7 — self-stopped at the preamble): Spec
   `FS-2.2-rbac-granularity.md` (approved 2026-07-28) landed, replacing the coarse `admin` scope
@@ -1029,10 +1090,10 @@ unknown_user` in the audit log every time. This blocks the spec's own exit-walkt
   PLATFORM SIDE, not yet in a console-consumable contract:** `khatm-platform` session
   `chore/credential-search-status-filter` added the server-side `status` query param this ask
   named — **PR #41 opened on `khatm-platform`, NOT YET MERGED.** Do not run `npm run
-  contract:update` against this until #41 merges (it is still on a feature branch, not `main`).
+contract:update` against this until #41 merges (it is still on a feature branch, not `main`).
   Once merged: re-run the preamble contract refresh, confirm `status` (repeatable,
   `ACTIVE|EXHAUSTED|REVOKED|SUSPENDED|EXPIRED`, OR-combined) appears on `GET
-  /api/v1/credentials`'s `parameters`, and the status-filter dropdown (item 5 under "Next up") is
+/api/v1/credentials`'s `parameters`, and the status-filter dropdown (item 5 under "Next up") is
   unblocked.
 - **`npm run check`'s `format:check` step fails on an untracked `.vscode/extensions.json`** —
   noticed 2026-07-23 during the qr-api-base-guard chore, pre-existing (not introduced by that
@@ -1091,6 +1152,45 @@ unknown_user` in the audit log every time. This blocks the spec's own exit-walkt
   cleanly" within this session. Revisit if a pilot tenant actually needs single-file uploads over
   200 rows.
 
+## 7. Known gaps / rough edges (as of 2026-07-29)
+
+Carried over from `docs/rbac-roles-and-hierarchy.md` §7 — surfaced during Majd's C7 (spec
+FS-2.2 D7) manual walkthrough and confirmed live against the running stack (DB rows + platform
+source), not console bugs:
+
+1. **No cross-tenant user listing.** `POST /admin/tenants/{id}/users` (on-behalf-of create)
+   exists; its `GET` counterpart doesn't. A `PLATFORM_ADMIN` who onboards a tenant and adds
+   users to it has no way to see those users again afterward, from anywhere — not the console,
+   not the raw API — until either that endpoint is added, or someone logs in as a user of that
+   tenant and views `/users` from inside it. The most confusing gap in practice; see "Open
+   decisions" for the full platform-ask writeup.
+2. **Logging in as a newly-onboarded tenant's own user doesn't work yet.** The platform's login
+   endpoint currently only ever resolves users against its default tenant — a
+   pre-authentication tenant-resolution gap, confirmed by reading `AuthService`/`TenantContext`
+   source, not guessed. In practice: even once a `TENANT_ADMIN` or other user is created in a
+   new tenant, that user cannot sign in until the platform adds a tenant-resolution mechanism
+   for the login request itself. Independent of gap #1.
+3. **Custom/ad-hoc roles don't exist.** The three-role catalog (`ISSUER_OPERATOR`,
+   `TENANT_ADMIN`, `PLATFORM_ADMIN`) is fixed; a tenant can't define its own role with a custom
+   scope combination (planned for a later phase per spec FS-2.2).
+4. **The signing-key panel shows lifecycle status only**, not rotation controls — `key:manage`
+   currently gates a read-only view.
+5. **The tenant-scoped `/users` list is identical for every `tenant:admin`-holding user of the
+   same tenant, including `PLATFORM_ADMIN`.** Not a privilege leak: the list is tenant-scoped,
+   not role-scoped, and `PLATFORM_ADMIN`'s own session lives in the platform's default tenant —
+   so it only looks like cross-tenant visibility when every test account happens to sit in that
+   same default tenant, which the current seed/demo data does. A `TENANT_ADMIN` created in a
+   genuinely different tenant sees only that tenant's own users.
+6. **The last-active-admin guard (`KH-USR-0423`) counts by scope, not role code.** It blocks a
+   disable/lock/role-change only when it would drop a tenant's active `tenant:admin`-holding
+   user count to zero — `PLATFORM_ADMIN` counts toward that total (it grants `tenant:admin`
+   too), so the guard also protects the last platform admin, not just a `TENANT_ADMIN`-role
+   user specifically. Confirmed live: with three admins present in the default tenant, disabling
+   one succeeded (two remained); reducing to the last one correctly 409s.
+
+See `docs/rbac-roles-and-hierarchy.md` for the full roles/scopes reference this section
+summarizes, including the nav-visibility matrix and the tenant-vs-user model.
+
 ## Next up (post-V1, ordered per Majd)
 
 1. API-key revocation UI (KH-2.2-era — the platform endpoint already exists,
@@ -1098,32 +1198,31 @@ unknown_user` in the audit log every time. This blocks the spec's own exit-walkt
 2. Visual identity — **DONE**. Remainder: migrate the last ~12 duplicated button blocks onto
    `Button` and adopt `.khatm-input` across remaining forms; revisit whether a real charting
    library belongs in the dashboard.
-3. Majd's EN/AR/RTL browser walkthrough of C7 (users & scope-gating, spec FS-2.2 D7) — PR
-   #19 opened 2026-07-28, not yet merged; this walkthrough is the merge gate, same as every
-   screen since C1.
-4. Platform follow-ups from C7 (see "Open decisions"): a login/tenant-resolution mechanism for
-   authenticating a non-default tenant's own users (currently architecturally unreachable — not
-   a console-side fix), and a `GET` counterpart for `/admin/tenants/{id}/users` so the
-   on-behalf-of Users tab can list, not just create.
-5. Unify the scope-gating placement convention (self-gating vs. App.tsx-level wrapping — see
+3. Platform follow-ups from C7 (see "Open decisions" and §7 above): a login/tenant-resolution
+   mechanism for authenticating a non-default tenant's own users (currently architecturally
+   unreachable — not a console-side fix), and a `GET` counterpart for
+   `/admin/tenants/{id}/users` so the on-behalf-of Users tab can list, not just create.
+4. Unify the scope-gating placement convention (self-gating vs. App.tsx-level wrapping — see
    "Open decisions" above) across every gated page. Also sweep the `ConfirmDialog`-driven pages
    noted in C7's "Open decisions" entry for the same unguarded-`mutateAsync` unhandled-rejection
    shape fixed in the new `UsersPage.tsx`.
-6. Credentials search status-filter dropdown — the platform ask logged 2026-07-28 (C6b) is
+5. Credentials search status-filter dropdown — the platform ask logged 2026-07-28 (C6b) is
    addressed on `khatm-platform`'s side via PR #41 (`chore/credential-search-status-filter`),
    but that PR is **not yet merged** — still blocked until it lands on `khatm-platform` `main`
    and this repo's `npm run contract:update` picks it up. See "Open decisions" above.
 
-Closed: item #3 (was #3, KH-2.2-era RBAC), C7 users & scope-gating (spec FS-2.2 D7) delivered
-2026-07-28 after resuming from the same day's preamble self-stop; PR #19 opened, Majd's
-walkthrough now the remaining gate (item #3 above). Closed: item #5 (was #6), contract zero-diff sanity
-check for KH-1.6-BE — PR #39 merged 2026-07-28, C6b's re-run confirmed zero semantic drift; see
-"Last completed" and "Open decisions". Closed: item #5 (previously), Majd's C5 Tenants EN/AR/RTL
-walkthrough — done, PR #15 merged 2026-07-27 (STATE's stale "PR open" line was corrected by the
-C6b hygiene pass). Closed: item #6 (was #5), C6 credential lifecycle Majd walkthrough — approved
-and merged as PR #16 2026-07-28; see "Last completed". Closed: Dashboard v2's four data-less
-panels — all wired to real khatm-platform data (KH-1.1.5-BE) 2026-07-25; see "Last completed".
-Closed: the full EN/AR + RTL click-through across every screen — Majd confirmed the Arabic
-layout and messages read correctly across the rebuilt container before merging PR #6. Closed:
-item #5, contract refresh sanity check — re-ran 2026-07-26, zero semantic drift found; see
-"Last completed".
+Closed: item #3 (was #3, Majd's EN/AR/RTL walkthrough of C7), delivered 2026-07-29 — walkthrough
+raised RBAC clarification questions (answered live, no bugs; see "Last completed" 2026-07-29 and
+§7 above), one copy fix applied, PR #19 merged to `main` (squash, branch deleted). Closed: item
+#3 (was #3, KH-2.2-era RBAC), C7 users & scope-gating (spec FS-2.2 D7) delivered 2026-07-28 after
+resuming from the same day's preamble self-stop. Closed: item #5 (was #6), contract zero-diff
+sanity check for KH-1.6-BE — PR #39 merged 2026-07-28, C6b's re-run confirmed zero semantic
+drift; see "Last completed" and "Open decisions". Closed: item #5 (previously), Majd's C5
+Tenants EN/AR/RTL walkthrough — done, PR #15 merged 2026-07-27 (STATE's stale "PR open" line was
+corrected by the C6b hygiene pass). Closed: item #6 (was #5), C6 credential lifecycle Majd
+walkthrough — approved and merged as PR #16 2026-07-28; see "Last completed". Closed: Dashboard
+v2's four data-less panels — all wired to real khatm-platform data (KH-1.1.5-BE) 2026-07-25; see
+"Last completed". Closed: the full EN/AR + RTL click-through across every screen — Majd confirmed
+the Arabic layout and messages read correctly across the rebuilt container before merging PR #6.
+Closed: item #5, contract refresh sanity check — re-ran 2026-07-26, zero semantic drift found;
+see "Last completed".
