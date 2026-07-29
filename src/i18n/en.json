@@ -489,7 +489,7 @@
       "typeRequired": "Type is required",
       "deployMode": "Deployment mode",
       "addInitialAdmin": "Add an initial administrator",
-      "addInitialAdminHelp": "Creates the tenant's first TENANT_ADMIN user with a one-time temporary password.",
+      "addInitialAdminHelp": "Creates a new, separate administrator account for this tenant (not your own account) with a one-time temporary password.",
       "initialAdminUsername": "Administrator username",
       "initialAdminUsernameRequired": "Administrator username is required",
       "initialAdminNameEn": "Administrator name (English)",

@@ -489,7 +489,7 @@
       "typeRequired": "النوع مطلوب",
       "deployMode": "نمط النشر",
       "addInitialAdmin": "إضافة مدير أولي",
-      "addInitialAdminHelp": "ينشئ أول مستخدم TENANT_ADMIN لهذا المستأجر بكلمة مرور مؤقتة تُعرض مرة واحدة.",
+      "addInitialAdminHelp": "ينشئ حساب مدير جديدًا ومنفصلاً لهذا المستأجر (وليس حسابك الخاص) بكلمة مرور مؤقتة تُعرض مرة واحدة.",
       "initialAdminUsername": "اسم مستخدم المدير",
       "initialAdminUsernameRequired": "اسم مستخدم المدير مطلوب",
       "initialAdminNameEn": "اسم المدير (بالإنجليزية)",
