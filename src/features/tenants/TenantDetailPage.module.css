@@ -70,3 +70,35 @@
   display: flex;
   gap: var(--space-3);
 }
+
+.tabs {
+  display: flex;
+  gap: var(--space-2);
+  border-block-end: 1px solid var(--color-border);
+}
+
+.tab,
+.tabActive {
+  padding: var(--space-2) var(--space-4);
+  background: none;
+  border: none;
+  border-block-end: 2px solid transparent;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab {
+  color: var(--color-text-muted);
+}
+
+.tabActive {
+  color: var(--color-primary);
+  border-block-end-color: var(--color-primary);
+}
+
+.usersTab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}

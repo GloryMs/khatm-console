@@ -23,7 +23,7 @@ import styles from './ConsumingPartiesPage.module.css';
 
 export function ConsumingPartiesPage() {
   return (
-    <RequireScope scope="admin">
+    <RequireScope scope="consumer:manage">
       <ConsumingPartiesPageBody />
     </RequireScope>
   );

@@ -21,12 +21,12 @@ export function getSchema(id: string): Promise<SchemaDetail> {
   return apiFetch<SchemaDetail>(`/api/v1/schemas/${encodeURIComponent(id)}`);
 }
 
-/** Create a new DRAFT schema (version 1). Requires the `admin` scope. */
+/** Create a new DRAFT schema (version 1). Requires the `schema:manage` scope. */
 export function createSchema(req: SchemaCreateRequest): Promise<SchemaDetail> {
   return apiFetch<SchemaDetail>('/api/v1/schemas', { method: 'POST', body: req });
 }
 
-/** Rewrite a DRAFT schema's authoring fields in place. Requires the `admin` scope. */
+/** Rewrite a DRAFT schema's authoring fields in place. Requires the `schema:manage` scope. */
 export function updateSchema(id: string, req: SchemaAuthoringRequest): Promise<SchemaDetail> {
   return apiFetch<SchemaDetail>(`/api/v1/schemas/${encodeURIComponent(id)}`, {
     method: 'PUT',

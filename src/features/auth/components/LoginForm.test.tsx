@@ -12,6 +12,7 @@ function renderForm(login: AuthContextValue['login'] = vi.fn()) {
     user: null,
     login,
     logout: async () => undefined,
+    refresh: async () => undefined,
     hasScope: () => false,
   };
   render(

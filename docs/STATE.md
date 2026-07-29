@@ -4,6 +4,22 @@
 
 ## Current phase / task
 
+- C7 users & scope-gating (spec FS-2.2 D7) — **DONE, resumed and delivered 2026-07-28** after
+  self-stopping earlier the same day at the preamble gate (missing forced-password-change
+  signal, see below). khatm-platform's PR #46 fixed it — `MeResponse.mustChangePassword` +
+  `GET /auth/me` exempted from the gate — confirmed live on the rebuilt local compose stack
+  before resuming (PR #46 itself still not merged to `khatm-platform` `main`; vendored the
+  contract from the live container, same precedent as the 2026-07-25 Dashboard session). Full
+  D7 delivered: scope re-gating off the coarse `admin` scope, a new Users screen
+  (`tenant:admin`), the forced-password-change take-over screen, tenant onboarding's
+  `initialAdmin` + an on-behalf-of Users tab on the tenant detail page (create-only —
+  self-stopped on the missing `GET` for listing a tenant's users, see "Open decisions"), and
+  full EN/AR + RTL. **PR #19 opened, not merged** — Majd's EN/AR/RTL browser walkthrough is the
+  merge gate, per standing practice. A significant platform-side finding surfaced during the
+  live API-level walkthrough: `POST /api/v1/auth/login` can only ever authenticate users in the
+  platform's _default_ tenant (confirmed by reading `AuthService`/`TenantContext` source) —
+  not a console bug, but it blocks demonstrating a newly-onboarded tenant's own users logging
+  in end-to-end. See "Last completed" 2026-07-28 (the second, later entry) for the full record.
 - C6b status filter (chore follow-up to C6) — **DONE. PR #17 merged 2026-07-28** (squash, branch
   deleted), Majd-approved. Self-stopped on its one code item: the refreshed contract (now the
   officially-merged `khatm-platform` `main`) still exposes no server-side `status` query param on
@@ -29,6 +45,229 @@
   manual EN/AR + RTL walkthrough of that specific banner was never explicitly logged as run.
 
 ## Last completed
+
+- 2026-07-28 (C7 users & scope-gating, spec FS-2.2 D7 — resumed and delivered): Majd reported
+  the platform developer had fixed the missing forced-password-change signal (khatm-platform
+  PR #46, not yet merged) and confirmed it live on the already-running local compose stack.
+  Re-verified directly rather than trusting the report alone: pulled `contracts/openapi.json`
+  from the live `khatm-api` container (`/v3/api-docs`), sorted-key-pretty-printed to match this
+  repo's vendoring convention (a custom formatter was needed — Jackson's default pretty-printer
+  keeps array-of-object elements at the _same_ indent as the array itself, not nested a level
+  deeper, which the naive first attempt got wrong), and diffed it against the just-refetched
+  (still-unfixed) `origin/main` contract: **purely additive** — `MeResponse.mustChangePassword`
+  (boolean) added, `GET /api/v1/auth/me`'s description updated to state it's exempt from the
+  gate, and six `403` response descriptions on the `/api/v1/users/*` endpoints gained "...or the
+  caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me)". All
+  three other preamble gate items were already confirmed present earlier the same day. Gate
+  cleared — resumed the session.
+  - **Contract adoption hit the same `CreateTenantRequest` → `OnboardTenantRequest` rename**
+    flagged (but not fixed) during the morning's self-stop. Fixed it this time (in scope now,
+    since the session is proceeding): `src/features/tenants/api.ts`'s `createTenant` now takes
+    `OnboardTenantRequest`/returns `OnboardTenantResponse` (adds `initialAdmin`); `hooks.ts` and
+    `TenantsPage.tsx` updated to match. `GET`/list/suspend/activate all kept their existing
+    `TenantView` shape — only the `POST` (onboard) response type changed.
+  - **Item 1 — RE-GATING (D2)**: every `RequireScope`/`hasScope` literal `'admin'` replaced with
+    its granular scope, confirmed against the refreshed contract's own `403` response
+    descriptions rather than guessed: `schemaManagement`'s three pages → `schema:manage`;
+    `consumingParties` → `consumer:manage`; `dashboard`'s `SigningKeysPanel` (`isAdmin` renamed
+    `canViewKeys`) → `key:manage`; `tenants`'s two pages → `platform:admin`. `Sidebar.tsx`'s nav
+    items re-gated to match, plus a new `Users` entry gated on `tenant:admin`. Every affected
+    `README.md`, code docstring, and test file's mocked `hasScope` predicate updated in the same
+    pass — grepped the whole `src/` tree for the literal string `'admin'` afterward to confirm
+    nothing was missed (the only remaining hits are the two stale platform docstrings noted this
+    morning, a test username fixture, and this file's own history).
+  - **Item 2 — Users screen** (`/users`, new feature `src/features/users/`, `RequireScope`d
+    `tenant:admin`, single page with inline row actions — mirrors C2b's `ConsumingPartiesPage`
+    shape rather than C5's separate list+detail split, since C2b's shape is the closer match for
+    "several independent lifecycle actions per row"): list (username, localized display name,
+    role chips, ACTIVE/LOCKED/DISABLED status badge) from `GET /api/v1/users`; create dialog
+    (username, display name EN/AR, role multi-select) from `POST /api/v1/users`; per-row edit
+    roles / lock / unlock / disable / reset-password, each via `ConfirmDialog` (or a small
+    dedicated `EditRolesDialog`). Role catalog (`roles.ts`) is a **hardcoded client-side
+    constant** — `TENANT_ADMIN`/`ISSUER_OPERATOR` — since the contract exposes `roles` as a bare
+    `string[]` with no enum, exactly C5's `TenantType` precedent; confirmed live that
+    `PLATFORM_ADMIN` is a real, distinct third role (the seed `admin` user's `roles` come back
+    as `["PLATFORM_ADMIN"]`) and **deliberately excluded it from this catalog** — granting
+    platform-wide cross-tenant power from a single tenant's own Users screen would be a
+    privilege-escalation bug, not a feature; spec D4 keeps `PLATFORM_ADMIN` tied to the default
+    tenant specifically. KH-USR-0423 (last-active-admin guard) is caught by `error.code` (not
+    `messageKey`, mirroring `CreateTenantDialog`'s `SLUG_ERROR_CODES` idiom) and renders a
+    dedicated written explanation (`users.lastAdminGuard.explanation`) via `Banner` instead of
+    the generic `ApiErrorBanner` — confirmed live against the real 409 (see walkthrough below).
+    Temporary passwords (create + reset-password) render via a new shared
+    `components/ui/TemporaryPasswordDialog.tsx` wrapping the existing generic `SecretReveal`
+    component — **not** `consumingParties`' bespoke `MintedKeyModal`. Judgment call: `SecretReveal`
+    is this codebase's actual shared, parametrized shown-once-secret component (its own docstring
+    already claims "claim codes and consuming-party API keys" as its lineage, even though
+    `MintedKeyModal` itself was never migrated onto it) and is the more correct thing for a new
+    caller to adopt now, rather than copying `MintedKeyModal`'s one-off, non-reusable pattern a
+    second time.
+  - **Item 3 — forced password change**: `AuthContextValue` gained `refresh()` (re-runs the
+    `/auth/me` bootstrap; `AuthProvider` wires it to the existing `bootstrap` callback).
+    `RequireAuth` now reads `user?.mustChangePassword` and redirects to a new `/change-password`
+    route (mounted as a sibling of `AppShell`, not inside it — a full take-over screen, same
+    pattern as `/login`) whenever it's true, and redirects away from `/change-password` once it
+    clears — checked _before_ any other route's queries ever fire, so a session never sees the
+    raw `KH-USR-0403`/"You must set a new password..." error at all (confirmed live — see
+    below). New `auth/api.ts#changeMyPassword` posts to `POST /api/v1/users/me/password`;
+    `ChangePasswordPage`/`ChangePasswordForm` (new-password + confirm, mismatch validated
+    client-side) call it, then `refresh()`, then navigate to `/`. Covered by
+    `RequireAuth.test.tsx` (5 cases: unauthenticated redirect, forced redirect, stays-on-page,
+    redirect-away-once-cleared, normal pass-through) and `ChangePasswordForm.test.tsx` (3:
+    mismatch validation, success path incl. `refresh`+navigate, API-error surfacing).
+  - **Item 4 — tenants additions** (`platform:admin`): `CreateTenantDialog` gained an optional
+    "Add an initial administrator" checkbox revealing username + display-name EN/AR fields
+    (zod `superRefine`, conditionally required); `TenantsPage` shows the resulting one-time
+    temporary password (`TemporaryPasswordDialog`) _before_ navigating to the new tenant's
+    detail page, not after — the platform never returns it a second time. `TenantDetailPage`
+    gained a Details/Users tab switcher; the Users tab is explicitly marked "acting on behalf
+    of {tenant}" and offers a create-user form (`createUserInTenant` → `POST
+/admin/tenants/{id}/users`, spec D4's `OnBehalfOfExecutor`) with its own one-time password
+    dialog. **Self-stopped on listing**: the refreshed contract has no `GET` counterpart for a
+    tenant's users from the platform-admin side (only the `POST` exists) — confirmed by listing
+    every `/api/v1/admin/tenants*` path in the contract. Built the create capability the
+    contract supports; the tab shows an explicit, localized "listing isn't available here yet"
+    note instead of fabricating or omitting the gap silently. Platform ask recorded (below).
+  - **Item 5 — EN/AR + RTL**: every new key added to both `en.json`/`ar.json` in the same commit
+    (parity script-verified: recursive key-diff, zero mismatches either direction); `common.done`
+    promoted out of `consumingParties.mint.done` since `TemporaryPasswordDialog` is now a second
+    caller. RTL grep (`(margin|padding|border)-(left|right)`, bare `left:`/`right:`, physical
+    `text-align`, `float:`) across every new/changed stylesheet this session: zero matches —
+    logical properties only (`border-block-end` for the new tab underline, `inline-size`
+    throughout the new dialogs).
+  - Tests: 216 total now (was 199) — 17 new: `RequireAuth.test.tsx` (5), `ChangePasswordForm.test.tsx`
+    (3), `UsersPage.test.tsx` (6: scope gating ×2, create-dialog validation incl.
+    at-least-one-role, create → one-time password shown via `SecretReveal`'s reveal toggle and
+    absent from the TanStack Query cache, KH-USR-0423's dedicated explanation on disable,
+    reset-password → one-time password), plus one new case each in `TenantsPage.test.tsx`
+    (initialAdmin → temporary password shown before navigating) and `TenantDetailPage.test.tsx`
+    (on-behalf-of notice + create-only fallback, on-behalf-of create → temporary password).
+    One real bug caught by the KH-USR-0423 test itself: `UsersPage`'s `onConfirm*` handlers
+    awaited `mutateAsync` with no `try/catch`, which is harmless when the mutation succeeds but
+    surfaces as an unhandled promise rejection (failing `npm run test`'s exit code, even though
+    the mutation's own `isError` state already drives the correct UI) the first time a test
+    actually exercises a _rejecting_ confirm-dialog mutation in this codebase — every other
+    confirm-dialog page (`ConsumingPartiesPage`, `TenantDetailPage`'s suspend/activate,
+    `SchemaManagementPage`'s publish/archive) has the identical unguarded shape and is presumably
+    equally exposed, just never tested against a rejection; fixed only in the new `UsersPage`
+    code this session (out of scope to retrofit every existing page), noted below.
+  - `npm run typecheck`, `npm run lint` (only the pre-existing `FormField.tsx` fast-refresh
+    warning), `npm run test` (216/216, confirmed clean exit code), and `npm run build` all clean.
+    `format:check` clean on every file this session touched; still fails only on the pre-existing
+    untracked `.vscode/extensions.json` and `docs/sessions/C7-users-and-scope-gating.md` (this
+    session's own verbatim brief-as-a-file, also pre-existing and untracked, not authored or
+    reformatted by this session).
+  - **Live walkthrough, API-level (no browser-automation tool, same standing limitation)**:
+    rebuilt and recreated the `khatm-console` container against the running stack; drove the
+    real request pipeline through the console's own proxy (`localhost:3000`), CSRF pattern as
+    usual. Confirmed: (1) the platform fix live — `mustChangePassword` present on `/auth/me`;
+    (2) tenant onboarding with `initialAdmin` returns a one-time temporary password; (3) the
+    on-behalf-of `POST /admin/tenants/{id}/users` create call; (4) the **full forced-change
+    cycle end-to-end** — reset an existing user's password → login with the temp password →
+    `mustChangePassword:true` → confirmed the gate is genuinely global (even `GET
+/api/v1/schemas`, a no-scope-required endpoint, 403s `KH-USR-0403` while it's active) →
+    `POST /api/v1/users/me/password` → `mustChangePassword:false` → the same endpoint now
+    succeeds; (5) **KH-USR-0423 fires correctly** for both disabling the sole admin and
+    stripping their admin-carrying role via `POST .../roles`; (6) role→scope mapping live-matches
+    spec D3 exactly (`ISSUER_OPERATOR`'s session scopes are precisely `issue`/`revoke`/`verify` —
+    no `schema:manage`/`tenant:admin`/`platform:admin`, confirming Sidebar would correctly hide
+    Users/Tenants/Manage-Schemas/Consumers for it). Grepped the rebuilt bundle for
+    `mustChangePassword`, `change-password`, `KH-USR-0423` as a static confirmation the shipped
+    code matches.
+  - **Significant platform-side finding, not a console bug**: attempting to log in as the
+    freshly-onboarded tenant's own `initialAdmin` user (`c7admin`) failed with a generic 401
+    (`AUTH_LOGIN_FAILED`, `reason: unknown_user` in the audit log) even though the user
+    genuinely exists (`app_user` row confirmed directly via `psql`, `ACTIVE`,
+    `must_change_password: true`). Root-caused by reading platform source, not guessed:
+    `AuthService.login` resolves `UUID tenantId = TenantContext.current()` _before_
+    authentication succeeds, and `TenantContext`'s Javadoc is explicit that tenant context is
+    "resolved from the authenticated principal only... never from a request body, header, or
+    query parameter" (spec FS-2.1 D1) — so at the pre-auth point where `login()` runs, there is
+    structurally no mechanism to know which tenant a login attempt is for, and
+    `TenantContext.current()` legally falls back to the platform's single `DEFAULT_TENANT_ID`.
+    `AppUserRepository.findByTenantIdAndUsername(tenantId, username)` therefore only ever
+    searches the default tenant — **any non-default tenant's user is unreachable through `POST
+/api/v1/auth/login` as currently implemented**, regardless of console-side code. This directly
+    blocks the spec's own "دليل الخروج" (exit walkthrough) step "login as the tenant's first
+    admin, with the temporary password" for any tenant other than the seeded default one.
+    Verified every other reachable piece of the walkthrough instead, using the default tenant's
+    existing `admin` (`PLATFORM_ADMIN`) and `e2e-operator` (`ISSUER_OPERATOR`) users (see above)
+    — this is a genuine login/tenant-resolution gap for the platform team, not a workaround-able
+    console limitation. Recorded as a platform ask below. The throwaway `c7-walkthrough` tenant
+    created while probing this was left `SUSPENDED` (no delete endpoint exists, same as C5's
+    precedent).
+  - PR #19 opened, not merged — Majd's EN/AR/RTL browser walkthrough is the actual merge gate,
+    same as every prior screen since C1.
+
+- 2026-07-28 (C7 users & scope-gating, spec FS-2.2 D7 — self-stopped at the preamble): Spec
+  `FS-2.2-rbac-granularity.md` (approved 2026-07-28) landed, replacing the coarse `admin` scope
+  debt tracked since C2b/C5 with the granular registry (`issue, verify, consume, revoke,
+schema:manage, consumer:manage, key:manage, tenant:admin, platform:admin`) and opening
+  tenant-user management. Ran the mandated preamble first, on a fresh branch
+  (`feat/C7-users-and-scope-gating`): `npm run contract:update` against `origin/main` (`gh api`
+  fallback, as always for this private upstream) pulled a substantially larger contract than
+  what C6b had vendored (773 insertions / 61 deletions). Checked all four required gate items
+  plus the security-scheme check directly in the refreshed `contracts/openapi.json` before
+  writing any code:
+  - **`/api/v1/users` family — present.** `GET/POST /api/v1/users`, `POST .../{id}/roles`,
+    `.../lock`, `.../unlock`, `.../disable`, `.../reset-password`, and the self-service
+    `POST /api/v1/users/me/password` all exist, tagged `users`.
+  - **`initialAdmin` on tenant creation — present.** `OnboardTenantRequest.initialAdmin` and its
+    description ("Full onboarding: ... and — when initialAdmin is present — the tenant's first
+    TENANT_ADMIN with a one-time temporary password. Resumable...") on `POST
+/api/v1/admin/tenants`.
+  - **`/admin/tenants/{id}/users` — present.**
+  - **Legacy `admin` scope in `components.securitySchemes` — absent, as required.** The block
+    only declares `apiKeyBearer`/`sessionCookie` (bearer/cookie schemes, no OAuth2-style scope
+    enum at all), so there's structurally nowhere for a literal `"admin"` scope name to appear.
+    Noted, not a gate failure: two operation _descriptions_ still read "Requires the admin
+    scope" verbatim (`allowSchema` — `POST
+/api/v1/admin/consuming-parties/{id}/allowed-schemas` — and tenants' `GET
+/api/v1/admin/tenants`) — stale prose the platform team missed during the D2 re-gating pass.
+    Their actual `403` response descriptions correctly cite the granular scopes
+    (`consumer:manage` and `platform:admin` respectively), confirming enforcement itself was
+    re-gated correctly; only two docstrings lag. Worth a platform-side doc cleanup, not a
+    blocker — recorded under "Open decisions" below.
+  - **The forced-password-change error code — absent. Gate fails here.** The only trace of the
+    concept anywhere in the contract is one line of prose on `POST /api/v1/users/me/password`:
+    "the one call a temporary-password user may make while `must_change_password` is set, and
+    the call that clears it." Nothing else exposes that state to a client: `POST
+/api/v1/auth/login`'s `200` response has no body/schema at all (bodyless — just "Login
+    succeeded; session cookie set"); `MeResponse` (`GET /api/v1/auth/me`) exposes only
+    `displayNameI18n`/`preferredLang`/`scopes`/`username`, no boolean flag; and grepping every
+    distinct `KH-*` error code referenced anywhere in the contract (30 total) turns up nothing
+    password-change-related — only the expected `KH-USR-0400/0404/0409/0423` for user
+    management and the generic `KH-RBC-0401/0403` for auth/scope failures. There is no way for
+    the console to detect "this session must change its password before anything else" from the
+    contract as published.
+  - Per the preamble's own protocol ("self-stop if any of these are absent... don't improvise"),
+    **the entire session stopped here — no UI code was written**, matching this repo's standing
+    practice for a failed hard gate (C2, C2b, C6 2026-07-27). This is a whole-session gate, not
+    a per-item one: even though item 1 (RE-GATING) and item 4 (tenants additions) don't
+    themselves depend on the password-change signal, D7 is one coherent deliverable (item 2's
+    users screen and item 3's forced-change flow are directly coupled — a users screen that can
+    mint temporary passwords with no way to route into a forced change afterward is an
+    incomplete, misleading feature), so nothing was built rather than half-building around the
+    gap.
+  - **Contract deliberately not vendored this session.** Regenerating types against the new
+    contract (`npm run gen:api`) broke `typecheck`: the platform renamed
+    `CreateTenantRequest` → `OnboardTenantRequest` (now documented as "Onboard a tenant,
+    optionally with its first administrator"), and C5's already-shipped
+    `src/features/tenants/api.ts` imports the old name. Fixing that reference is a real code
+    change to already-shipped, unrelated-to-this-brief code — out of scope for a self-stopped
+    session per the same "don't improvise" instruction — so both `contracts/openapi.json` and
+    `src/api/generated/schema.ts` were reverted back to the committed `main` versions
+    (`git checkout -- ...`) rather than committing a contract the repo can't build against yet.
+    Whoever picks up C7 next will need to do this rename alongside their own gate re-check
+    regardless, since a fresh `contract:update` will hit the same rename again.
+  - No branch pushed, no PR opened — there is nothing to review. The local branch
+    `feat/C7-users-and-scope-gating` was created for this session but carries no commits (work
+    happened on it, then was reverted); safe to reuse or delete whenever the next C7 attempt
+    starts.
+  - `npm run check` re-confirmed green on the untouched `main` baseline (only the pre-existing
+    `FormField.tsx` fast-refresh lint warning) before this STATE update was written; no feature
+    code touched, so no test count change.
+  - **Platform ask (new, concrete) — see "Open decisions".**
 
 - 2026-07-28 (chore/C6b-status-filter, micro follow-up to C6): Preamble ran `npm run
 contract:update` (`gh api` fallback) against `origin/main`. khatm-platform PR #39 (KH-1.6-BE)
@@ -733,6 +972,50 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 
 ## Open decisions / blockers
 
+- **Platform ask from 2026-07-28 morning (C7 preamble self-stop) — closed the same day.** The
+  missing forced-password-change signal was fixed by khatm-platform PR #46 (`MeResponse.
+mustChangePassword` + `GET /auth/me` exempted from the gate) and confirmed live before C7 was
+  resumed and delivered — see "Last completed" 2026-07-28 (the later, "resumed and delivered"
+  entry). PR #46 itself is still not merged to `khatm-platform` `main` as of this writing; the
+  contract was vendored from the live local container instead (precedent: 2026-07-25 Dashboard).
+- **Platform ask, new 2026-07-28 (C7 delivery — login/tenant resolution, likely a real gap):**
+  `POST /api/v1/auth/login` can only ever authenticate users belonging to the platform's
+  _default_ tenant. `AuthService.login` reads `TenantContext.current()` before authentication
+  succeeds; `TenantContext`'s own Javadoc states tenant context is resolved strictly from the
+  authenticated principal (spec FS-2.1 D1) — never a header, body, or query param — so at the
+  pre-auth point where `login()` runs there is no way to know which tenant a login attempt
+  targets, and it silently falls back to `DEFAULT_TENANT_ID`. Verified live: onboarding a new
+  tenant with an `initialAdmin` succeeds and returns a real, `ACTIVE` user row (confirmed via
+  direct `psql`), but logging in as that user 401s with `AUTH_LOGIN_FAILED`/`reason:
+unknown_user` in the audit log every time. This blocks the spec's own exit-walkthrough step
+  ("login as the tenant's first admin, with the temporary password") for any tenant other than
+  the seeded default one — needs a platform-side tenant-resolution mechanism for the
+  pre-authentication login request (subdomain, header, path-prefixed login endpoint, or
+  similar) before that step of the walkthrough — or C7's own on-behalf-of Users tab — can be
+  demonstrated end-to-end for a real, freshly-onboarded tenant.
+- **Platform ask, new 2026-07-28 (C7 delivery — on-behalf-of Users tab is create-only):**
+  `POST /api/v1/admin/tenants/{id}/users` (spec D4 on-behalf-of) has no matching `GET` to list a
+  target tenant's existing users from the platform-admin side — confirmed by listing every
+  `/api/v1/admin/tenants*` path in the refreshed contract. `TenantDetailPage`'s Users tab is
+  create-only as a result, with an explicit localized note rather than a fabricated or silently
+  omitted list. A `GET /api/v1/admin/tenants/{id}/users` (or similar) would complete it.
+- **Noted, not fixed (C7 delivery):** every existing `ConfirmDialog`-driven page in this
+  codebase (`ConsumingPartiesPage`, `TenantDetailPage`'s suspend/activate,
+  `SchemaManagementPage`'s publish/archive) awaits `mutationFn.mutateAsync(...)` inside its
+  `onConfirm*` handler with no `try/catch` — harmless when the mutation succeeds, but
+  `mutateAsync` re-throws by design, and nothing awaits/catches the fire-and-forget `onClick`
+  handler, so a _rejecting_ mutation there would surface as an unhandled promise rejection (this
+  fails `npm run test`'s exit code — discovered when this session's own `UsersPage` KH-USR-0423
+  test became the first test in this codebase to actually mock a `ConfirmDialog` mutation as
+  rejecting). Fixed in the new `UsersPage.tsx` this session (each handler now wraps its
+  `mutateAsync` call in `try { … } catch { /* surfaced via isError */ }`); the existing pages
+  listed above likely have the identical latent issue but were out of scope to retrofit here —
+  worth a small follow-up sweep.
+- Two operation descriptions in the refreshed contract still read "Requires the admin scope"
+  verbatim (`allowSchema` — `POST /api/v1/admin/consuming-parties/{id}/allowed-schemas` — and
+  `GET /api/v1/admin/tenants`) even though their own `403` responses correctly cite the new
+  granular scopes (`consumer:manage`/`platform:admin`) — stale docstrings from the platform's
+  D2 re-gating pass, noted 2026-07-28 morning, still present, low-priority doc cleanup only.
 - **Platform ask from 2026-07-27 — fully closed 2026-07-28 (C6b chore).** Spec FS-1.6
   (Consumption Lifecycle Visibility) landed and khatm-platform's KH-1.6-BE (PR #39) delivered
   exactly what was asked: `status`/`usesConsumed` on `CredentialSummary`/`CredentialView`, and a
@@ -815,23 +1098,32 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 2. Visual identity — **DONE**. Remainder: migrate the last ~12 duplicated button blocks onto
    `Button` and adopt `.khatm-input` across remaining forms; revisit whether a real charting
    library belongs in the dashboard.
-3. KH-2.2-era RBAC changes, whatever those turn out to require.
-4. Unify the scope-gating placement convention (self-gating vs. App.tsx-level wrapping — see
-   "Open decisions" above) across every gated page.
-5. Credentials search status-filter dropdown — the platform ask logged 2026-07-28 (C6b) is
-   addressed on `khatm-platform`'s side via PR #41 (`chore/credential-search-status-filter`), but
-   that PR is **not yet merged** — still blocked until it lands on `khatm-platform` `main` and this
-   repo's `npm run contract:update` picks it up. See "Open decisions" above.
+3. Majd's EN/AR/RTL browser walkthrough of C7 (users & scope-gating, spec FS-2.2 D7) — PR
+   #19 opened 2026-07-28, not yet merged; this walkthrough is the merge gate, same as every
+   screen since C1.
+4. Platform follow-ups from C7 (see "Open decisions"): a login/tenant-resolution mechanism for
+   authenticating a non-default tenant's own users (currently architecturally unreachable — not
+   a console-side fix), and a `GET` counterpart for `/admin/tenants/{id}/users` so the
+   on-behalf-of Users tab can list, not just create.
+5. Unify the scope-gating placement convention (self-gating vs. App.tsx-level wrapping — see
+   "Open decisions" above) across every gated page. Also sweep the `ConfirmDialog`-driven pages
+   noted in C7's "Open decisions" entry for the same unguarded-`mutateAsync` unhandled-rejection
+   shape fixed in the new `UsersPage.tsx`.
+6. Credentials search status-filter dropdown — the platform ask logged 2026-07-28 (C6b) is
+   addressed on `khatm-platform`'s side via PR #41 (`chore/credential-search-status-filter`),
+   but that PR is **not yet merged** — still blocked until it lands on `khatm-platform` `main`
+   and this repo's `npm run contract:update` picks it up. See "Open decisions" above.
 
-Closed: item #5 (was #6), contract zero-diff sanity check for KH-1.6-BE — PR #39 merged
-2026-07-28, C6b's re-run confirmed zero semantic drift; see "Last completed" and "Open
-decisions". Closed: item #5 (previously), Majd's C5 Tenants EN/AR/RTL walkthrough — done, PR #15
-merged 2026-07-27 (STATE's stale "PR open" line was corrected by the C6b hygiene pass). Closed:
-item #6 (was #5), C6 credential lifecycle Majd walkthrough — approved and merged as
-PR #16 2026-07-28; see "Last completed". Closed: Dashboard v2's four data-less panels — all
-wired to real khatm-platform data (KH-1.1.5-BE) 2026-07-25; see "Last completed". Closed: the
-full EN/AR + RTL click-through
-across every screen — Majd confirmed the Arabic
+Closed: item #3 (was #3, KH-2.2-era RBAC), C7 users & scope-gating (spec FS-2.2 D7) delivered
+2026-07-28 after resuming from the same day's preamble self-stop; PR #19 opened, Majd's
+walkthrough now the remaining gate (item #3 above). Closed: item #5 (was #6), contract zero-diff sanity
+check for KH-1.6-BE — PR #39 merged 2026-07-28, C6b's re-run confirmed zero semantic drift; see
+"Last completed" and "Open decisions". Closed: item #5 (previously), Majd's C5 Tenants EN/AR/RTL
+walkthrough — done, PR #15 merged 2026-07-27 (STATE's stale "PR open" line was corrected by the
+C6b hygiene pass). Closed: item #6 (was #5), C6 credential lifecycle Majd walkthrough — approved
+and merged as PR #16 2026-07-28; see "Last completed". Closed: Dashboard v2's four data-less
+panels — all wired to real khatm-platform data (KH-1.1.5-BE) 2026-07-25; see "Last completed".
+Closed: the full EN/AR + RTL click-through across every screen — Majd confirmed the Arabic
 layout and messages read correctly across the rebuilt container before merging PR #6. Closed:
 item #5, contract refresh sanity check — re-ran 2026-07-26, zero semantic drift found; see
 "Last completed".

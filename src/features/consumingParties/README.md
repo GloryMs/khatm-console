@@ -5,7 +5,8 @@ each party's schema allowlist (deny-by-default), and mint one-time-shown
 API keys.
 
 **Routes:** `/consumers` (`ConsumingPartiesPage`), self-gated with
-`RequireScope('admin')` (same pattern as `schemaManagement`).
+`RequireScope('consumer:manage')` (spec FS-2.2 D2 — replaces the former
+coarse `admin` scope; same pattern as `schemaManagement`).
 
 **Queries / mutations:** `useConsumingParties` → `GET
 /api/v1/admin/consuming-parties`; `useCreateConsumingParty`,

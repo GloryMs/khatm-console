@@ -9,7 +9,7 @@ import styles from './SchemaViewPage.module.css';
 
 export function SchemaViewPage() {
   return (
-    <RequireScope scope="admin">
+    <RequireScope scope="schema:manage">
       <SchemaViewPageBody />
     </RequireScope>
   );

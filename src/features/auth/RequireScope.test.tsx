@@ -11,6 +11,7 @@ const baseAuth: AuthContextValue = {
   user: null,
   login: async () => undefined,
   logout: async () => undefined,
+  refresh: async () => undefined,
   hasScope: () => false,
 };
 

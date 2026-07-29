@@ -2,10 +2,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   activateTenant,
   createTenant,
+  createUserInTenant,
   getTenant,
   listTenants,
   suspendTenant,
-  type CreateTenantRequest,
+  type CreateUserRequest,
+  type OnboardTenantRequest,
 } from './api';
 
 export const tenantsKeys = {
@@ -39,7 +41,7 @@ function useInvalidateAfterWrite() {
 export function useCreateTenant() {
   const invalidate = useInvalidateAfterWrite();
   return useMutation({
-    mutationFn: (req: CreateTenantRequest) => createTenant(req),
+    mutationFn: (req: OnboardTenantRequest) => createTenant(req),
     onSuccess: invalidate,
   });
 }
@@ -57,5 +59,18 @@ export function useActivateTenant() {
   return useMutation({
     mutationFn: (id: string) => activateTenant(id),
     onSuccess: invalidate,
+  });
+}
+
+/**
+ * Adds a user to a tenant other than the caller's own (spec FS-2.2 D4
+ * on-behalf-of). No list invalidation — the contract has no matching `GET`
+ * for a tenant's users from the platform-admin side, so there is no cached
+ * list to keep fresh here.
+ */
+export function useCreateUserInTenant() {
+  return useMutation({
+    mutationFn: ({ tenantId, req }: { tenantId: string; req: CreateUserRequest }) =>
+      createUserInTenant(tenantId, req),
   });
 }

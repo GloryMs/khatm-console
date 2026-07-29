@@ -8,12 +8,12 @@ export type CreateApiKeyResponse = components['schemas']['CreateApiKeyResponse']
 
 const BASE = '/api/v1/admin/consuming-parties';
 
-/** Every consuming party registered for the tenant. Requires the `admin` scope. */
+/** Every consuming party registered for the tenant. Requires the `consumer:manage` scope. */
 export function listConsumingParties(): Promise<ConsumingPartyView[]> {
   return apiFetch<ConsumingPartyView[]>(BASE);
 }
 
-/** Register a new consuming party. Requires the `admin` scope. */
+/** Register a new consuming party. Requires the `consumer:manage` scope. */
 export function createConsumingParty(
   req: CreateConsumingPartyRequest,
 ): Promise<ConsumingPartyView> {

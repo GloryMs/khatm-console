@@ -2,31 +2,53 @@ import { apiFetch } from '@/api/client';
 import type { components } from '@/api/generated/schema';
 
 export type TenantView = components['schemas']['TenantView'];
-export type CreateTenantRequest = components['schemas']['CreateTenantRequest'];
+export type OnboardTenantRequest = components['schemas']['OnboardTenantRequest'];
+export type OnboardTenantResponse = components['schemas']['OnboardTenantResponse'];
+export type InitialAdminRequest = components['schemas']['InitialAdminRequest'];
+export type CreateUserRequest = components['schemas']['CreateUserRequest'];
+export type CreateUserResponse = components['schemas']['CreateUserResponse'];
 
 export type TenantType = 'GOVERNMENT' | 'EDUCATION' | 'PRIVATE' | 'OTHER';
 export type TenantDeployMode = 'SAAS' | 'ONPREM' | 'FEDERATED';
 
 const BASE = '/api/v1/admin/tenants';
 
-/** Every tenant registered on the platform, newest first. Requires the `admin` scope. */
+/** Every tenant registered on the platform, newest first. Requires the `platform:admin` scope. */
 export function listTenants(): Promise<TenantView[]> {
   return apiFetch<TenantView[]>(BASE);
 }
 
-/** One tenant by id. Requires the `admin` scope. */
+/** One tenant by id. Requires the `platform:admin` scope. */
 export function getTenant(id: string): Promise<TenantView> {
   return apiFetch<TenantView>(`${BASE}/${encodeURIComponent(id)}`);
 }
 
 /**
- * Full onboarding: tenant row, first ACTIVE signing key, default status list.
- * Resumable — retrying with a slug whose onboarding died partway through
- * resumes it rather than conflicting; only a fully-onboarded slug 409s
- * (KH-TNT-0409). Requires the `admin` scope.
+ * Full onboarding: tenant row, first ACTIVE signing key, default status list,
+ * the three-role catalog, and — when `initialAdmin` is present — the
+ * tenant's first TENANT_ADMIN with a one-time temporary password (spec
+ * FS-2.2 D6). Resumable — retrying with a slug whose onboarding died partway
+ * through resumes it rather than conflicting; only a fully-onboarded slug
+ * 409s (KH-TNT-0409). Requires the `platform:admin` scope.
  */
-export function createTenant(req: CreateTenantRequest): Promise<TenantView> {
-  return apiFetch<TenantView>(BASE, { method: 'POST', body: req });
+export function createTenant(req: OnboardTenantRequest): Promise<OnboardTenantResponse> {
+  return apiFetch<OnboardTenantResponse>(BASE, { method: 'POST', body: req });
+}
+
+/**
+ * Adds a user to a tenant other than the caller's own, run on behalf of the
+ * named tenant (spec FS-2.2 D4 `OnBehalfOfExecutor`, audited `ON_BEHALF_OF`).
+ * Same creation shape as a tenant admin's own-user create. Requires the
+ * `platform:admin` scope.
+ */
+export function createUserInTenant(
+  tenantId: string,
+  req: CreateUserRequest,
+): Promise<CreateUserResponse> {
+  return apiFetch<CreateUserResponse>(`${BASE}/${encodeURIComponent(tenantId)}/users`, {
+    method: 'POST',
+    body: req,
+  });
 }
 
 /** ACTIVE -> SUSPENDED; blocks new issuance and sign-ins only. Idempotent. */

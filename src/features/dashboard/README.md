@@ -6,8 +6,8 @@ fully wired to real data as of khatm-platform's KH-1.1.5-BE.
 
 **Routes:** `/dashboard` (`DashboardPage`), any authenticated operator — also
 the post-login landing page (`/` redirects here). The signing-keys panel is
-admin-scoped (matches the backend endpoint) and shows an "admin required"
-state for non-admin operators.
+`key:manage`-scoped (spec FS-2.2 D2, matches the backend endpoint) and shows
+a "not available" state for operators without that scope.
 
 **Queries** (all `src/features/dashboard/hooks.ts`, 60s `staleTime`/
 `refetchInterval` unless noted):
@@ -29,9 +29,9 @@ state for non-admin operators.
 - `useConsumingPartyStats(windowDays)` → `GET /api/v1/stats/consuming-parties`
   — the top-consuming-parties panel, ranked by call volume.
 - `useSigningKeyStatuses(enabled)` → `GET /api/v1/admin/signing-keys`
-  (5-minute refresh, admin-scoped) — real `kid`/`state`/`validFrom`/
-  `validTo`; `enabled` is wired to `hasScope('admin')` so a non-admin
-  operator's dashboard never fires a request that can only 403.
+  (5-minute refresh, `key:manage`-scoped) — real `kid`/`state`/`validFrom`/
+  `validTo`; `enabled` is wired to `hasScope('key:manage')` so an operator
+  without that scope never fires a request that can only 403.
 
 **Export:** the toolbar's Export button is real — `csv.ts`'s `buildStatsCsv`
 serializes the currently-displayed stats snapshot (window + all 7 counters)

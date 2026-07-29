@@ -23,31 +23,31 @@ const STATE_LABEL_KEY: Record<string, string> = {
 
 /**
  * Every signing key's lifecycle status from `GET /api/v1/admin/signing-keys`
- * (KH-1.1.5-BE, admin-scoped) — real `state`/`validFrom`/`validTo`, never
- * the JWK material. Unlike the public `/.well-known/jwks.json` this
- * includes RETIRED keys and is only visible to admins.
+ * (KH-1.1.5-BE, `key:manage`-scoped) — real `state`/`validFrom`/`validTo`,
+ * never the JWK material. Unlike the public `/.well-known/jwks.json` this
+ * includes RETIRED keys and is only visible to key:manage-scoped operators.
  */
 export function SigningKeysPanel() {
   const { t, i18n } = useTranslation();
   const { hasScope } = useAuth();
-  const isAdmin = hasScope('admin');
-  const keys = useSigningKeyStatuses(isAdmin);
+  const canViewKeys = hasScope('key:manage');
+  const keys = useSigningKeyStatuses(canViewKeys);
   const dateFormat = new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium' });
 
   return (
     <PanelCard title={t('dashboard.keys.title')}>
-      {!isAdmin && (
+      {!canViewKeys && (
         <EmptyState
           title={t('dashboard.keys.adminOnlyTitle')}
           body={t('dashboard.keys.adminOnlyBody')}
         />
       )}
-      {isAdmin && keys.isPending && <p className={styles.help}>{t('common.loading')}</p>}
-      {isAdmin && keys.isError && <ApiErrorBanner error={keys.error} />}
-      {isAdmin && keys.isSuccess && (keys.data.keys?.length ?? 0) === 0 && (
+      {canViewKeys && keys.isPending && <p className={styles.help}>{t('common.loading')}</p>}
+      {canViewKeys && keys.isError && <ApiErrorBanner error={keys.error} />}
+      {canViewKeys && keys.isSuccess && (keys.data.keys?.length ?? 0) === 0 && (
         <EmptyState title={t('dashboard.keys.emptyTitle')} body={t('dashboard.keys.emptyBody')} />
       )}
-      {isAdmin && keys.isSuccess && (keys.data.keys?.length ?? 0) > 0 && (
+      {canViewKeys && keys.isSuccess && (keys.data.keys?.length ?? 0) > 0 && (
         <ul className={styles.list}>
           {keys.data.keys?.map((key) => {
             const tone = STATE_TONE[key.state ?? ''] ?? 'neutral';
