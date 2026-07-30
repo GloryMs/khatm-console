@@ -12,8 +12,8 @@
   Delivered both items: an optional "Organization" field on the login form (maps to `tenantSlug`,
   omitted from the request when blank) and the on-behalf-of Users tab now lists a tenant's users
   (reusing `UserList` read-only, since lock/roles/reset have no on-behalf-of contract variant).
-  **PR #20 opened, not merged** — Majd's EN/AR/RTL walkthrough is the merge gate (branch
-  protection now enforced on this repo). See "Last completed" 2026-07-30 for the full record.
+  **PR #20 merged to `main` 2026-07-30** (squash, branch deleted) after Majd's EN/AR/RTL
+  walkthrough. See "Last completed" 2026-07-30 for the full record.
 - C7 users & scope-gating (spec FS-2.2 D7) — **DONE, resumed and delivered 2026-07-28** after
   self-stopping earlier the same day at the preamble gate (missing forced-password-change
   signal, see below). khatm-platform's PR #46 fixed it — `MeResponse.mustChangePassword` +
@@ -145,10 +145,10 @@
     matches. The throwaway `c7b-acme` tenant was left `SUSPENDED` after the walkthrough (no delete
     endpoint exists, same precedent as every prior throwaway-tenant cleanup). What this does
     **not** cover: seeing the Organization field or the on-behalf-of user rows rendered in an
-    actual browser, or the Arabic/RTL layout — **Majd's manual EN/AR/RTL browser walkthrough is
-    still the real merge gate**, per this session's own DoD and this repo's now-enforced branch
-    protection.
-  - PR #20 opened, not merged.
+    actual browser, or the Arabic/RTL layout — that gap was closed by Majd's own manual EN/AR/RTL
+    browser walkthrough, the real merge gate per this repo's now-enforced branch protection.
+  - **PR #20 opened, then merged to `main` 2026-07-30** (squash, branch deleted) after Majd's
+    walkthrough passed.
 
 - 2026-07-28 (C7 users & scope-gating, spec FS-2.2 D7 — resumed and delivered): Majd reported
   the platform developer had fixed the missing forced-password-change signal (khatm-platform
