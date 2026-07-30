@@ -18,3 +18,8 @@ Temporary passwords (create + reset) are shown exactly once via the shared
 `TemporaryPasswordDialog` and never enter the TanStack Query cache.
 KH-USR-0423 (last-active-admin guard) renders as a dedicated inline
 explanation instead of the generic error banner.
+
+`components/UserList.tsx` is shared beyond this feature: its row-action
+handler props are all optional, and omitting every one renders the same row
+shape with no actions column — used by `tenants`' on-behalf-of Users tab,
+which has no on-behalf-of contract variant of lock/roles/reset to call.

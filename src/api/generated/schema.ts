@@ -320,7 +320,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List a tenant's users
+         * @description Every user of the named tenant, newest first — the same row shape GET /api/v1/users returns for a tenant admin's own tenant, run on behalf of the named tenant (OnBehalfOfExecutor, audited ON_BEHALF_OF). Requires the platform:admin scope.
+         */
+        get: operations["listUsersInTenant"];
         put?: never;
         /**
          * Add a user to an existing tenant
@@ -364,7 +368,7 @@ export interface paths {
         put?: never;
         /**
          * Console login
-         * @description Authenticates a username/password pair for the current tenant and establishes a server-side session (Redis-backed, cookie KHATM_SESSION). Every failure reason — unknown user, wrong password, temporary lockout, administrative LOCKED/DISABLED — returns the identical generic 401 (spec FS-0.6b D7); the real reason is recorded only in the audit log.
+         * @description Authenticates a username/password pair and establishes a server-side session (Redis-backed, cookie KHATM_SESSION). The optional tenantSlug (spec FS-2.2) authenticates against that tenant specifically; omit or leave it blank to log into the caller's ambient default tenant, unchanged from before. Every failure reason — unknown user, wrong password, temporary lockout, administrative LOCKED/DISABLED, or an unknown/SUSPENDED tenantSlug — returns the identical generic 401 (spec FS-0.6b D7); the real reason is recorded only in the audit log.
          */
         post: operations["login"];
         delete?: never;
@@ -1311,6 +1315,7 @@ export interface components {
         };
         LoginRequest: {
             password: string;
+            tenantSlug?: string;
             username: string;
         };
         MeResponse: {
@@ -2226,6 +2231,55 @@ export interface operations {
                 };
             };
             /** @description No tenant with this id (KH-TNT-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    listUsersInTenant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The tenant's users */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserSummary"][];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the platform:admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Target tenant not found (KH-TNT-0404) */
             404: {
                 headers: {
                     [name: string]: unknown;

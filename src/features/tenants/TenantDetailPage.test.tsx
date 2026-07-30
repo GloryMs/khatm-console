@@ -128,11 +128,23 @@ describe('TenantDetailPage suspend / activate', () => {
   });
 });
 
+const onBehalfOfUser: tenantsApi.UserSummary = {
+  id: 'obo-user-1',
+  username: 'tenantadmin',
+  displayNameI18n: { en: 'Tenant Admin', ar: 'مدير المستأجر' },
+  roles: ['TENANT_ADMIN'],
+  status: 'ACTIVE',
+  createdAt: '2026-07-29T06:00:00Z',
+};
+
 describe('TenantDetailPage on-behalf-of Users tab', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it('switches to the Users tab and shows the on-behalf-of notice plus the create-only fallback', async () => {
+  it("switches to the Users tab and lists the tenant's users, read-only (no row actions)", async () => {
     vi.spyOn(tenantsApi, 'getTenant').mockResolvedValue(activeTenant);
+    const listUsersInTenant = vi
+      .spyOn(tenantsApi, 'listUsersInTenant')
+      .mockResolvedValue([onBehalfOfUser]);
     const user = userEvent.setup();
     renderPage(adminAuth);
 
@@ -141,11 +153,18 @@ describe('TenantDetailPage on-behalf-of Users tab', () => {
     expect(
       screen.getByText(i18n.t('tenants.detail.onBehalfOfNotice', { tenant: 'Demo Tenant' })),
     ).toBeInTheDocument();
-    expect(screen.getByText(i18n.t('tenants.detail.usersListUnavailable'))).toBeInTheDocument();
+    expect(await screen.findByText('tenantadmin')).toBeInTheDocument();
+    expect(screen.getByText('Tenant Admin')).toBeInTheDocument();
+    expect(listUsersInTenant).toHaveBeenCalledWith('tenant-1');
+    expect(screen.queryByRole('columnheader', { name: i18n.t('users.columnActions') })).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: i18n.t('users.actionEditRoles') }),
+    ).not.toBeInTheDocument();
   });
 
   it('adds a user to the tenant on behalf of it and shows the one-time temporary password', async () => {
     vi.spyOn(tenantsApi, 'getTenant').mockResolvedValue(activeTenant);
+    vi.spyOn(tenantsApi, 'listUsersInTenant').mockResolvedValue([]);
     const createUserInTenant = vi.spyOn(tenantsApi, 'createUserInTenant').mockResolvedValue({
       id: 'user-9',
       username: 'newadmin',

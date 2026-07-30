@@ -14,10 +14,13 @@ on-behalf-of Users tab), both self-gated with `RequireScope('platform:admin')`
 invalidates the list and detail queries. `jwks.ts`'s `buildTenantJwksUrl`
 constructs the tenant's public JWKS link client-side from its slug alone (no
 extra endpoint call) — same-origin via the nginx/Vite `/t` proxy added
-alongside the existing `/api` and `/.well-known` ones. `createUserInTenant`
-(spec D4 `OnBehalfOfExecutor`) posts to `/admin/tenants/{id}/users` for the
-detail page's Users tab; the contract has no matching `GET`, so that tab is
-create-only — see STATE.md's platform ask.
+alongside the existing `/api` and `/.well-known` ones. `useTenantUsers(id)`
+→ `GET /admin/tenants/{id}/users` and `createUserInTenant` (spec D4
+`OnBehalfOfExecutor`) → `POST .../{id}/users` back the detail page's Users
+tab: it lists the tenant's users read-only (`UserList` with no row-action
+handlers — lock/roles/reset have no on-behalf-of contract variant yet, so
+those actions aren't offered here) alongside the existing create form;
+creating invalidates that tenant's users query.
 
 Onboarding is server-resumable (a retried create for a half-onboarded slug
 succeeds rather than 409ing) — the UI has no special retry handling, by

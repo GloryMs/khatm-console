@@ -16,9 +16,16 @@ import {
   CreateUserDialog,
   type CreateUserFormValues,
 } from '@/features/users/components/CreateUserDialog';
+import { UserList } from '@/features/users/components/UserList';
 import type { CreateUserResponse } from './api';
 import { buildTenantJwksUrl } from './jwks';
-import { useActivateTenant, useCreateUserInTenant, useSuspendTenant, useTenant } from './hooks';
+import {
+  useActivateTenant,
+  useCreateUserInTenant,
+  useSuspendTenant,
+  useTenant,
+  useTenantUsers,
+} from './hooks';
 import styles from './TenantDetailPage.module.css';
 
 type DetailTab = 'details' | 'users';
@@ -45,6 +52,7 @@ function TenantDetailPageBody() {
   const [activeTab, setActiveTab] = useState<DetailTab>('details');
   const [createUserOpen, setCreateUserOpen] = useState(false);
   const [createdUser, setCreatedUser] = useState<CreateUserResponse | null>(null);
+  const tenantUsers = useTenantUsers(activeTab === 'users' ? params.id : undefined);
 
   if (tenant.isPending) return <p>{t('common.loading')}</p>;
   if (tenant.isError) return <ApiErrorBanner error={tenant.error} />;
@@ -195,14 +203,14 @@ function TenantDetailPageBody() {
               })}
             </p>
           </Banner>
-          <Banner tone="warning">
-            <p>{t('tenants.detail.usersListUnavailable')}</p>
-          </Banner>
           <div className={styles.actionsRow}>
             <Button variant="primary" onClick={() => setCreateUserOpen(true)}>
               {t('tenants.detail.addUserCta')}
             </Button>
           </div>
+          {tenantUsers.isPending && <p>{t('common.loading')}</p>}
+          {tenantUsers.isError && <ApiErrorBanner error={tenantUsers.error} />}
+          {tenantUsers.data && <UserList users={tenantUsers.data} />}
         </div>
       )}
 

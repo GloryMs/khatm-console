@@ -5,6 +5,7 @@ import {
   createUserInTenant,
   getTenant,
   listTenants,
+  listUsersInTenant,
   suspendTenant,
   type CreateUserRequest,
   type OnboardTenantRequest,
@@ -14,6 +15,7 @@ export const tenantsKeys = {
   all: ['tenants'] as const,
   list: () => [...tenantsKeys.all, 'list'] as const,
   detail: (id: string) => [...tenantsKeys.all, 'detail', id] as const,
+  users: (id: string) => [...tenantsKeys.all, 'detail', id, 'users'] as const,
 };
 
 /** The platform's tenants, newest first. */
@@ -62,15 +64,26 @@ export function useActivateTenant() {
   });
 }
 
+/** A tenant's users, on behalf of that tenant (spec FS-2.2 D4). Requires `platform:admin`. */
+export function useTenantUsers(tenantId: string | undefined) {
+  return useQuery({
+    queryKey: tenantId ? tenantsKeys.users(tenantId) : [...tenantsKeys.all, 'users', 'none'],
+    queryFn: () => listUsersInTenant(tenantId as string),
+    enabled: Boolean(tenantId),
+  });
+}
+
 /**
  * Adds a user to a tenant other than the caller's own (spec FS-2.2 D4
- * on-behalf-of). No list invalidation — the contract has no matching `GET`
- * for a tenant's users from the platform-admin side, so there is no cached
- * list to keep fresh here.
+ * on-behalf-of); invalidates that tenant's on-behalf-of users list.
  */
 export function useCreateUserInTenant() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ tenantId, req }: { tenantId: string; req: CreateUserRequest }) =>
       createUserInTenant(tenantId, req),
+    onSuccess: (_data, { tenantId }) => {
+      void queryClient.invalidateQueries({ queryKey: tenantsKeys.users(tenantId) });
+    },
   });
 }

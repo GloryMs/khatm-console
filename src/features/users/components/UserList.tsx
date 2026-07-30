@@ -8,11 +8,16 @@ import styles from './UserList.module.css';
 
 interface UserListProps {
   users: UserSummary[];
-  onEditRoles: (user: UserSummary) => void;
-  onLock: (user: UserSummary) => void;
-  onUnlock: (user: UserSummary) => void;
-  onDisable: (user: UserSummary) => void;
-  onResetPassword: (user: UserSummary) => void;
+  /**
+   * Row-action handlers. All optional — omit every one (e.g. the on-behalf-of
+   * tenant Users tab, which has no on-behalf-of variant of these endpoints
+   * yet) to render the same list read-only, with no actions column at all.
+   */
+  onEditRoles?: (user: UserSummary) => void;
+  onLock?: (user: UserSummary) => void;
+  onUnlock?: (user: UserSummary) => void;
+  onDisable?: (user: UserSummary) => void;
+  onResetPassword?: (user: UserSummary) => void;
 }
 
 const STATUS_TONE: Record<string, StatusTone> = {
@@ -37,6 +42,7 @@ export function UserList({
 }: UserListProps) {
   const { t } = useTranslation();
   const localize = useLocalizedText();
+  const hasActions = Boolean(onEditRoles || onLock || onUnlock || onDisable || onResetPassword);
 
   if (users.length === 0) {
     return <div className="emptyState">{t('users.empty')}</div>;
@@ -50,7 +56,7 @@ export function UserList({
           <th>{t('users.columnName')}</th>
           <th>{t('users.columnRoles')}</th>
           <th>{t('users.columnStatus')}</th>
-          <th>{t('users.columnActions')}</th>
+          {hasActions && <th>{t('users.columnActions')}</th>}
         </tr>
       </thead>
       <tbody>
@@ -80,35 +86,53 @@ export function UserList({
                   {STATUS_LABEL_KEY[status] ? t(STATUS_LABEL_KEY[status]) : t('common.unknown')}
                 </StatusBadge>
               </td>
-              <td>
-                <div className={styles.actions}>
-                  <button type="button" className={styles.action} onClick={() => onEditRoles(user)}>
-                    {t('users.actionEditRoles')}
-                  </button>
-                  {status === 'ACTIVE' && (
-                    <button type="button" className={styles.action} onClick={() => onLock(user)}>
-                      {t('users.actionLock')}
-                    </button>
-                  )}
-                  {status !== 'DISABLED' && (
-                    <button type="button" className={styles.action} onClick={() => onDisable(user)}>
-                      {t('users.actionDisable')}
-                    </button>
-                  )}
-                  {status !== 'ACTIVE' && (
-                    <button type="button" className={styles.action} onClick={() => onUnlock(user)}>
-                      {t('users.actionUnlock')}
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    className={styles.action}
-                    onClick={() => onResetPassword(user)}
-                  >
-                    {t('users.actionResetPassword')}
-                  </button>
-                </div>
-              </td>
+              {hasActions && (
+                <td>
+                  <div className={styles.actions}>
+                    {onEditRoles && (
+                      <button
+                        type="button"
+                        className={styles.action}
+                        onClick={() => onEditRoles(user)}
+                      >
+                        {t('users.actionEditRoles')}
+                      </button>
+                    )}
+                    {onLock && status === 'ACTIVE' && (
+                      <button type="button" className={styles.action} onClick={() => onLock(user)}>
+                        {t('users.actionLock')}
+                      </button>
+                    )}
+                    {onDisable && status !== 'DISABLED' && (
+                      <button
+                        type="button"
+                        className={styles.action}
+                        onClick={() => onDisable(user)}
+                      >
+                        {t('users.actionDisable')}
+                      </button>
+                    )}
+                    {onUnlock && status !== 'ACTIVE' && (
+                      <button
+                        type="button"
+                        className={styles.action}
+                        onClick={() => onUnlock(user)}
+                      >
+                        {t('users.actionUnlock')}
+                      </button>
+                    )}
+                    {onResetPassword && (
+                      <button
+                        type="button"
+                        className={styles.action}
+                        onClick={() => onResetPassword(user)}
+                      >
+                        {t('users.actionResetPassword')}
+                      </button>
+                    )}
+                  </div>
+                </td>
+              )}
             </tr>
           );
         })}
