@@ -17,10 +17,14 @@ extra endpoint call) — same-origin via the nginx/Vite `/t` proxy added
 alongside the existing `/api` and `/.well-known` ones. `useTenantUsers(id)`
 → `GET /admin/tenants/{id}/users` and `createUserInTenant` (spec D4
 `OnBehalfOfExecutor`) → `POST .../{id}/users` back the detail page's Users
-tab: it lists the tenant's users read-only (`UserList` with no row-action
-handlers — lock/roles/reset have no on-behalf-of contract variant yet, so
+tab: it lists the tenant's users (`UserList` with only `onResetTotp` wired
+— lock/roles/reset-password still have no on-behalf-of contract variant, so
 those actions aren't offered here) alongside the existing create form;
-creating invalidates that tenant's users query.
+creating invalidates that tenant's users query. `useResetTotpInTenant`
+(spec FS-2.2 V1, `POST .../{id}/users/{userId}/totp/reset`,
+`OnBehalfOfExecutor`) resets a user's TOTP enrollment on behalf of the
+named tenant; no invalidation, same reasoning as `features/users`'
+`useResetTotp`.
 
 Onboarding is server-resumable (a retried create for a half-onboarded slug
 succeeds rather than 409ing) — the UI has no special retry handling, by

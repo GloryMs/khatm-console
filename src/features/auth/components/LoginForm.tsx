@@ -8,6 +8,7 @@ import { ApiErrorBanner } from '@/components/ui/ApiErrorBanner';
 import { Button } from '@/components/ui/Button';
 import { ApiError } from '@/api/errors';
 import { useAuth } from '../useAuth';
+import type { LoginChallengeResponse } from '../api';
 import styles from './LoginForm.module.css';
 
 function buildLoginSchema(t: TFunction) {
@@ -20,7 +21,12 @@ function buildLoginSchema(t: TFunction) {
 
 type LoginFormValues = z.infer<ReturnType<typeof buildLoginSchema>>;
 
-export function LoginForm() {
+interface LoginFormProps {
+  /** Called instead of a normal sign-in when the account has TOTP active. */
+  onTotpRequired?: (challenge: LoginChallengeResponse) => void;
+}
+
+export function LoginForm({ onTotpRequired }: LoginFormProps = {}) {
   const { t } = useTranslation();
   const { login } = useAuth();
   const [submitError, setSubmitError] = useState<unknown>(null);
@@ -37,11 +43,12 @@ export function LoginForm() {
     setSubmitError(null);
     const tenantSlug = values.tenantSlug.trim();
     try {
-      await login({
+      const result = await login({
         username: values.username,
         password: values.password,
         ...(tenantSlug ? { tenantSlug } : {}),
       });
+      if (result?.totpRequired) onTotpRequired?.(result);
     } catch (err) {
       setSubmitError(err);
       if (err instanceof ApiError) {

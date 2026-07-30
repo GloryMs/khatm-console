@@ -14,6 +14,7 @@ function renderForm(refresh: AuthContextValue['refresh'] = vi.fn().mockResolvedV
     status: 'authenticated',
     user: { username: 'op1', scopes: [], mustChangePassword: true },
     login: async () => undefined,
+    completeTotpLogin: async () => undefined,
     logout: async () => undefined,
     refresh,
     hasScope: () => false,

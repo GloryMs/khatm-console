@@ -18,6 +18,7 @@ interface UserListProps {
   onUnlock?: (user: UserSummary) => void;
   onDisable?: (user: UserSummary) => void;
   onResetPassword?: (user: UserSummary) => void;
+  onResetTotp?: (user: UserSummary) => void;
 }
 
 const STATUS_TONE: Record<string, StatusTone> = {
@@ -39,10 +40,13 @@ export function UserList({
   onUnlock,
   onDisable,
   onResetPassword,
+  onResetTotp,
 }: UserListProps) {
   const { t } = useTranslation();
   const localize = useLocalizedText();
-  const hasActions = Boolean(onEditRoles || onLock || onUnlock || onDisable || onResetPassword);
+  const hasActions = Boolean(
+    onEditRoles || onLock || onUnlock || onDisable || onResetPassword || onResetTotp,
+  );
 
   if (users.length === 0) {
     return <div className="emptyState">{t('users.empty')}</div>;
@@ -128,6 +132,15 @@ export function UserList({
                         onClick={() => onResetPassword(user)}
                       >
                         {t('users.actionResetPassword')}
+                      </button>
+                    )}
+                    {onResetTotp && (
+                      <button
+                        type="button"
+                        className={styles.action}
+                        onClick={() => onResetTotp(user)}
+                      >
+                        {t('users.actionResetTotp')}
                       </button>
                     )}
                   </div>

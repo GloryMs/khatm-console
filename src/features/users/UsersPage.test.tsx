@@ -15,6 +15,7 @@ const baseAuth: AuthContextValue = {
   status: 'authenticated',
   user: null,
   login: async () => undefined,
+  completeTotpLogin: async () => undefined,
   logout: async () => undefined,
   refresh: async () => undefined,
   hasScope: () => false,
@@ -169,5 +170,25 @@ describe('UsersPage reset password', () => {
     await waitFor(() => expect(reset).toHaveBeenCalledWith('user-1'));
     await user.click(await screen.findByRole('button', { name: i18n.t('common.reveal') }));
     expect(await screen.findByText('fresh-temp-pass')).toBeInTheDocument();
+  });
+});
+
+describe('UsersPage reset 2FA', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("resets a user's TOTP enrollment after confirm", async () => {
+    vi.spyOn(usersApi, 'listUsers').mockResolvedValue(users);
+    const resetTotp = vi.spyOn(usersApi, 'resetTotp').mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    renderPage(tenantAdminAuth);
+
+    await user.click(await screen.findByRole('button', { name: i18n.t('users.actionResetTotp') }));
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: i18n.t('users.resetTotpConfirm.confirm'),
+      }),
+    );
+
+    await waitFor(() => expect(resetTotp).toHaveBeenCalledWith('user-1'));
   });
 });

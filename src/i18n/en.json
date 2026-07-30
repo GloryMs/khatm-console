@@ -16,7 +16,8 @@
     "consumingParties": "Consuming Parties",
     "consumeSim": "Consume Simulator",
     "users": "Users",
-    "tenants": "Tenants"
+    "tenants": "Tenants",
+    "security": "Security"
   },
   "shell": {
     "sidebarLabel": "Primary navigation",
@@ -135,6 +136,18 @@
       "submit": "Sign in",
       "submitting": "Signing in…"
     },
+    "totpChallenge": {
+      "title": "Enter your authentication code",
+      "code": "Authentication code",
+      "recoveryCode": "Recovery code",
+      "codeRequired": "Enter the 6-digit code from your authenticator app",
+      "recoveryRequired": "Enter one of your recovery codes",
+      "useRecoveryInstead": "Use a recovery code instead",
+      "useCodeInstead": "Use your authenticator app instead",
+      "back": "Back",
+      "submit": "Verify",
+      "submitting": "Verifying…"
+    },
     "logout": "Log out",
     "sessionLoading": "Loading session…",
     "changePassword": {
@@ -149,6 +162,30 @@
       "mismatch": "The passwords don't match",
       "submit": "Change password",
       "submitting": "Changing password…"
+    }
+  },
+  "security": {
+    "title": "Security",
+    "totp": {
+      "title": "Two-factor authentication",
+      "description": "Add a six-digit code from an authenticator app to your sign-in.",
+      "statusUnknown": "This console can't yet show whether two-factor authentication is already active on your account — enrolling again is safe and simply issues a fresh secret; your old authenticator entry stops working once you confirm the new one.",
+      "enrollCta": "Enroll / re-enroll",
+      "enrollTitle": "Set up two-factor authentication",
+      "enrollIntro": "Generates a new secret for your authenticator app. If two-factor authentication is already active, an administrator must reset it before you can re-enroll.",
+      "generateCta": "Generate secret",
+      "generating": "Generating…",
+      "scanHint": "Scan this QR code with your authenticator app, or enter the secret manually, then confirm with the six-digit code it shows.",
+      "manualSecretLabel": "Manual entry secret",
+      "manualSecretHelper": "Shown once — use this if you can't scan the QR code.",
+      "confirmCode": "Authentication code",
+      "confirmCodeRequired": "Enter the 6-digit code from your authenticator app",
+      "confirmCta": "Confirm & activate",
+      "confirming": "Confirming…",
+      "recoveryCodesIntro": "Two-factor authentication is now active. Save these one-time recovery codes somewhere safe — each can be used once, instead of a code, if you lose access to your authenticator app.",
+      "recoveryCodesLabel": "Recovery codes",
+      "recoveryCodesHelper": "Shown once — copy or print them now. They cannot be shown again; re-enroll to generate a fresh set.",
+      "recoveryCodesPrintTitle": "Khatm Console — two-factor recovery codes"
     }
   },
   "errors": {
@@ -290,7 +327,9 @@
     "hide": "Hide",
     "shownOnce": "Shown once",
     "unknown": "Unknown",
-    "done": "Done"
+    "done": "Done",
+    "cancel": "Cancel",
+    "print": "Print"
   },
   "schemaManagement": {
     "title": "Manage Schemas",
@@ -556,6 +595,7 @@
     "actionUnlock": "Unlock",
     "actionDisable": "Disable",
     "actionResetPassword": "Reset password",
+    "actionResetTotp": "Reset 2FA",
     "create": {
       "title": "Create user",
       "username": "Username",
@@ -598,6 +638,13 @@
     "resetConfirm": {
       "title": "Reset password for {{username}}?",
       "body": "A new one-time temporary password is generated and shown once. The user must change it at next sign-in.",
+      "confirm": "Reset now",
+      "resetting": "Resetting…",
+      "cancel": "Cancel"
+    },
+    "resetTotpConfirm": {
+      "title": "Reset two-factor authentication for {{username}}?",
+      "body": "Clears their current enrollment and recovery codes. They must set up two-factor authentication again the next time it's required. This has no effect if they haven't enrolled.",
       "confirm": "Reset now",
       "resetting": "Resetting…",
       "cancel": "Cancel"

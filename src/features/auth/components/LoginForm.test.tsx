@@ -11,6 +11,7 @@ function renderForm(login: AuthContextValue['login'] = vi.fn()) {
     status: 'unauthenticated',
     user: null,
     login,
+    completeTotpLogin: async () => undefined,
     logout: async () => undefined,
     refresh: async () => undefined,
     hasScope: () => false,
@@ -69,6 +70,40 @@ describe('LoginForm', () => {
         username: 'c7admin',
         password: 'secret',
         tenantSlug: 'acme',
+      }),
+    );
+  });
+
+  it('calls onTotpRequired with the challenge when login flags totpRequired', async () => {
+    const login = vi.fn().mockResolvedValue({ totpRequired: true, challengeId: 'challenge-1' });
+    const onTotpRequired = vi.fn();
+    render(
+      <I18nextProvider i18n={i18n}>
+        <AuthContext.Provider
+          value={{
+            status: 'unauthenticated',
+            user: null,
+            login,
+            completeTotpLogin: async () => undefined,
+            logout: async () => undefined,
+            refresh: async () => undefined,
+            hasScope: () => false,
+          }}
+        >
+          <LoginForm onTotpRequired={onTotpRequired} />
+        </AuthContext.Provider>
+      </I18nextProvider>,
+    );
+    const user = userEvent.setup();
+
+    await user.type(screen.getByLabelText(i18n.t('auth.login.username')), 'op1');
+    await user.type(screen.getByLabelText(i18n.t('auth.login.password')), 'secret');
+    await user.click(screen.getByRole('button', { name: i18n.t('auth.login.submit') }));
+
+    await waitFor(() =>
+      expect(onTotpRequired).toHaveBeenCalledWith({
+        totpRequired: true,
+        challengeId: 'challenge-1',
       }),
     );
   });

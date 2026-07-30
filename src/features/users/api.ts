@@ -56,3 +56,13 @@ export function resetPassword(id: string): Promise<CreateUserResponse> {
     method: 'POST',
   });
 }
+
+/**
+ * Clears the target user's TOTP enrollment and invalidates their remaining
+ * recovery codes — they re-enroll at next login if a mandatory scope
+ * requires it (spec FS-2.2 V1). Idempotent (a no-op for a user with no TOTP
+ * enrolled).
+ */
+export async function resetTotp(id: string): Promise<void> {
+  await apiFetch(`${BASE}/${encodeURIComponent(id)}/totp/reset`, { method: 'POST' });
+}
