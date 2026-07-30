@@ -14,7 +14,7 @@ export interface paths {
         /**
          * Fetch the JWKS
          * @deprecated
-         * @description Public ACTIVE + RETIRING signing keys, no authentication required. Deprecated (spec FS-2.1 V2): aliases the default tenant only — every other tenant's JWKS is at GET /t/{tenantSlug}/.well-known/jwks.json. Stays available through Phase 2.
+         * @description Public signing keys of every lifecycle state (ACTIVE/RETIRING/RETIRED), no authentication required. Deprecated (spec FS-2.1 V2): aliases the default tenant only — every other tenant's JWKS is at GET /t/{tenantSlug}/.well-known/jwks.json. Stays available through Phase 2.
          */
         get: operations["jwks_1"];
         put?: never;
@@ -223,6 +223,46 @@ export interface paths {
         get: operations["signingKeys"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/signing-keys/rotate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rotate the tenant's signing key
+         * @description Atomically: generate a new key via the configured KeyProvider, move the current ACTIVE key to RETIRING, and activate the new one. The one-ACTIVE-per-tenant partial unique index is the final arbiter under concurrent rotations — at most one concurrent caller ever succeeds. All of the tenant's status lists are also forced stale in the same operation, so the existing periodic sweep re-signs them with the new key within one cycle. Requires the key:manage scope (any actor kind).
+         */
+        post: operations["rotate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/signing-keys/{kid}/retire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retire a RETIRING signing key
+         * @description Moves a RETIRING key to RETIRED. Only a RETIRING key may be retired (409 otherwise). Rejected with 422 if the key has not yet reached khatm.keys.min-retiring-age (default P30D) unless force=true (bypasses the guard, audited). A RETIRED key stays published in JWKS and stays verifiable — retiring never breaks verification of documents already signed with it. Requires the key:manage scope (any actor kind).
+         */
+        post: operations["retire"];
         delete?: never;
         options?: never;
         head?: never;
@@ -968,7 +1008,7 @@ export interface paths {
         };
         /**
          * Fetch a tenant's JWKS
-         * @description Public ACTIVE + RETIRING signing keys for the named tenant, no authentication required. Stays available regardless of the tenant's suspension status (spec V4).
+         * @description Public signing keys of every lifecycle state (ACTIVE/RETIRING/RETIRED) for the named tenant, no authentication required. Stays available regardless of the tenant's suspension status (spec V4).
          */
         get: operations["jwks"];
         put?: never;
@@ -1352,6 +1392,24 @@ export interface components {
         };
         ReplaceRolesRequest: {
             roles?: string[];
+        };
+        /** @description Optional min-age bypass for retiring a key */
+        RetireKeyRequest: {
+            force?: boolean;
+        };
+        /** @description The now-RETIRED signing key */
+        RetireKeyResponse: {
+            kid?: string;
+            state?: string;
+            /** Format: date-time */
+            validTo?: string;
+        };
+        /** @description The newly created, now-ACTIVE signing key */
+        RotateKeyResponse: {
+            kid?: string;
+            state?: string;
+            /** Format: date-time */
+            validFrom?: string;
         };
         SchemaAuthoringRequest: {
             claimsDef: components["schemas"]["ClaimFieldRequest"][];
@@ -1987,6 +2045,115 @@ export interface operations {
             };
             /** @description Authenticated without the key:manage scope */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    rotate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The newly created, now-ACTIVE key */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RotateKeyResponse"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Authenticated without the key:manage scope */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    retire: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RetireKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description The now-RETIRED key */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RetireKeyResponse"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Authenticated without the key:manage scope */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No such key for the current tenant (KH-KEY-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The key is not currently RETIRING (KH-KEY-0409) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The key has not yet reached khatm.keys.min-retiring-age; force=true to bypass (KH-KEY-0422) */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -4,6 +4,21 @@
 
 ## Current phase / task
 
+- C7c-totp-2fa (console side of FS-2.2's TOTP 2FA, spec §4 V1 / session KH-2.2c-BE) —
+  **SELF-STOPPED AT THE PREAMBLE, no code written.** Preamble ran `npm run contract:update`
+  (`gh api` fallback against `origin/main`, as always for this private upstream) per this
+  session's own instruction to self-stop if the enroll/confirm/challenge/reset surfaces or the
+  `totpRequired` login signal are absent. They are: the refresh's 170 insertions are entirely
+  FS-2.3 KMS key rotation (`POST /api/v1/admin/signing-keys/rotate` and
+  `.../{kid}/retire`, `RotateKeyResponse`/`RetireKeyResponse`) — a different, already-landed spec
+  (`docs/specs/FS-2.3-kms-key-rotation.md`, session KH-2.3a-BE), unrelated to this task. Grepped
+  the entire refreshed contract case-insensitively for `totp|2fa|two-factor|recovery.?code|
+otpauth|mfa` — zero matches. FS-2.2 §4 V1 explicitly scheduled 2FA as its own backend session
+  (KH-2.2c-BE) "separate, after C7" — that session has evidently not run yet. Vendored the
+  KMS-rotation contract refresh anyway (harmless, in scope for the preamble's own `gen:api`
+  regen; `npm run check` re-confirmed green, 218/218 tests) since it's a strict superset of what
+  C7b last vendored and unblocks C8's own upcoming preamble. No branch-worthy UI code exists to
+  build yet. Recorded as a platform ask below; this task stays blocked until KH-2.2c-BE ships.
 - C7b login-slug-and-obo-list (micro follow-up to C7, closing the console side of the two
   platform gaps recorded 2026-07-28) — **DONE, delivered 2026-07-30.** Preamble
   (`npm run contract:update` against `origin/main`) confirmed both KH-2.2d-BE gate items present
@@ -57,6 +72,37 @@
   manual EN/AR + RTL walkthrough of that specific banner was never explicitly logged as run.
 
 ## Last completed
+
+- 2026-07-30 (feat/C7c-totp-2fa — self-stopped at the preamble, no code): Session brief: console
+  side of FS-2.2's TOTP 2FA (spec §4 V1, scheduled as its own backend session KH-2.2c-BE,
+  explicitly "separate after C7" — not part of C7/C7b's already-delivered D7 scope). Preamble ran
+  `npm run contract:update` (`gh api` fallback against `origin/main`) — 170 insertions over the
+  C7b-vendored contract. Read the diff before writing any UI code, per this session's own
+  self-stop instruction ("if the enroll/confirm/challenge/reset surfaces or the `totpRequired`
+  login signal are absent"): every insertion is FS-2.3 KMS key rotation
+  (`POST /api/v1/admin/signing-keys/rotate`, `POST /api/v1/admin/signing-keys/{kid}/retire`,
+  `RotateKeyResponse`/`RetireKeyResponse` schemas) — `docs/specs/FS-2.3-kms-key-rotation.md`'s own
+  session KH-2.3a-BE, already landed on `khatm-platform` `main`, unrelated to 2FA. A
+  case-insensitive grep of the entire refreshed `contracts/openapi.json` for
+  `totp|2fa|two-factor|recovery.?code|otpauth|mfa` returned zero matches: no enrollment, no
+  confirm step, no challenge endpoint, no recovery-code surface, and `LoginRequest`/`LoginResponse`
+  are unchanged — no `totpRequired` signal anywhere. **Self-stopped before any UI code** — none of
+  the five numbered deliverables in the brief (login challenge step, enrollment QR + confirm,
+  forced-enrollment takeover, security-settings surface, admin reset) have a contract surface to
+  build against yet.
+  - Vendored the KMS-rotation contract refresh anyway and ran `npm run gen:api` — harmless,
+    strictly additive over what C7b last vendored, and unblocks spec FS-2.3's own upcoming C8
+    console session's preamble. `npm run check`: typecheck/lint clean (only the pre-existing
+    `FormField.tsx` fast-refresh warning), `format:check` clean on every file this session touched
+    (fails only on the same pre-existing untracked files as every prior session:
+    `.vscode/extensions.json`, `docs/sessions/*.md`, and now also the untracked
+    `docs/specs/FS-2.3-kms-key-rotation.md`), `npm run test` 218/218 (unchanged — no test code
+    touched), `npm run build` not re-run (no source changed beyond the generated schema).
+  - No EN/AR/RTL work — no new UI exists. No PR-worthy UI diff; this commit is contract-vendor +
+    STATE only, same shape as the 2026-07-28 C6b self-stop precedent.
+  - Recorded as a fresh platform ask below. This task stays blocked until KH-2.2c-BE ships and a
+    resumed session confirms the four missing surfaces (enroll/confirm/challenge/reset) plus the
+    `totpRequired` login signal.
 
 - 2026-07-30 (chore/C7b-login-slug-and-obo-list, micro follow-up to C7): Preamble ran
   `npm run contract:update` against `origin/main` (`gh api` fallback, as always for this private
@@ -1135,6 +1181,23 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 
 ## Open decisions / blockers
 
+- **Platform ask, new 2026-07-30 (feat/C7c-totp-2fa preamble self-stop) — OPEN, blocks this
+  task.** FS-2.2 §4 V1 committed to TOTP 2FA for holders of `revoke`/`tenant:admin`/
+  `platform:admin` as its own backend session, KH-2.2c-BE, scheduled "separate, after C7." As of
+  this writing (`origin/main`, 170 insertions past C7b's vendored contract, confirmed all
+  KH-2.3a-BE/KMS-rotation and unrelated) that session has not shipped: no `POST .../2fa/enroll`,
+  `.../2fa/confirm`, `.../2fa/challenge`, or `.../2fa/reset`-shaped surface exists anywhere in the
+  contract, and `LoginRequest`/`LoginResponse` carry no `totpRequired` (or similarly-named) field
+  — a challenge-step login can't be distinguished from a normal one. Needed before this console
+  session can resume: (1) enrollment endpoint(s) returning an `otpauth://` URI + manual-entry
+  secret, a confirm-code endpoint, and recovery codes shown once; (2) a login-response signal
+  (e.g. `totpRequired: boolean`, possibly plus a short-lived challenge token) so the console can
+  branch into a code-entry step instead of completing the session; (3) a distinct error code for
+  the "2FA now mandatory for your scopes, enroll before continuing" forced-enrollment case,
+  mirroring how `MeResponse.mustChangePassword` (KH-2.2-BE) drives C7's existing forced-
+  password-change takeover; (4) an admin-side "reset a user's 2FA" endpoint (`tenant:admin`,
+  the on-behalf-of variant if D4's `OnBehalfOfExecutor` pattern extends here). See "Last
+  completed" 2026-07-30 for the full self-stop record.
 - **Platform ask from 2026-07-28 morning (C7 preamble self-stop) — closed the same day.** The
   missing forced-password-change signal was fixed by khatm-platform PR #46 (`MeResponse.
 mustChangePassword` + `GET /auth/me` exempted from the gate) and confirmed live before C7 was
