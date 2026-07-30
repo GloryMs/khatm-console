@@ -10,7 +10,10 @@ tenant.
 
 **Queries / mutations:** `useUsers` → `GET /api/v1/users`; `useCreateUser`,
 `useReplaceRoles`, `useLockUser`, `useUnlockUser`, `useDisableUser`,
-`useResetPassword` — every mutation invalidates the list. Role codes come
+`useResetPassword` — every mutation invalidates the list. `useResetTotp`
+(spec FS-2.2 V1, `POST /api/v1/users/{id}/totp/reset`) does not — it changes
+no field `UserList` renders, and the platform exposes no TOTP-status field
+to invalidate anyway (see `features/security`'s README). Role codes come
 from a fixed client-side catalog (`roles.ts`, TENANT_ADMIN/ISSUER_OPERATOR —
 not a contract enum, same precedent as `TenantType`).
 

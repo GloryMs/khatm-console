@@ -14,7 +14,7 @@ export interface paths {
         /**
          * Fetch the JWKS
          * @deprecated
-         * @description Public ACTIVE + RETIRING signing keys, no authentication required. Deprecated (spec FS-2.1 V2): aliases the default tenant only — every other tenant's JWKS is at GET /t/{tenantSlug}/.well-known/jwks.json. Stays available through Phase 2.
+         * @description Public signing keys of every lifecycle state (ACTIVE/RETIRING/RETIRED), no authentication required. Deprecated (spec FS-2.1 V2): aliases the default tenant only — every other tenant's JWKS is at GET /t/{tenantSlug}/.well-known/jwks.json. Stays available through Phase 2.
          */
         get: operations["jwks_1"];
         put?: never;
@@ -229,6 +229,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/signing-keys/rotate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rotate the tenant's signing key
+         * @description Atomically: generate a new key via the configured KeyProvider, move the current ACTIVE key to RETIRING, and activate the new one. The one-ACTIVE-per-tenant partial unique index is the final arbiter under concurrent rotations — at most one concurrent caller ever succeeds. All of the tenant's status lists are also forced stale in the same operation, so the existing periodic sweep re-signs them with the new key within one cycle. Requires the key:manage scope (any actor kind).
+         */
+        post: operations["rotate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/signing-keys/{kid}/retire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retire a RETIRING signing key
+         * @description Moves a RETIRING key to RETIRED. Only a RETIRING key may be retired (409 otherwise). Rejected with 422 if the key has not yet reached khatm.keys.min-retiring-age (default P30D) unless force=true (bypasses the guard, audited). A RETIRED key stays published in JWKS and stays verifiable — retiring never breaks verification of documents already signed with it. Requires the key:manage scope (any actor kind).
+         */
+        post: operations["retire"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/tenants": {
         parameters: {
             query?: never;
@@ -337,6 +377,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/tenants/{id}/users/{userId}/totp/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset a user's TOTP enrollment in another tenant
+         * @description Clears the target user's TOTP enrollment on behalf of a tenant other than the caller's own (OnBehalfOfExecutor, audited ON_BEHALF_OF) — they re-enroll at next login if a mandatory scope requires it. Idempotent. Requires the platform:admin scope.
+         */
+        post: operations["resetTotpInTenant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/attention": {
         parameters: {
             query?: never;
@@ -368,7 +428,7 @@ export interface paths {
         put?: never;
         /**
          * Console login
-         * @description Authenticates a username/password pair and establishes a server-side session (Redis-backed, cookie KHATM_SESSION). The optional tenantSlug (spec FS-2.2) authenticates against that tenant specifically; omit or leave it blank to log into the caller's ambient default tenant, unchanged from before. Every failure reason — unknown user, wrong password, temporary lockout, administrative LOCKED/DISABLED, or an unknown/SUSPENDED tenantSlug — returns the identical generic 401 (spec FS-0.6b D7); the real reason is recorded only in the audit log.
+         * @description Authenticates a username/password pair and establishes a server-side session (Redis-backed, cookie KHATM_SESSION). The optional tenantSlug (spec FS-2.2) authenticates against that tenant specifically; omit or leave it blank to log into the caller's ambient default tenant, unchanged from before. Every failure reason — unknown user, wrong password, temporary lockout, administrative LOCKED/DISABLED, or an unknown/SUSPENDED tenantSlug — returns the identical generic 401 (spec FS-0.6b D7); the real reason is recorded only in the audit log. If the account has an active TOTP enrollment (spec FS-2.2 V1), no session is created yet — the response body instead carries totpRequired:true and a challengeId to submit to POST /api/v1/auth/totp.
          */
         post: operations["login"];
         delete?: never;
@@ -411,6 +471,26 @@ export interface paths {
         get: operations["me"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/totp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complete a TOTP login challenge
+         * @description Completes a login that POST /api/v1/auth/login flagged totpRequired, with either a live TOTP code or a one-time recovery code (exactly one of the two). On success, establishes the session exactly like a direct login. Rate-limited identically to the password step (spec FS-2.2 V1); every failure reason returns the same generic 401 as login itself.
+         */
+        post: operations["completeTotp"];
         delete?: never;
         options?: never;
         head?: never;
@@ -839,6 +919,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/users/me/totp/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm TOTP enrollment
+         * @description Activates a pending enrollment with a live code from the authenticator app and returns 10 one-time recovery codes — shown exactly once. Refused with 409 if there is no pending enrollment, it is already active, or it has expired (re-enroll in any of those cases); refused with 400 if the code does not match.
+         */
+        post: operations["confirmTotp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/me/totp/enroll": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Begin TOTP enrollment
+         * @description Generates a fresh secret (encrypted at rest) and returns it, Base32-encoded, plus an otpauth:// enrollment URI — shown exactly once. Any authenticated console session may enroll its own user. Refused with 409 if TOTP is already active (an administrator must reset it first); calling this again before confirming simply supersedes the previous, not-yet-confirmed secret.
+         */
+        post: operations["enrollTotp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/users/{id}/disable": {
         parameters: {
             query?: never;
@@ -919,6 +1039,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/users/{id}/totp/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset a user's TOTP enrollment
+         * @description Clears the target user's TOTP enrollment and invalidates their remaining recovery codes — they re-enroll at next login if a mandatory scope requires it. Idempotent (a user with no TOTP enrolled is a no-op). Requires the tenant:admin scope.
+         */
+        post: operations["resetTotp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/users/{id}/unlock": {
         parameters: {
             query?: never;
@@ -968,7 +1108,7 @@ export interface paths {
         };
         /**
          * Fetch a tenant's JWKS
-         * @description Public ACTIVE + RETIRING signing keys for the named tenant, no authentication required. Stays available regardless of the tenant's suspension status (spec V4).
+         * @description Public signing keys of every lifecycle state (ACTIVE/RETIRING/RETIRED) for the named tenant, no authentication required. Stays available regardless of the tenant's suspension status (spec V4).
          */
         get: operations["jwks"];
         put?: never;
@@ -1313,6 +1453,10 @@ export interface components {
             ar?: string;
             en?: string;
         };
+        LoginChallengeResponse: {
+            challengeId?: string;
+            totpRequired?: boolean;
+        };
         LoginRequest: {
             password: string;
             tenantSlug?: string;
@@ -1352,6 +1496,24 @@ export interface components {
         };
         ReplaceRolesRequest: {
             roles?: string[];
+        };
+        /** @description Optional min-age bypass for retiring a key */
+        RetireKeyRequest: {
+            force?: boolean;
+        };
+        /** @description The now-RETIRED signing key */
+        RetireKeyResponse: {
+            kid?: string;
+            state?: string;
+            /** Format: date-time */
+            validTo?: string;
+        };
+        /** @description The newly created, now-ACTIVE signing key */
+        RotateKeyResponse: {
+            kid?: string;
+            state?: string;
+            /** Format: date-time */
+            validFrom?: string;
         };
         SchemaAuthoringRequest: {
             claimsDef: components["schemas"]["ClaimFieldRequest"][];
@@ -1449,6 +1611,21 @@ export interface components {
             slug?: string;
             status?: string;
             type?: string;
+        };
+        TotpChallengeRequest: {
+            challengeId: string;
+            code?: string;
+            recoveryCode?: string;
+        };
+        TotpConfirmRequest: {
+            code: string;
+        };
+        TotpConfirmResponse: {
+            recoveryCodes?: string[];
+        };
+        TotpEnrollResponse: {
+            otpAuthUri?: string;
+            secretBase32?: string;
         };
         UserSummary: {
             /** Format: date-time */
@@ -1996,6 +2173,115 @@ export interface operations {
             };
         };
     };
+    rotate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The newly created, now-ACTIVE key */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RotateKeyResponse"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Authenticated without the key:manage scope */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    retire: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RetireKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description The now-RETIRED key */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RetireKeyResponse"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Authenticated without the key:manage scope */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No such key for the current tenant (KH-KEY-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The key is not currently RETIRING (KH-KEY-0409) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The key has not yet reached khatm.keys.min-retiring-age; force=true to bypass (KH-KEY-0422) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     list_3: {
         parameters: {
             query?: never;
@@ -2361,6 +2647,54 @@ export interface operations {
             };
         };
     };
+    resetTotpInTenant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description TOTP reset (or already inactive) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the platform:admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Target tenant (KH-TNT-0404) or user (KH-USR-0404) not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     attention: {
         parameters: {
             query?: never;
@@ -2412,12 +2746,14 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Login succeeded; session cookie set */
+            /** @description Login succeeded (session cookie set, empty body), or a TOTP challenge was issued (no cookie, body carries totpRequired:true + challengeId) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "*/*": components["schemas"]["LoginChallengeResponse"];
+                };
             };
             /** @description Authentication failed (KH-RBC-0401, generic message) */
             401: {
@@ -2467,6 +2803,46 @@ export interface operations {
                 };
             };
             /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    completeTotp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TotpChallengeRequest"];
+            };
+        };
+        responses: {
+            /** @description Login completed; session cookie set */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Neither or both of code/recoveryCode were provided (KH-USR-0400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unknown/expired challenge, TOTP-attempt lockout, or a wrong code (KH-RBC-0401, generic message) */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3610,6 +3986,95 @@ export interface operations {
             };
         };
     };
+    confirmTotp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TotpConfirmRequest"];
+            };
+        };
+        responses: {
+            /** @description TOTP activated; recovery codes shown once */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TotpConfirmResponse"];
+                };
+            };
+            /** @description The code does not match (KH-USR-0400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No valid session */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No pending enrollment, already active, or the pending enrollment expired (KH-USR-1409) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    enrollTotp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Enrollment secret and URI, shown once */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TotpEnrollResponse"];
+                };
+            };
+            /** @description No valid session */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description TOTP is already active for this user (KH-USR-1409) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     disable: {
         parameters: {
             query?: never;
@@ -3801,6 +4266,44 @@ export interface operations {
             };
             /** @description Would remove the last active administrator (KH-USR-0423) */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    resetTotp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description TOTP reset (or already inactive) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description User not found (KH-USR-0404) */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

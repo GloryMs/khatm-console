@@ -6,6 +6,7 @@ import {
   getTenant,
   listTenants,
   listUsersInTenant,
+  resetTotpInTenant,
   suspendTenant,
   type CreateUserRequest,
   type OnboardTenantRequest,
@@ -85,5 +86,17 @@ export function useCreateUserInTenant() {
     onSuccess: (_data, { tenantId }) => {
       void queryClient.invalidateQueries({ queryKey: tenantsKeys.users(tenantId) });
     },
+  });
+}
+
+/**
+ * Resets a user's TOTP enrollment on behalf of a tenant other than the
+ * caller's own (spec FS-2.2 D4 on-behalf-of). No list invalidation — TOTP
+ * reset doesn't change any field the on-behalf-of `UserList` renders.
+ */
+export function useResetTotpInTenant() {
+  return useMutation({
+    mutationFn: ({ tenantId, userId }: { tenantId: string; userId: string }) =>
+      resetTotpInTenant(tenantId, userId),
   });
 }

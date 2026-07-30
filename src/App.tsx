@@ -19,6 +19,7 @@ import { SchemaBuilderPage } from '@/features/schemaManagement/SchemaBuilderPage
 import { SchemaManagementPage } from '@/features/schemaManagement/SchemaManagementPage';
 import { SchemaViewPage } from '@/features/schemaManagement/SchemaViewPage';
 import { SchemasPage } from '@/features/schemas/SchemasPage';
+import { SecuritySettingsPage } from '@/features/security/SecuritySettingsPage';
 import { TenantDetailPage } from '@/features/tenants/TenantDetailPage';
 import { TenantsPage } from '@/features/tenants/TenantsPage';
 import { UsersPage } from '@/features/users/UsersPage';
@@ -64,6 +65,7 @@ export function App() {
                   <Route path="/consumers" element={<ConsumingPartiesPage />} />
                   <Route path="/consume-sim" element={<ConsumeSimPage />} />
                   <Route path="/users" element={<UsersPage />} />
+                  <Route path="/security" element={<SecuritySettingsPage />} />
                   <Route path="/tenants" element={<TenantsPage />} />
                   <Route path="/tenants/:id" element={<TenantDetailPage />} />
                 </Route>

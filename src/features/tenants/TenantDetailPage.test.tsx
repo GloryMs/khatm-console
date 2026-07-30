@@ -13,6 +13,7 @@ const baseAuth: AuthContextValue = {
   status: 'authenticated',
   user: null,
   login: async () => undefined,
+  completeTotpLogin: async () => undefined,
   logout: async () => undefined,
   refresh: async () => undefined,
   hasScope: () => false,
@@ -140,7 +141,7 @@ const onBehalfOfUser: tenantsApi.UserSummary = {
 describe('TenantDetailPage on-behalf-of Users tab', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it("switches to the Users tab and lists the tenant's users, read-only (no row actions)", async () => {
+  it("switches to the Users tab and lists the tenant's users, with only the Reset 2FA row action", async () => {
     vi.spyOn(tenantsApi, 'getTenant').mockResolvedValue(activeTenant);
     const listUsersInTenant = vi
       .spyOn(tenantsApi, 'listUsersInTenant')
@@ -156,10 +157,34 @@ describe('TenantDetailPage on-behalf-of Users tab', () => {
     expect(await screen.findByText('tenantadmin')).toBeInTheDocument();
     expect(screen.getByText('Tenant Admin')).toBeInTheDocument();
     expect(listUsersInTenant).toHaveBeenCalledWith('tenant-1');
-    expect(screen.queryByRole('columnheader', { name: i18n.t('users.columnActions') })).toBeNull();
+    expect(
+      screen.getByRole('columnheader', { name: i18n.t('users.columnActions') }),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: i18n.t('users.actionEditRoles') }),
     ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: i18n.t('users.actionResetTotp') }),
+    ).toBeInTheDocument();
+  });
+
+  it("resets a user's 2FA on behalf of the tenant after confirm", async () => {
+    vi.spyOn(tenantsApi, 'getTenant').mockResolvedValue(activeTenant);
+    vi.spyOn(tenantsApi, 'listUsersInTenant').mockResolvedValue([onBehalfOfUser]);
+    const resetTotpInTenant = vi
+      .spyOn(tenantsApi, 'resetTotpInTenant')
+      .mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    renderPage(adminAuth);
+
+    await user.click(await screen.findByRole('tab', { name: i18n.t('tenants.detail.tabUsers') }));
+    await user.click(await screen.findByRole('button', { name: i18n.t('users.actionResetTotp') }));
+
+    const dialog = screen.getByRole('dialog');
+    await user.click(
+      within(dialog).getByRole('button', { name: i18n.t('users.resetTotpConfirm.confirm') }),
+    );
+    await waitFor(() => expect(resetTotpInTenant).toHaveBeenCalledWith('tenant-1', 'obo-user-1'));
   });
 
   it('adds a user to the tenant on behalf of it and shows the one-time temporary password', async () => {

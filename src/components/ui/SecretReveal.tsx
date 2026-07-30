@@ -24,6 +24,9 @@ interface SecretRevealProps {
   onCopy?: (value: string) => void;
   /** Toast text shown briefly after a successful copy. */
   copiedMessage?: ReactNode;
+  /** Omit to hide the print action entirely (only rendered once revealed). */
+  printLabel?: ReactNode;
+  onPrint?: (value: string) => void;
 }
 
 /**
@@ -43,6 +46,8 @@ export function SecretReveal({
   copyLabel,
   onCopy,
   copiedMessage,
+  printLabel,
+  onPrint,
 }: SecretRevealProps) {
   const [revealed, setRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -80,6 +85,16 @@ export function SecretReveal({
             }}
           >
             {copyLabel}
+          </Button>
+        )}
+        {onPrint && printLabel && revealed && (
+          <Button
+            type="button"
+            variant="secondary"
+            className={styles.action}
+            onClick={() => onPrint(value)}
+          >
+            {printLabel}
           </Button>
         )}
       </div>

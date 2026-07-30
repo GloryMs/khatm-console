@@ -4,6 +4,26 @@
 
 ## Current phase / task
 
+- C7c-totp-2fa (console side of FS-2.2's TOTP 2FA, spec §4 V1 / session KH-2.2c-BE) —
+  **RESUMED and DELIVERED 2026-07-30**, after self-stopping earlier the same day at the preamble
+  gate (KH-2.2c-BE and KH-2.3a-BE not yet merged, see below). Majd reported both
+  `khatm-platform` PRs #49 (KH-2.2c-BE) and #50 (KH-2.3a-BE) merged; a fresh
+  `npm run contract:update` confirmed all five enroll/confirm/challenge/reset surfaces plus the
+  `totpRequired` login signal, so the gate cleared and the session resumed. Delivered: (1) the
+  login TOTP challenge step (`TotpChallengeForm`, code-or-recovery-code, generic failure copy);
+  (2) self-service enrollment (`features/security`, new `/security` route — QR + manual secret +
+  confirm-code + one-time recovery codes via `SecretReveal`, extended with a new print action);
+  (3) admin-side "Reset 2FA" on the Users screen (`tenant:admin`) and the tenant on-behalf-of
+  Users tab (`platform:admin`); full EN/AR + RTL. **Self-stopped on exactly one numbered item**:
+  FORCED ENROLLMENT (auto-routing a `revoke`/`tenant:admin`/`platform:admin` holder into a
+  takeover screen) has no contract-discoverable signal — no distinct error code, no `MeResponse`
+  field — so it could not be built; same reasoning also means the Security Settings page shows no
+  definitive "is TOTP active" status, only an always-available enroll/re-enroll action. Both
+  recorded as a platform ask below. **PR #22 opened, not merged** — Majd's own live walkthrough
+  with a real authenticator app (enroll → forced flow → challenge login → recovery login → admin
+  reset → re-enroll, per the brief's DoD) is the merge gate; this session had no test-account
+  credentials to drive that walkthrough itself (see "Last completed" for what was verified
+  instead). KH-2.2 epic can be marked CLOSED once this merges.
 - C7b login-slug-and-obo-list (micro follow-up to C7, closing the console side of the two
   platform gaps recorded 2026-07-28) — **DONE, delivered 2026-07-30.** Preamble
   (`npm run contract:update` against `origin/main`) confirmed both KH-2.2d-BE gate items present
@@ -57,6 +77,143 @@
   manual EN/AR + RTL walkthrough of that specific banner was never explicitly logged as run.
 
 ## Last completed
+
+- 2026-07-30 (feat/C7c-totp-2fa, resumed and delivered): Majd reported `khatm-platform` PRs #49
+  (KH-2.2c-BE, TOTP 2FA) and #50 (KH-2.3a-BE, KMS key rotation — unrelated but bundled in the same
+  merge wave) both merged. Re-ran `npm run contract:update` rather than trusting the report alone:
+  confirmed all five surfaces directly in the refreshed `contracts/openapi.json` before writing
+  any code — `LoginChallengeResponse{challengeId, totpRequired}` on `POST /auth/login`'s 200,
+  `POST /auth/totp` (challenge completion), `POST /users/me/totp/enroll`
+  (`TotpEnrollResponse{otpAuthUri, secretBase32}`), `POST /users/me/totp/confirm`
+  (`TotpConfirmResponse{recoveryCodes[]}`), `POST /users/{id}/totp/reset`, and
+  `POST /admin/tenants/{id}/users/{userId}/totp/reset` (on-behalf-of, `platform:admin`). Gate
+  cleared — resumed.
+  - **Item 1 — login challenge**: `auth/api.ts`'s `login()` now returns
+    `LoginChallengeResponse | undefined` (`undefined` = session established directly, matching
+    every existing caller); a new `completeTotpLogin()` posts to `/auth/totp`.
+    `AuthContextValue` gained `completeTotpLogin`; `AuthProvider.login` only bootstraps
+    (`GET /auth/me`) when the response _isn't_ a challenge, otherwise returns it up to the caller
+    without establishing a session. `LoginPage` now holds the challenge as local step state,
+    swapping `LoginForm` for a new `TotpChallengeForm` when `login()` resolves
+    `totpRequired: true`. `TotpChallengeForm`: a single code input
+    (`autoComplete="one-time-code"`, `inputMode="numeric"`, `ltr-embed` — no existing digit-input
+    precedent found, recording this as the choice for future digit fields) plus a
+    "use a recovery code instead" toggle swapping to a `recoveryCode` field of the same shape;
+    submits exactly one of `code`/`recoveryCode` per `TotpChallengeRequest`'s contract shape.
+    Deliberately no wrong-code-vs-lockout copy — the platform returns the identical generic
+    `KH-RBC-0401` for every failure reason here too (confirmed in the contract's own endpoint
+    description), so `ApiErrorBanner`'s existing generic fallback is all that's needed, same
+    anti-enumeration stance as password login (spec FS-0.6b D7).
+  - **Item 2 — enrollment**: new feature slice `src/features/security/` (`/security` route, no
+    `RequireScope` — any authenticated session may manage its own 2FA, matching the contract's own
+    "no valid session" as the only failure mode on the `me/totp/*` endpoints).
+    `TotpEnrollDialog` derives its step from mutation data rather than parallel step state:
+    no `enroll.data` → a "Generate secret" button (explicit user gesture, not an auto-firing
+    mutation-on-mount — this codebase's standing convention, confirmed by checking every other
+    dialog); `enroll.data` present → QR (`qrcode.react`'s `QRCodeSVG`, same component and `size`
+    convention as the existing issuance QR) + manual `secretBase32` fallback + a confirm-code
+    field; `confirm.data` present → the 10 one-time recovery codes, terminal step. Both the manual
+    secret and the recovery codes reuse the existing `SecretReveal` shown-once pattern per the
+    brief's own instruction — recovery codes needed a **new capability** on that shared component,
+    so `SecretReveal` gained optional `printLabel`/`onPrint` props (rendered only once revealed)
+    rather than forking a second component; its `.value` box also gained `white-space: pre-wrap`
+    for the joined multi-line codes (harmless no-op for every existing single-line caller). New
+    `printRecoveryCodes.ts`: a blank same-origin popup window with just the codes, no external
+    content, `window.print()` — deliberately not a whole-page print (would include app chrome).
+  - **Item 3 — FORCED ENROLLMENT: self-stopped, not built.** The brief's own instruction was "on
+    the distinct error code, route into a takeover screen — reuse the forced-password-change
+    pattern." No such error code, and no `MeResponse` field, exists anywhere in the refreshed
+    contract — `RequireAuth`'s existing `mustChangePassword` gate has no TOTP equivalent to read.
+    `resetTotp`'s own description ("...they re-enroll at next login if a mandatory scope requires
+    it") confirms the _mechanism_ exists server-side, but nothing surfaces _which_ sessions are
+    currently non-compliant to a client. Recorded as a platform ask below; this is the one brief
+    item genuinely not delivered, same "self-stop one sub-item, build the rest" precedent as C7's
+    on-behalf-of-listing gap.
+  - **Item 4 — SECURITY SETTINGS surface**: delivered the re-enroll action
+    (`SecuritySettingsPage` → `TotpEnrollDialog`); **did not** deliver a status badge — same root
+    cause as item 3, no field exists to show "is TOTP active" for the caller's own account either.
+    The page says so explicitly (`security.totp.statusUnknown`) rather than guessing or silently
+    omitting the gap, same honesty precedent as C7's earlier "listing isn't available here yet"
+    banner. USERS screen (`tenant:admin`) gained a "Reset 2FA" row action
+    (`useResetTotp` → `POST /users/{id}/totp/reset`, `ConfirmDialog`, idempotent — safe to offer
+    unconditionally with no status to gate on); the on-behalf-of Users tab
+    (`TenantDetailPage`, `platform:admin`) gained the same via `useResetTotpInTenant` →
+    `POST /admin/tenants/{id}/users/{userId}/totp/reset` — the first on-behalf-of action beyond
+    create, since this endpoint (unlike lock/roles/reset-password) does have an on-behalf-of
+    contract variant.
+  - **Item 5 — EN/AR + RTL**: every new key added to both `en.json`/`ar.json` in the same commit;
+    parity script-verified (recursive key-diff both directions, zero mismatches). RTL grep
+    (`(margin|padding|border)-(left|right)`, bare `left:`/`right:`, physical `text-align`,
+    `float:`) across every new/changed stylesheet: zero matches — logical properties throughout.
+    Digit/code fields (`TotpChallengeForm`'s code input, the enrollment confirm-code input) use
+    the existing `ltr-embed` utility class already applied to other code-like values (usernames,
+    slugs, JWKS URLs) — no dedicated numeric-input RTL precedent existed before this session, so
+    this is the recorded choice for any future one.
+  - Tests: 227 total now (was 218) — 9 new: `TotpChallengeForm.test.tsx` (3: code submit, recovery
+    toggle + submit, back button), `LoginForm.test.tsx` gained 1 (`onTotpRequired` called on a
+    `totpRequired` response), `TotpEnrollDialog.test.tsx` (2: full generate→confirm→recovery-codes
+    walkthrough, print-after-reveal), `SecuritySettingsPage.test.tsx` (1: opens the enroll dialog),
+    `UsersPage.test.tsx` gained 1 (reset-2FA confirm → `resetTotp` called), `TenantDetailPage.test.tsx`
+    gained 1 (on-behalf-of reset-2FA confirm → `resetTotpInTenant` called with positional args) and
+    had its existing on-behalf-of-listing test's assertions updated (the tab now has an actions
+    column with exactly the Reset 2FA button, not zero actions — a legitimate behavior change, not
+    a regression). Every other `AuthContextValue`-mocking test file (13 of them) needed a
+    mechanical `completeTotpLogin: async () => undefined,` added to satisfy the interface's new
+    required field — no behavior change in any of them.
+  - `npm run typecheck`, `npm run lint` (only the pre-existing `FormField.tsx` fast-refresh
+    warning), `npm run test` (227/227), and `npm run build` all clean. `format:check` clean on
+    every file this session touched (`prettier --write` needed on 5 files mid-session, all
+    re-verified clean after); still fails only on pre-existing untracked files (`.vscode/
+extensions.json`, `docs/sessions/*.md` including this session's own two brief-as-a-file records,
+    `docs/specs/FS-2.3-kms-key-rotation.md`).
+  - **Live check, without an authenticated walkthrough this time**: rebuilt and recreated the
+    `khatm-console` container against the running compose stack (`khatm-api`/`khatm-worker`
+    up ~33 minutes, consistent with "platform main post-merge"). Diffed the live `/v3/api-docs`
+    (fetched from inside the `khatm-console` container, over the `khatm-net` network) against the
+    freshly-vendored contract: all 54 paths match exactly, zero drift. Grepped the rebuilt, served
+    bundle for `totpRequired`/`/auth/totp`/`otpAuthUri`/`recoveryCode`/totp-reset paths as a static
+    confirmation the shipped code matches. **Could not drive an authenticated API walkthrough**
+    (unlike every prior session's precedent) — this session had no known password for any seeded
+    account (`admin`, `e2e-operator`, etc.) and, unlike C7/C7b, no route to mint one without
+    already being authenticated as something. Did not attempt to guess or brute-force credentials,
+    and did not access a sibling `/tmp/claude/...khatm-platform` directory noticed during the
+    search (a different, unrelated session's own workspace). The DoD's full live walkthrough
+    (enroll → forced flow → challenge login → recovery login → admin reset → re-enroll, with a
+    real authenticator app, EN+AR) is explicitly Majd's own step per the brief and remains the
+    merge gate — nothing here substitutes for it, only reduces the odds of a wasted walkthrough
+    round-trip on a wiring bug.
+  - **PR #22 opened, not merged** — awaiting Majd's walkthrough.
+
+- 2026-07-30 (feat/C7c-totp-2fa — self-stopped at the preamble, no code): Session brief: console
+  side of FS-2.2's TOTP 2FA (spec §4 V1, scheduled as its own backend session KH-2.2c-BE,
+  explicitly "separate after C7" — not part of C7/C7b's already-delivered D7 scope). Preamble ran
+  `npm run contract:update` (`gh api` fallback against `origin/main`) — 170 insertions over the
+  C7b-vendored contract. Read the diff before writing any UI code, per this session's own
+  self-stop instruction ("if the enroll/confirm/challenge/reset surfaces or the `totpRequired`
+  login signal are absent"): every insertion is FS-2.3 KMS key rotation
+  (`POST /api/v1/admin/signing-keys/rotate`, `POST /api/v1/admin/signing-keys/{kid}/retire`,
+  `RotateKeyResponse`/`RetireKeyResponse` schemas) — `docs/specs/FS-2.3-kms-key-rotation.md`'s own
+  session KH-2.3a-BE, already landed on `khatm-platform` `main`, unrelated to 2FA. A
+  case-insensitive grep of the entire refreshed `contracts/openapi.json` for
+  `totp|2fa|two-factor|recovery.?code|otpauth|mfa` returned zero matches: no enrollment, no
+  confirm step, no challenge endpoint, no recovery-code surface, and `LoginRequest`/`LoginResponse`
+  are unchanged — no `totpRequired` signal anywhere. **Self-stopped before any UI code** — none of
+  the five numbered deliverables in the brief (login challenge step, enrollment QR + confirm,
+  forced-enrollment takeover, security-settings surface, admin reset) have a contract surface to
+  build against yet.
+  - Vendored the KMS-rotation contract refresh anyway and ran `npm run gen:api` — harmless,
+    strictly additive over what C7b last vendored, and unblocks spec FS-2.3's own upcoming C8
+    console session's preamble. `npm run check`: typecheck/lint clean (only the pre-existing
+    `FormField.tsx` fast-refresh warning), `format:check` clean on every file this session touched
+    (fails only on the same pre-existing untracked files as every prior session:
+    `.vscode/extensions.json`, `docs/sessions/*.md`, and now also the untracked
+    `docs/specs/FS-2.3-kms-key-rotation.md`), `npm run test` 218/218 (unchanged — no test code
+    touched), `npm run build` not re-run (no source changed beyond the generated schema).
+  - No EN/AR/RTL work — no new UI exists. No PR-worthy UI diff; this commit is contract-vendor +
+    STATE only, same shape as the 2026-07-28 C6b self-stop precedent.
+  - Recorded as a fresh platform ask below. This task stays blocked until KH-2.2c-BE ships and a
+    resumed session confirms the four missing surfaces (enroll/confirm/challenge/reset) plus the
+    `totpRequired` login signal.
 
 - 2026-07-30 (chore/C7b-login-slug-and-obo-list, micro follow-up to C7): Preamble ran
   `npm run contract:update` against `origin/main` (`gh api` fallback, as always for this private
@@ -1135,6 +1292,25 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 
 ## Open decisions / blockers
 
+- **Platform ask, new 2026-07-30 (feat/C7c-totp-2fa preamble self-stop) — CLOSED the same day**,
+  fixed by `khatm-platform` PRs #49 (KH-2.2c-BE) and #50 (KH-2.3a-BE, unrelated KMS rotation).
+  All five surfaces confirmed live: `POST /auth/login`'s `LoginChallengeResponse`, `POST
+/auth/totp`, `POST /users/me/totp/enroll`, `POST /users/me/totp/confirm`, `POST
+/users/{id}/totp/reset`, `POST /admin/tenants/{id}/users/{userId}/totp/reset`. See "Last
+  completed" 2026-07-30 (the "resumed and delivered" entry) for what was built against it.
+- **Platform ask, new 2026-07-30 (feat/C7c-totp-2fa delivery) — OPEN.** Two related gaps, both
+  traced to the same root cause: the platform enforces TOTP as fully opt-in/self-service (spec
+  FS-2.2 V1's underlying mechanism) but exposes no signal for the _mandatory-for-certain-scopes_
+  half of that same spec item. Needed: (1) a distinct error code (or a `MeResponse` boolean,
+  mirroring `mustChangePassword`) for "this session's scopes require TOTP and it isn't enrolled
+  yet," so the console can build the forced-enrollment takeover screen the brief called for —
+  right now nothing distinguishes a `revoke`/`tenant:admin`/`platform:admin` holder who must
+  enroll from one who's exempt; (2) any way at all to read the caller's own or another user's
+  current TOTP-active status (e.g. `MeResponse.totpEnabled`, or a field on `UserSummary`) — right
+  now Security Settings can only ever offer "enroll / re-enroll" with no status shown, and the
+  Users screen's "Reset 2FA" is offered unconditionally rather than only where it'd do something
+  (harmless today only because `resetTotp` is documented idempotent — a no-op if nothing to
+  reset). See "Last completed" 2026-07-30 for the full delivery record and self-stop reasoning.
 - **Platform ask from 2026-07-28 morning (C7 preamble self-stop) — closed the same day.** The
   missing forced-password-change signal was fixed by khatm-platform PR #46 (`MeResponse.
 mustChangePassword` + `GET /auth/me` exempted from the gate) and confirmed live before C7 was
@@ -1254,7 +1430,7 @@ contract:update` against this until #41 merges (it is still on a feature branch,
   cleanly" within this session. Revisit if a pilot tenant actually needs single-file uploads over
   200 rows.
 
-## 7. Known gaps / rough edges (as of 2026-07-29)
+## 7. Known gaps / rough edges (as of 2026-07-30)
 
 Carried over from `docs/rbac-roles-and-hierarchy.md` §7 — surfaced during Majd's C7 (spec
 FS-2.2 D7) manual walkthrough and confirmed live against the running stack (DB rows + platform
@@ -1284,6 +1460,14 @@ source), not console bugs:
    too), so the guard also protects the last platform admin, not just a `TENANT_ADMIN`-role
    user specifically. Confirmed live: with three admins present in the default tenant, disabling
    one succeeded (two remained); reducing to the last one correctly 409s.
+7. **No TOTP-mandatory-enrollment signal, and no TOTP-status signal at all (added 2026-07-30,
+   C7c).** The platform enforces TOTP as opt-in/self-service only (spec FS-2.2 V1's mechanism
+   half) — there is no error code or `MeResponse` field for "your scopes require TOTP, enroll
+   now," so the console has no forced-enrollment takeover screen (unlike the analogous
+   `mustChangePassword` gate), and no field anywhere exposes whether a given account currently
+   has TOTP active, so Security Settings shows an always-available enroll/re-enroll action with
+   no status badge, and the Users/on-behalf-of "Reset 2FA" actions are offered unconditionally
+   (safe only because `resetTotp` is documented idempotent). See "Open decisions" above.
 
 See `docs/rbac-roles-and-hierarchy.md` for the full roles/scopes reference this section
 summarizes, including the nav-visibility matrix and the tenant-vs-user model.

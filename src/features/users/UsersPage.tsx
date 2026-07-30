@@ -16,6 +16,7 @@ import {
   useLockUser,
   useReplaceRoles,
   useResetPassword,
+  useResetTotp,
   useUnlockUser,
   useUsers,
 } from './hooks';
@@ -42,6 +43,7 @@ function UsersPageBody() {
   const unlockUser = useUnlockUser();
   const disableUser = useDisableUser();
   const resetPassword = useResetPassword();
+  const resetTotp = useResetTotp();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editRolesTarget, setEditRolesTarget] = useState<UserSummary | null>(null);
@@ -49,6 +51,7 @@ function UsersPageBody() {
   const [unlockTarget, setUnlockTarget] = useState<UserSummary | null>(null);
   const [disableTarget, setDisableTarget] = useState<UserSummary | null>(null);
   const [resetTarget, setResetTarget] = useState<UserSummary | null>(null);
+  const [resetTotpTarget, setResetTotpTarget] = useState<UserSummary | null>(null);
   const [temporaryPassword, setTemporaryPassword] = useState<CreateUserResponse | null>(null);
 
   /** KH-USR-0423 gets a clear inline explanation, not the generic banner (spec FS-2.2 D5). */
@@ -134,6 +137,17 @@ function UsersPageBody() {
     }
   };
 
+  const onConfirmResetTotp = async () => {
+    if (!resetTotpTarget?.id) return;
+    try {
+      await resetTotp.mutateAsync(resetTotpTarget.id);
+      setResetTotpTarget(null);
+      resetTotp.reset();
+    } catch {
+      // surfaced via resetTotp.isError/error in the confirm dialog
+    }
+  };
+
   return (
     <section className={styles.page}>
       <div className={styles.headRow}>
@@ -153,6 +167,7 @@ function UsersPageBody() {
           onUnlock={setUnlockTarget}
           onDisable={setDisableTarget}
           onResetPassword={setResetTarget}
+          onResetTotp={setResetTotpTarget}
         />
       )}
 
@@ -260,6 +275,27 @@ function UsersPageBody() {
           onCancel={() => {
             setResetTarget(null);
             resetPassword.reset();
+          }}
+        />
+      )}
+
+      {resetTotpTarget && (
+        <ConfirmDialog
+          titleId="reset-totp-confirm-title"
+          title={t('users.resetTotpConfirm.title', { username: resetTotpTarget.username ?? '' })}
+          body={t('users.resetTotpConfirm.body')}
+          confirmLabel={
+            resetTotp.isPending
+              ? t('users.resetTotpConfirm.resetting')
+              : t('users.resetTotpConfirm.confirm')
+          }
+          cancelLabel={t('users.resetTotpConfirm.cancel')}
+          isBusy={resetTotp.isPending}
+          errorMessage={resetTotp.isError ? resolveError(resetTotp.error) : undefined}
+          onConfirm={onConfirmResetTotp}
+          onCancel={() => {
+            setResetTotpTarget(null);
+            resetTotp.reset();
           }}
         />
       )}

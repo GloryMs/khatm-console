@@ -6,6 +6,7 @@ import {
   lockUser,
   replaceRoles,
   resetPassword,
+  resetTotp,
   unlockUser,
   type CreateUserRequest,
 } from './api';
@@ -74,4 +75,9 @@ export function useResetPassword() {
     mutationFn: (id: string) => resetPassword(id),
     onSuccess: invalidate,
   });
+}
+
+/** No list invalidation — TOTP reset doesn't change any field `UserList` renders. */
+export function useResetTotp() {
+  return useMutation({ mutationFn: (id: string) => resetTotp(id) });
 }

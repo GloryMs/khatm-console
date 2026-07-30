@@ -62,6 +62,18 @@ export function listUsersInTenant(tenantId: string): Promise<UserSummary[]> {
   return apiFetch<UserSummary[]>(`${BASE}/${encodeURIComponent(tenantId)}/users`);
 }
 
+/**
+ * Clears a user's TOTP enrollment in a tenant other than the caller's own,
+ * run on behalf of the named tenant (`OnBehalfOfExecutor`, audited
+ * `ON_BEHALF_OF`). Idempotent. Requires the `platform:admin` scope.
+ */
+export async function resetTotpInTenant(tenantId: string, userId: string): Promise<void> {
+  await apiFetch(
+    `${BASE}/${encodeURIComponent(tenantId)}/users/${encodeURIComponent(userId)}/totp/reset`,
+    { method: 'POST' },
+  );
+}
+
 /** ACTIVE -> SUSPENDED; blocks new issuance and sign-ins only. Idempotent. */
 export function suspendTenant(id: string): Promise<TenantView> {
   return apiFetch<TenantView>(`${BASE}/${encodeURIComponent(id)}/suspend`, { method: 'POST' });

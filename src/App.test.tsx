@@ -17,6 +17,7 @@ const baseAuth: AuthContextValue = {
   status: 'authenticated',
   user: null,
   login: async () => undefined,
+  completeTotpLogin: async () => undefined,
   logout: async () => undefined,
   refresh: async () => undefined,
   hasScope: () => false,

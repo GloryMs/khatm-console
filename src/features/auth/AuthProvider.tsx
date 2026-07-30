@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { authBridge } from '@/auth/authBridge';
 import {
+  completeTotpLogin as completeTotpLoginRequest,
   getMe,
   login as loginRequest,
   logout as logoutRequest,
   type LoginRequest,
   type MeResponse,
+  type TotpChallengeRequest,
 } from './api';
 import { AuthContext, type AuthContextValue, type AuthStatus } from './AuthContext';
 
@@ -44,7 +46,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(
     async (req: LoginRequest) => {
-      await loginRequest(req);
+      const result = await loginRequest(req);
+      if (result?.totpRequired) return result;
+      await bootstrap();
+      return undefined;
+    },
+    [bootstrap],
+  );
+
+  const completeTotpLogin = useCallback(
+    async (req: TotpChallengeRequest) => {
+      await completeTotpLoginRequest(req);
       await bootstrap();
     },
     [bootstrap],
@@ -59,8 +71,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasScope = useCallback((scope: string) => user?.scopes?.includes(scope) ?? false, [user]);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ status, user, login, logout, hasScope, refresh: bootstrap }),
-    [status, user, login, logout, hasScope, bootstrap],
+    () => ({ status, user, login, completeTotpLogin, logout, hasScope, refresh: bootstrap }),
+    [status, user, login, completeTotpLogin, logout, hasScope, bootstrap],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

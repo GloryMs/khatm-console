@@ -17,11 +17,12 @@ import {
   type CreateUserFormValues,
 } from '@/features/users/components/CreateUserDialog';
 import { UserList } from '@/features/users/components/UserList';
-import type { CreateUserResponse } from './api';
+import type { CreateUserResponse, UserSummary } from './api';
 import { buildTenantJwksUrl } from './jwks';
 import {
   useActivateTenant,
   useCreateUserInTenant,
+  useResetTotpInTenant,
   useSuspendTenant,
   useTenant,
   useTenantUsers,
@@ -47,11 +48,13 @@ function TenantDetailPageBody() {
   const suspend = useSuspendTenant();
   const activate = useActivateTenant();
   const createUserInTenant = useCreateUserInTenant();
+  const resetTotpInTenant = useResetTotpInTenant();
   const [confirmAction, setConfirmAction] = useState<'suspend' | 'activate' | null>(null);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<DetailTab>('details');
   const [createUserOpen, setCreateUserOpen] = useState(false);
   const [createdUser, setCreatedUser] = useState<CreateUserResponse | null>(null);
+  const [resetTotpTarget, setResetTotpTarget] = useState<UserSummary | null>(null);
   const tenantUsers = useTenantUsers(activeTab === 'users' ? params.id : undefined);
 
   if (tenant.isPending) return <p>{t('common.loading')}</p>;
@@ -92,6 +95,17 @@ function TenantDetailPageBody() {
     setCreateUserOpen(false);
     createUserInTenant.reset();
     setCreatedUser(result);
+  };
+
+  const onConfirmResetTotp = async () => {
+    if (!resetTotpTarget?.id || !id) return;
+    try {
+      await resetTotpInTenant.mutateAsync({ tenantId: id, userId: resetTotpTarget.id });
+      setResetTotpTarget(null);
+      resetTotpInTenant.reset();
+    } catch {
+      // surfaced via resetTotpInTenant.isError/error in the confirm dialog
+    }
   };
 
   return (
@@ -210,7 +224,9 @@ function TenantDetailPageBody() {
           </div>
           {tenantUsers.isPending && <p>{t('common.loading')}</p>}
           {tenantUsers.isError && <ApiErrorBanner error={tenantUsers.error} />}
-          {tenantUsers.data && <UserList users={tenantUsers.data} />}
+          {tenantUsers.data && (
+            <UserList users={tenantUsers.data} onResetTotp={setResetTotpTarget} />
+          )}
         </div>
       )}
 
@@ -235,6 +251,29 @@ function TenantDetailPageBody() {
           username={createdUser.username ?? ''}
           password={createdUser.temporaryPassword}
           onClose={() => setCreatedUser(null)}
+        />
+      )}
+
+      {resetTotpTarget && (
+        <ConfirmDialog
+          titleId="reset-totp-confirm-title"
+          title={t('users.resetTotpConfirm.title', { username: resetTotpTarget.username ?? '' })}
+          body={t('users.resetTotpConfirm.body')}
+          confirmLabel={
+            resetTotpInTenant.isPending
+              ? t('users.resetTotpConfirm.resetting')
+              : t('users.resetTotpConfirm.confirm')
+          }
+          cancelLabel={t('users.resetTotpConfirm.cancel')}
+          isBusy={resetTotpInTenant.isPending}
+          errorMessage={
+            resetTotpInTenant.isError ? resolveError(resetTotpInTenant.error) : undefined
+          }
+          onConfirm={onConfirmResetTotp}
+          onCancel={() => {
+            setResetTotpTarget(null);
+            resetTotpInTenant.reset();
+          }}
         />
       )}
 
