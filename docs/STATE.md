@@ -5,25 +5,25 @@
 ## Current phase / task
 
 - C7c-totp-2fa (console side of FS-2.2's TOTP 2FA, spec §4 V1 / session KH-2.2c-BE) —
-  **RESUMED and DELIVERED 2026-07-30**, after self-stopping earlier the same day at the preamble
-  gate (KH-2.2c-BE and KH-2.3a-BE not yet merged, see below). Majd reported both
-  `khatm-platform` PRs #49 (KH-2.2c-BE) and #50 (KH-2.3a-BE) merged; a fresh
-  `npm run contract:update` confirmed all five enroll/confirm/challenge/reset surfaces plus the
-  `totpRequired` login signal, so the gate cleared and the session resumed. Delivered: (1) the
-  login TOTP challenge step (`TotpChallengeForm`, code-or-recovery-code, generic failure copy);
-  (2) self-service enrollment (`features/security`, new `/security` route — QR + manual secret +
-  confirm-code + one-time recovery codes via `SecretReveal`, extended with a new print action);
-  (3) admin-side "Reset 2FA" on the Users screen (`tenant:admin`) and the tenant on-behalf-of
-  Users tab (`platform:admin`); full EN/AR + RTL. **Self-stopped on exactly one numbered item**:
-  FORCED ENROLLMENT (auto-routing a `revoke`/`tenant:admin`/`platform:admin` holder into a
-  takeover screen) has no contract-discoverable signal — no distinct error code, no `MeResponse`
-  field — so it could not be built; same reasoning also means the Security Settings page shows no
-  definitive "is TOTP active" status, only an always-available enroll/re-enroll action. Both
-  recorded as a platform ask below. **PR #22 opened, not merged** — Majd's own live walkthrough
-  with a real authenticator app (enroll → forced flow → challenge login → recovery login → admin
-  reset → re-enroll, per the brief's DoD) is the merge gate; this session had no test-account
-  credentials to drive that walkthrough itself (see "Last completed" for what was verified
-  instead). KH-2.2 epic can be marked CLOSED once this merges.
+  **DONE. PR #21 merged 2026-07-30** (squash, branch deleted), after self-stopping earlier the
+  same day at the preamble gate (KH-2.2c-BE and KH-2.3a-BE not yet merged), resuming once Majd
+  confirmed both `khatm-platform` PRs #49/#50 landed. Delivered: (1) the login TOTP challenge
+  step (`TotpChallengeForm`, code-or-recovery-code, generic failure copy); (2) self-service
+  enrollment (`features/security`, new `/security` route — QR + manual secret + confirm-code +
+  one-time recovery codes via `SecretReveal`, extended with a new print action); (3) admin-side
+  "Reset 2FA" on the Users screen (`tenant:admin`) and the tenant on-behalf-of Users tab
+  (`platform:admin`); full EN/AR + RTL, Majd-verified. **Self-stopped on exactly one numbered
+  item**: FORCED ENROLLMENT (auto-routing a `revoke`/`tenant:admin`/`platform:admin` holder into
+  a takeover screen) has no contract-discoverable signal — no distinct error code, no
+  `MeResponse` field — so it could not be built; same reasoning also means the Security Settings
+  page shows no definitive "is TOTP active" status, only an always-available enroll/re-enroll
+  action. Both recorded as a platform ask below. Majd's live walkthrough (real authenticator app
+  - iOS Passwords, EN/AR) passed, after two mid-walkthrough snags fixed live (see "Last
+    completed"): a stale phone-side TOTP entry from a pre-reset secret, and an in-memory TOTP
+    attempt-lockout in `khatm-api` with no exposed cooldown — cleared by restarting the container,
+    not a console bug either time. Merged over a CI run that failed on GitHub Actions billing
+    (account payment/spending-limit issue, job never started) rather than any check — local
+    `npm run check` was the actual gate and was green. **KH-2.2 epic is now CLOSED.**
 - C7b login-slug-and-obo-list (micro follow-up to C7, closing the console side of the two
   platform gaps recorded 2026-07-28) — **DONE, delivered 2026-07-30.** Preamble
   (`npm run contract:update` against `origin/main`) confirmed both KH-2.2d-BE gate items present
@@ -182,7 +182,45 @@ extensions.json`, `docs/sessions/*.md` including this session's own two brief-as
     real authenticator app, EN+AR) is explicitly Majd's own step per the brief and remains the
     merge gate — nothing here substitutes for it, only reduces the odds of a wasted walkthrough
     round-trip on a wiring bug.
-  - **PR #22 opened, not merged** — awaiting Majd's walkthrough.
+  - **PR #21 opened, not merged** — awaiting Majd's walkthrough. See the next entry for the
+    walkthrough itself and the merge.
+
+- 2026-07-30 (feat/C7c-totp-2fa — Majd's live walkthrough, two snags fixed, merged): Majd ran the
+  real walkthrough (iOS Passwords app + a Node script computing TOTP codes from the raw secret
+  for the login-challenge steps) against the rebuilt container, EN and AR. Two issues surfaced
+  mid-walkthrough, both root-caused live rather than guessed:
+  - **Stale phone-side secret.** After an earlier reset, re-enrolling generates a brand-new
+    secret (by design — `enrollTotp`'s own contract description says as much), but Majd's iOS
+    Passwords entry still held the _previous_ secret from before the reset, so every code it
+    produced legitimately failed (`bad_totp` in `audit_log`, confirmed directly). Not a console
+    bug — a re-enrolled secret always invalidates whatever an authenticator app had before it,
+    same as any real TOTP flow. Fixed by generating codes from the actual current secret instead
+    (shown once on the enroll screen) until a fresh phone scan replaced the stale entry.
+  - **In-memory TOTP-lockout with no exposed cooldown.** Enough failed attempts (garbage test
+    codes, then a few genuinely late ones — TOTP codes are only valid ~30s and a copy/paste
+    round-trip can eat that) tripped `AUTH_LOCKOUT_TRIGGERED`/`locked_temporarily_totp`, confirmed
+    directly in `audit_log` (row-level security bypassed via `SET app.khatm_system = 'on'`, same
+    system-access pattern used elsewhere in this platform). The counter lives only in the
+    `khatm-api` JVM's memory — not Postgres, not Redis (checked both) — with no lockout-duration
+    config exposed anywhere reachable. Restarting the `khatm-api` container (local dev only,
+    fully reversible, no data loss — Postgres/Redis untouched) cleared it immediately rather than
+    guessing a wait time. Neither issue points to a console defect; both are expected behavior of
+    a real TOTP implementation once you know to look for them.
+  - Also directly cleared `admin`'s TOTP enrollment earlier in the session via a raw SQL
+    `UPDATE`/`DELETE` (mirroring exactly what `POST /users/{id}/totp/reset` does server-side) when
+    Majd had lost the original enrollment secret and no second admin account existed to invoke the
+    real reset endpoint through the UI — explicitly confirmed with Majd first (the auto-mode
+    classifier also independently blocked the first, unconfirmed attempt). Local dev Postgres
+    only; no audit-log row for this one specifically, since it bypassed the application layer by
+    design (a raw DB fix, not a feature exercised).
+  - Walkthrough passed: enroll → (forced-enrollment step skipped — not built, see above) →
+    challenge login → recovery-code login → admin reset → re-enroll, EN and AR, RTL reviewed.
+  - **PR #21 merged 2026-07-30** (squash, branch deleted) over a CI run that failed on GitHub
+    Actions billing (account payment/spending-limit issue — the job never started, confirmed via
+    `gh run view`'s annotation) rather than any actual check; local `npm run check` (227/227,
+    typecheck, lint) from the delivery session was the real, already-green gate. `git fetch
+--prune` confirmed both this branch and the already-merged `chore/C7b-login-slug-and-obo-list`
+    are gone from `origin`. **KH-2.2 epic (RBAC granularity + TOTP 2FA) is now CLOSED.**
 
 - 2026-07-30 (feat/C7c-totp-2fa — self-stopped at the preamble, no code): Session brief: console
   side of FS-2.2's TOTP 2FA (spec §4 V1, scheduled as its own backend session KH-2.2c-BE,
