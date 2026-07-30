@@ -37,7 +37,7 @@ describe('LoginForm', () => {
     expect(login).not.toHaveBeenCalled();
   });
 
-  it('calls login with the entered credentials on valid submit', async () => {
+  it('calls login with the entered credentials, omitting tenantSlug when left blank', async () => {
     const login = vi.fn().mockResolvedValue(undefined);
     renderForm(login);
     const user = userEvent.setup();
@@ -48,6 +48,28 @@ describe('LoginForm', () => {
 
     await waitFor(() =>
       expect(login).toHaveBeenCalledWith({ username: 'admin', password: 'secret' }),
+    );
+    expect(login).not.toHaveBeenCalledWith(
+      expect.objectContaining({ tenantSlug: expect.anything() }),
+    );
+  });
+
+  it('includes tenantSlug in the login request when an organization is entered', async () => {
+    const login = vi.fn().mockResolvedValue(undefined);
+    renderForm(login);
+    const user = userEvent.setup();
+
+    await user.type(screen.getByLabelText(i18n.t('auth.login.username')), 'c7admin');
+    await user.type(screen.getByLabelText(i18n.t('auth.login.password')), 'secret');
+    await user.type(screen.getByLabelText(i18n.t('auth.login.tenantSlug')), '  acme  ');
+    await user.click(screen.getByRole('button', { name: i18n.t('auth.login.submit') }));
+
+    await waitFor(() =>
+      expect(login).toHaveBeenCalledWith({
+        username: 'c7admin',
+        password: 'secret',
+        tenantSlug: 'acme',
+      }),
     );
   });
 });

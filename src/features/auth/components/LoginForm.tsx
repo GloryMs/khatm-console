@@ -14,6 +14,7 @@ function buildLoginSchema(t: TFunction) {
   return z.object({
     username: z.string().min(1, t('auth.login.usernameRequired')),
     password: z.string().min(1, t('auth.login.passwordRequired')),
+    tenantSlug: z.string(),
   });
 }
 
@@ -34,8 +35,13 @@ export function LoginForm() {
 
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(null);
+    const tenantSlug = values.tenantSlug.trim();
     try {
-      await login(values);
+      await login({
+        username: values.username,
+        password: values.password,
+        ...(tenantSlug ? { tenantSlug } : {}),
+      });
     } catch (err) {
       setSubmitError(err);
       if (err instanceof ApiError) {
@@ -70,6 +76,17 @@ export function LoginForm() {
         />
         {errors.password && <span className={styles.fieldError}>{errors.password.message}</span>}
       </label>
+      <div className={styles.field}>
+        <label htmlFor="login-tenant-slug">{t('auth.login.tenantSlug')}</label>
+        <input
+          id="login-tenant-slug"
+          type="text"
+          autoComplete="organization"
+          className="khatm-input"
+          {...register('tenantSlug')}
+        />
+        <span className={styles.fieldHint}>{t('auth.login.tenantSlugHint')}</span>
+      </div>
       <ApiErrorBanner error={submitError} />
       <Button type="submit" variant="primary" disabled={isSubmitting}>
         {isSubmitting ? t('auth.login.submitting') : t('auth.login.submit')}

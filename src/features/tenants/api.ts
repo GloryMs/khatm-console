@@ -7,6 +7,7 @@ export type OnboardTenantResponse = components['schemas']['OnboardTenantResponse
 export type InitialAdminRequest = components['schemas']['InitialAdminRequest'];
 export type CreateUserRequest = components['schemas']['CreateUserRequest'];
 export type CreateUserResponse = components['schemas']['CreateUserResponse'];
+export type UserSummary = components['schemas']['UserSummary'];
 
 export type TenantType = 'GOVERNMENT' | 'EDUCATION' | 'PRIVATE' | 'OTHER';
 export type TenantDeployMode = 'SAAS' | 'ONPREM' | 'FEDERATED';
@@ -49,6 +50,16 @@ export function createUserInTenant(
     method: 'POST',
     body: req,
   });
+}
+
+/**
+ * Every user of the named tenant, newest first — the same row shape
+ * `GET /api/v1/users` returns for a tenant admin's own tenant, run on behalf
+ * of the named tenant (`OnBehalfOfExecutor`, audited `ON_BEHALF_OF`).
+ * Requires the `platform:admin` scope.
+ */
+export function listUsersInTenant(tenantId: string): Promise<UserSummary[]> {
+  return apiFetch<UserSummary[]>(`${BASE}/${encodeURIComponent(tenantId)}/users`);
 }
 
 /** ACTIVE -> SUSPENDED; blocks new issuance and sign-ins only. Idempotent. */

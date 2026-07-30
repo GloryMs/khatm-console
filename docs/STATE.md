@@ -4,6 +4,16 @@
 
 ## Current phase / task
 
+- C7b login-slug-and-obo-list (micro follow-up to C7, closing the console side of the two
+  platform gaps recorded 2026-07-28) — **DONE, delivered 2026-07-30.** Preamble
+  (`npm run contract:update` against `origin/main`) confirmed both KH-2.2d-BE gate items present
+  in the officially-merged contract (not a pre-merge vendor, unlike C6/C7's own preamble
+  sessions): optional `tenantSlug` on `LoginRequest`, and `GET /api/v1/admin/tenants/{id}/users`.
+  Delivered both items: an optional "Organization" field on the login form (maps to `tenantSlug`,
+  omitted from the request when blank) and the on-behalf-of Users tab now lists a tenant's users
+  (reusing `UserList` read-only, since lock/roles/reset have no on-behalf-of contract variant).
+  **PR #20 opened, not merged** — Majd's EN/AR/RTL walkthrough is the merge gate (branch
+  protection now enforced on this repo). See "Last completed" 2026-07-30 for the full record.
 - C7 users & scope-gating (spec FS-2.2 D7) — **DONE, resumed and delivered 2026-07-28** after
   self-stopping earlier the same day at the preamble gate (missing forced-password-change
   signal, see below). khatm-platform's PR #46 fixed it — `MeResponse.mustChangePassword` +
@@ -47,6 +57,98 @@
   manual EN/AR + RTL walkthrough of that specific banner was never explicitly logged as run.
 
 ## Last completed
+
+- 2026-07-30 (chore/C7b-login-slug-and-obo-list, micro follow-up to C7): Preamble ran
+  `npm run contract:update` against `origin/main` (`gh api` fallback, as always for this private
+  upstream) — 64 insertions over the C7-vendored contract. Confirmed both gate items directly in
+  the refreshed `contracts/openapi.json` before writing any code: `LoginRequest.tenantSlug`
+  (optional string) present, and `GET /api/v1/admin/tenants/{id}/users` (`listUsersInTenant`,
+  returns `UserSummary[]`, `platform:admin`-gated) present. `POST /api/v1/auth/login`'s own
+  description spells out the exact semantics this session had to preserve verbatim: "The optional
+  tenantSlug (spec FS-2.2) authenticates against that tenant specifically; omit or leave it blank
+  to log into the caller's ambient default tenant, unchanged from before. Every failure reason —
+  unknown user, wrong password, temporary lockout, administrative LOCKED/DISABLED, or an
+  unknown/SUSPENDED tenantSlug — returns the identical generic 401 (spec FS-0.6b D7)." Both gates
+  passed; `npm run gen:api` regenerated types clean, `npm run typecheck` green immediately after —
+  this is the first C7-family session where the contract needed **no** pre-merge vendoring or
+  rename-chasing (unlike C7's own two 2026-07-28 preamble sessions).
+  - **Item 1 — login "Organization" field**: `LoginForm.tsx` gained an optional field
+    (`auth.login.tenantSlug`/`auth.login.tenantSlugHint`) below password. Zod schema keeps it an
+    unconstrained `z.string()` (no min-length); on submit the value is trimmed and spread into the
+    request object only if non-empty (`...(tenantSlug ? { tenantSlug } : {})`), so existing users
+    who never touch the field get the exact same two-field `{username, password}` body as before —
+    no behavior change for the default-tenant login path. `AuthContextValue.login` already typed
+    its parameter as the full generated `LoginRequest`, so no context/provider change was needed,
+    only the form. Deliberately did **not** add any special "organization not found" copy or
+    validation — the field has no client-side format check at all, matching the platform's own
+    anti-enumeration stance that an unknown/suspended slug must be indistinguishable from a bad
+    password. Confirmed via `ApiErrorBanner`'s existing generic-fallback behavior: no messageKey
+    mapping exists (or was added) for a slug-specific case, so the same generic banner copy renders
+    regardless of failure reason, matching the server's own single `KH-RBC-0401` for every case.
+  - **Item 2 — on-behalf-of Users tab now lists**: added `listUsersInTenant`/`useTenantUsers` to
+    `tenants/api.ts`/`hooks.ts` (`GET /admin/tenants/{id}/users`, new query key
+    `tenantsKeys.users(id)`, enabled only while the Users tab is active). `TenantDetailPage`'s
+    Users tab replaced its "listing isn't available here yet" fallback banner with the real list.
+    Reused `users/components/UserList.tsx` rather than duplicating the table markup (brief's own
+    instruction) — its five row-action handler props (`onEditRoles`/`onLock`/`onUnlock`/
+    `onDisable`/`onResetPassword`) are now all optional; omitting every one (as the on-behalf-of
+    tab does) renders the identical row shape with the entire actions column omitted, since
+    lock/roles/reset have no on-behalf-of contract variant today and the brief explicitly said not
+    to call the tenant-scoped `/api/v1/users/*` endpoints while impersonating via the admin
+    surface. `UsersPage.tsx` (the tenant-scoped `/users` screen) is unaffected — it still passes
+    all five handlers and renders exactly as before. `useCreateUserInTenant` now invalidates
+    `tenantsKeys.users(tenantId)` on success (previously couldn't — there was no cached list to
+    invalidate before this session).
+  - Removed `tenants.detail.usersListUnavailable` from both `en.json`/`ar.json` — no longer
+    reachable now that the tab actually lists.
+  - EN/AR parity script-verified: recursive key-diff, zero mismatches either direction. RTL grep
+    (`(margin|padding|border)-(left|right)`, bare `left:`/`right:`, `float:`) across every
+    touched stylesheet this session (`LoginForm.module.css`, `TenantDetailPage.module.css`,
+    `UserList.module.css`): zero matches.
+  - Tests: 218 total now (was 216) — `LoginForm.test.tsx`'s old single "calls login with
+    credentials" test was replaced with two (slug omitted when blank, slug included and trimmed
+    when entered), net +1 in that file; `tenants/hooks.test.tsx` gained a case for
+    `useCreateUserInTenant`'s new invalidation (+1);
+    `TenantDetailPage.test.tsx`'s existing on-behalf-of describe block was rewritten in place (same
+    2 cases) — the first now mocks `listUsersInTenant` and asserts the tenant's users render with
+    no actions column/row-action buttons present, the second (create flow) now also mocks
+    `listUsersInTenant` (empty list) so the tab's query doesn't hit the real, unmocked API during
+    that test.
+  - `npm run typecheck`, `npm run lint` (only the pre-existing `FormField.tsx` fast-refresh
+    warning), `npm run test` (218/218), and `npm run build` all clean. `format:check` clean on
+    every file this session touched (`prettier --write` needed on 4 files mid-session); still
+    fails only on the pre-existing untracked `.vscode/extensions.json` and two
+    `docs/sessions/*.md` files (this session's own brief-as-a-file included, same precedent as
+    every prior session).
+  - **Live walkthrough, API-level (no browser-automation tool, same standing limitation)**: rebuilt
+    and recreated the `khatm-console` container against the running compose stack (`khatm-api` had
+    itself been restarted 9 minutes prior — confirmed via `docker ps` — consistent with "platform
+    main post-merge"; the live `/v3/api-docs` was diffed against the freshly-vendored contract for
+    both gate items before trusting it). Drove the real request pipeline through the console's own
+    proxy (`localhost:3000`, CSRF `X-XSRF-TOKEN` pattern as usual), exactly the DoD's five steps:
+    (1) logged in as the existing default-tenant `admin` with **no** `tenantSlug` — identical
+    `{username, password}`-only body, `PLATFORM_ADMIN` scopes returned, unchanged from before;
+    (2) logged out; (3) onboarded a fresh tenant (`c7b-acme`) with an `initialAdmin`, then logged
+    in as that new user **with** `tenantSlug:"c7b-acme"` and the one-time temporary password — 200,
+    a `TENANT_ADMIN`-scoped session (no `platform:admin`), confirming the platform's
+    tenant-resolution gap from C7 is genuinely fixed; (4) changed the forced temporary password,
+    then confirmed `GET /api/v1/schemas` returned `[]` for this session — the new tenant's own
+    (empty) schema list, not the default tenant's 3 — proving the login landed in the correct
+    tenant context, not just returning 200; (5) logged back in as the default-tenant `admin` and
+    called `GET /api/v1/admin/tenants/{id}/users` on behalf of `c7b-acme` — returned exactly the
+    one `TENANT_ADMIN` user just created there. Also directly verified the anti-enumeration
+    requirement itself: a login with an unknown `tenantSlug` and a login with a wrong password on
+    the real default tenant both returned byte-identical `KH-RBC-0401` bodies (same `code`/
+    `messageKey`/`message`, only `traceId` differing) — confirms the console has nothing to get
+    wrong here since the server-side response is already indistinguishable. Grepped the rebuilt,
+    served bundle for `tenantSlug`/`listUsersInTenant` as a static confirmation the shipped code
+    matches. The throwaway `c7b-acme` tenant was left `SUSPENDED` after the walkthrough (no delete
+    endpoint exists, same precedent as every prior throwaway-tenant cleanup). What this does
+    **not** cover: seeing the Organization field or the on-behalf-of user rows rendered in an
+    actual browser, or the Arabic/RTL layout — **Majd's manual EN/AR/RTL browser walkthrough is
+    still the real merge gate**, per this session's own DoD and this repo's now-enforced branch
+    protection.
+  - PR #20 opened, not merged.
 
 - 2026-07-28 (C7 users & scope-gating, spec FS-2.2 D7 — resumed and delivered): Majd reported
   the platform developer had fixed the missing forced-password-change signal (khatm-platform
@@ -1039,27 +1141,27 @@ mustChangePassword` + `GET /auth/me` exempted from the gate) and confirmed live 
   resumed and delivered — see "Last completed" 2026-07-28 (the later, "resumed and delivered"
   entry). PR #46 itself is still not merged to `khatm-platform` `main` as of this writing; the
   contract was vendored from the live local container instead (precedent: 2026-07-25 Dashboard).
-- **Platform ask, new 2026-07-28 (C7 delivery — login/tenant resolution, likely a real gap):**
-  `POST /api/v1/auth/login` can only ever authenticate users belonging to the platform's
-  _default_ tenant. `AuthService.login` reads `TenantContext.current()` before authentication
-  succeeds; `TenantContext`'s own Javadoc states tenant context is resolved strictly from the
-  authenticated principal (spec FS-2.1 D1) — never a header, body, or query param — so at the
-  pre-auth point where `login()` runs there is no way to know which tenant a login attempt
-  targets, and it silently falls back to `DEFAULT_TENANT_ID`. Verified live: onboarding a new
-  tenant with an `initialAdmin` succeeds and returns a real, `ACTIVE` user row (confirmed via
-  direct `psql`), but logging in as that user 401s with `AUTH_LOGIN_FAILED`/`reason:
-unknown_user` in the audit log every time. This blocks the spec's own exit-walkthrough step
-  ("login as the tenant's first admin, with the temporary password") for any tenant other than
-  the seeded default one — needs a platform-side tenant-resolution mechanism for the
-  pre-authentication login request (subdomain, header, path-prefixed login endpoint, or
-  similar) before that step of the walkthrough — or C7's own on-behalf-of Users tab — can be
-  demonstrated end-to-end for a real, freshly-onboarded tenant.
-- **Platform ask, new 2026-07-28 (C7 delivery — on-behalf-of Users tab is create-only):**
-  `POST /api/v1/admin/tenants/{id}/users` (spec D4 on-behalf-of) has no matching `GET` to list a
-  target tenant's existing users from the platform-admin side — confirmed by listing every
-  `/api/v1/admin/tenants*` path in the refreshed contract. `TenantDetailPage`'s Users tab is
-  create-only as a result, with an explicit localized note rather than a fabricated or silently
-  omitted list. A `GET /api/v1/admin/tenants/{id}/users` (or similar) would complete it.
+- **Platform ask, new 2026-07-28 (C7 delivery — login/tenant resolution) — CLOSED 2026-07-30
+  (chore/C7b), fixed by khatm-platform's KH-2.2d-BE.** `POST /api/v1/auth/login` now accepts an
+  optional `tenantSlug` (`LoginRequest.tenantSlug`); omitting it preserves the exact prior
+  default-tenant behavior. Console-side: `LoginForm` gained an optional "Organization" field that
+  maps to it, omitted from the request entirely when left blank. Live-verified end-to-end
+  2026-07-30: onboarded a fresh tenant with an `initialAdmin`, logged in as that user with its
+  `tenantSlug` and one-time temporary password (200, `TENANT_ADMIN`-scoped session, no
+  `platform:admin`), and confirmed the session actually lands in that tenant's own context
+  (`GET /api/v1/schemas` returned `[]`, the new tenant's own empty list, not the default tenant's
+  3). Also confirmed the anti-enumeration requirement live: a login with an unknown `tenantSlug`
+  and one with a wrong password on the real default tenant return byte-identical `KH-RBC-0401`
+  bodies — the console adds no special-case copy for either. See "Last completed" 2026-07-30.
+- **Platform ask, new 2026-07-28 (C7 delivery — on-behalf-of Users tab is create-only) — CLOSED
+  2026-07-30 (chore/C7b), fixed by khatm-platform's KH-2.2d-BE.** `GET
+/api/v1/admin/tenants/{id}/users` (`listUsersInTenant`) now exists — confirmed in the
+  `origin/main`-refreshed contract, not a pre-merge vendor. `TenantDetailPage`'s Users tab now
+  lists the tenant's users (reusing `UserList` in its new read-only mode — row actions still stay
+  out of scope, since lock/roles/reset have no on-behalf-of contract variant). Live-verified
+  2026-07-30: a `PLATFORM_ADMIN` session listing a freshly-onboarded tenant's users via this
+  endpoint correctly returned exactly the one `TENANT_ADMIN` user created there. See "Last
+  completed" 2026-07-30.
 - **Noted, not fixed (C7 delivery):** every existing `ConfirmDialog`-driven page in this
   codebase (`ConsumingPartiesPage`, `TenantDetailPage`'s suspend/activate,
   `SchemaManagementPage`'s publish/archive) awaits `mutationFn.mutateAsync(...)` inside its
@@ -1158,18 +1260,13 @@ Carried over from `docs/rbac-roles-and-hierarchy.md` §7 — surfaced during Maj
 FS-2.2 D7) manual walkthrough and confirmed live against the running stack (DB rows + platform
 source), not console bugs:
 
-1. **No cross-tenant user listing.** `POST /admin/tenants/{id}/users` (on-behalf-of create)
-   exists; its `GET` counterpart doesn't. A `PLATFORM_ADMIN` who onboards a tenant and adds
-   users to it has no way to see those users again afterward, from anywhere — not the console,
-   not the raw API — until either that endpoint is added, or someone logs in as a user of that
-   tenant and views `/users` from inside it. The most confusing gap in practice; see "Open
-   decisions" for the full platform-ask writeup.
-2. **Logging in as a newly-onboarded tenant's own user doesn't work yet.** The platform's login
-   endpoint currently only ever resolves users against its default tenant — a
-   pre-authentication tenant-resolution gap, confirmed by reading `AuthService`/`TenantContext`
-   source, not guessed. In practice: even once a `TENANT_ADMIN` or other user is created in a
-   new tenant, that user cannot sign in until the platform adds a tenant-resolution mechanism
-   for the login request itself. Independent of gap #1.
+1. ~~**No cross-tenant user listing.**~~ **RESOLVED 2026-07-30 (chore/C7b).**
+   `GET /admin/tenants/{id}/users` now exists (KH-2.2d-BE); the on-behalf-of Users tab lists a
+   tenant's users read-only. See "Last completed" 2026-07-30.
+2. ~~**Logging in as a newly-onboarded tenant's own user doesn't work yet.**~~ **RESOLVED
+   2026-07-30 (chore/C7b).** `POST /api/v1/auth/login` now accepts an optional `tenantSlug`
+   (KH-2.2d-BE); the login form's new "Organization" field maps to it. See "Last completed"
+   2026-07-30.
 3. **Custom/ad-hoc roles don't exist.** The three-role catalog (`ISSUER_OPERATOR`,
    `TENANT_ADMIN`, `PLATFORM_ADMIN`) is fixed; a tenant can't define its own role with a custom
    scope combination (planned for a later phase per spec FS-2.2).
@@ -1198,19 +1295,18 @@ summarizes, including the nav-visibility matrix and the tenant-vs-user model.
 2. Visual identity — **DONE**. Remainder: migrate the last ~12 duplicated button blocks onto
    `Button` and adopt `.khatm-input` across remaining forms; revisit whether a real charting
    library belongs in the dashboard.
-3. Platform follow-ups from C7 (see "Open decisions" and §7 above): a login/tenant-resolution
-   mechanism for authenticating a non-default tenant's own users (currently architecturally
-   unreachable — not a console-side fix), and a `GET` counterpart for
-   `/admin/tenants/{id}/users` so the on-behalf-of Users tab can list, not just create.
-4. Unify the scope-gating placement convention (self-gating vs. App.tsx-level wrapping — see
+3. Unify the scope-gating placement convention (self-gating vs. App.tsx-level wrapping — see
    "Open decisions" above) across every gated page. Also sweep the `ConfirmDialog`-driven pages
    noted in C7's "Open decisions" entry for the same unguarded-`mutateAsync` unhandled-rejection
    shape fixed in the new `UsersPage.tsx`.
-5. Credentials search status-filter dropdown — the platform ask logged 2026-07-28 (C6b) is
+4. Credentials search status-filter dropdown — the platform ask logged 2026-07-28 (C6b) is
    addressed on `khatm-platform`'s side via PR #41 (`chore/credential-search-status-filter`),
    but that PR is **not yet merged** — still blocked until it lands on `khatm-platform` `main`
    and this repo's `npm run contract:update` picks it up. See "Open decisions" above.
 
+Closed: item #3 (was #3, platform follow-ups from C7 — login/tenant-resolution and the
+`GET /admin/tenants/{id}/users` counterpart), both fixed by khatm-platform's KH-2.2d-BE and
+delivered console-side 2026-07-30 (chore/C7b); see "Last completed" and "Open decisions" 2026-07-30.
 Closed: item #3 (was #3, Majd's EN/AR/RTL walkthrough of C7), delivered 2026-07-29 — walkthrough
 raised RBAC clarification questions (answered live, no bugs; see "Last completed" 2026-07-29 and
 §7 above), one copy fix applied, PR #19 merged to `main` (squash, branch deleted). Closed: item
