@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   getActivity,
   getAttention,
@@ -6,7 +6,10 @@ import {
   getDailyStats,
   getSigningKeyStatuses,
   getStats,
+  retireSigningKey,
+  rotateSigningKey,
   type ActivityParams,
+  type RetireKeyRequest,
 } from './api';
 import { computeComparisonWindow, computeWindow, type StatsWindowOption } from './windows';
 
@@ -88,6 +91,25 @@ export function useSigningKeyStatuses(enabled: boolean) {
     enabled,
     staleTime: SIGNING_KEYS_REFRESH_MS,
     refetchInterval: SIGNING_KEYS_REFRESH_MS,
+  });
+}
+
+/** Rotates the tenant's signing key; refetches the signing-keys list on success. */
+export function useRotateKey() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: rotateSigningKey,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: dashboardKeys.signingKeys() }),
+  });
+}
+
+/** Retires a RETIRING key (optionally forcing past the min-age guard); refetches the list on success. */
+export function useRetireKey() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ kid, force }: { kid: string } & RetireKeyRequest) =>
+      retireSigningKey(kid, { force }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: dashboardKeys.signingKeys() }),
   });
 }
 

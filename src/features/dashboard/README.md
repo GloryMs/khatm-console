@@ -32,6 +32,17 @@ a "not available" state for operators without that scope.
   (5-minute refresh, `key:manage`-scoped) — real `kid`/`state`/`validFrom`/
   `validTo`; `enabled` is wired to `hasScope('key:manage')` so an operator
   without that scope never fires a request that can only 403.
+- `useRotateKey()` → `POST /api/v1/admin/signing-keys/rotate` (KH-2.3a-BE
+  D2) — atomically retires the current ACTIVE key and activates a new one;
+  invalidates the signing-keys list on success. Gated behind a
+  `TypeToConfirmDialog` keyed off the current ACTIVE key's `kid` — the
+  contract exposes no tenant-slug field for the caller's own session (spec
+  FS-2.3 C8 asked for the tenant slug specifically; see `docs/STATE.md` for
+  the substitution rationale).
+- `useRetireKey()` → `POST /api/v1/admin/signing-keys/{kid}/retire` (D4) —
+  RETIRING→RETIRED only; staged through `RetireKeyDialog` for the
+  `khatm.keys.min-retiring-age` guard (KH-KEY-0422 explained inline, a
+  severe second confirm required to retry with `force: true`).
 
 **Export:** the toolbar's Export button is real — `csv.ts`'s `buildStatsCsv`
 serializes the currently-displayed stats snapshot (window + all 7 counters)
