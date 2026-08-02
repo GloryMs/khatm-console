@@ -5,7 +5,7 @@
 ## Current phase / task
 
 - C8-key-rotation-ui (console side of FS-2.3's KMS key rotation, spec §2 C8 brief) —
-  **DELIVERED 2026-08-02, PR opened NOT merged, awaiting Majd's EN/AR walkthrough (merge
+  **DELIVERED 2026-08-02, PR #22 opened NOT merged, awaiting Majd's EN/AR walkthrough (merge
   gate).** Preamble (`npm run contract:update`) confirmed the contract was already current (no
   diff against what C7c had vendored 2026-07-30) — `POST /api/v1/admin/signing-keys/rotate` and
   `POST /api/v1/admin/signing-keys/{kid}/retire` both present with `RotateKeyResponse`/
@@ -165,7 +165,7 @@
   - **No live walkthrough this session** — no running compose stack available. The DoD's live
     walkthrough (rotate → list shows new ACTIVE + old RETIRING → retire early blocked with clear
     copy, EN/AR) is Majd's own step per the brief and remains the merge gate.
-  - **PR opened, not merged** — awaiting Majd's walkthrough.
+  - **PR #22 opened, not merged** — awaiting Majd's walkthrough.
   - **Platform ask (new)**: if a literal tenant-slug (or tenant display name) field on the
     caller's own session is ever wanted for confirm-typing UX (this session substituted the
     active key's `kid` instead, see above), `MeResponse` would need one added — today it only
