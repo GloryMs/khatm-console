@@ -10,8 +10,6 @@ export type ConsumingPartyStatsResponse = components['schemas']['ConsumingPartyS
 export type ConsumingPartyStatsEntry = components['schemas']['ConsumingPartyStatsEntry'];
 export type AttentionResponse = components['schemas']['AttentionResponse'];
 export type AttentionEntry = components['schemas']['AttentionEntry'];
-export type SigningKeysResponse = components['schemas']['SigningKeysResponse'];
-export type SigningKeyView = components['schemas']['SigningKeyView'];
 export type ActivityResponse = components['schemas']['ActivityResponse'];
 export type ActivityItem = components['schemas']['ActivityItem'];
 
@@ -68,16 +66,6 @@ export function getConsumingPartyStats(params: StatsParams): Promise<ConsumingPa
  */
 export function getAttention(): Promise<AttentionResponse> {
   return apiFetch<AttentionResponse>('/api/v1/attention');
-}
-
-/**
- * Every signing key's lifecycle status (kid/state/validFrom/validTo, never
- * the JWK itself) — KH-1.1.5-BE. Unlike `/.well-known/jwks.json` (public,
- * ACTIVE+RETIRING only) this is admin-scoped and includes every state,
- * including RETIRED.
- */
-export function getSigningKeyStatuses(): Promise<SigningKeysResponse> {
-  return apiFetch<SigningKeysResponse>('/api/v1/admin/signing-keys');
 }
 
 export interface ActivityParams {

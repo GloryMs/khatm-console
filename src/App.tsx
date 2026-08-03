@@ -14,6 +14,7 @@ import { ConsumingPartiesPage } from '@/features/consumingParties/ConsumingParti
 import { CredentialsPage } from '@/features/credentials/CredentialsPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { IssuePage } from '@/features/issuance/IssuePage';
+import { KeyManagementPage } from '@/features/keyManagement/KeyManagementPage';
 import { RevokePage } from '@/features/revoke/RevokePage';
 import { SchemaBuilderPage } from '@/features/schemaManagement/SchemaBuilderPage';
 import { SchemaManagementPage } from '@/features/schemaManagement/SchemaManagementPage';
@@ -65,6 +66,7 @@ export function App() {
                   <Route path="/consumers" element={<ConsumingPartiesPage />} />
                   <Route path="/consume-sim" element={<ConsumeSimPage />} />
                   <Route path="/users" element={<UsersPage />} />
+                  <Route path="/key-management" element={<KeyManagementPage />} />
                   <Route path="/security" element={<SecuritySettingsPage />} />
                   <Route path="/tenants" element={<TenantsPage />} />
                   <Route path="/tenants/:id" element={<TenantDetailPage />} />

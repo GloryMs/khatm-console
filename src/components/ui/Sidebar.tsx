@@ -26,6 +26,7 @@ const NAV_ITEMS: NavItemDef[] = [
   { to: '/consume-sim', labelKey: 'nav.consumeSim', icon: '▷' },
   { to: '/users', labelKey: 'nav.users', icon: '☺', scope: 'tenant:admin' },
   { to: '/tenants', labelKey: 'nav.tenants', icon: '⌂', scope: 'platform:admin' },
+  { to: '/key-management', labelKey: 'nav.keyManagement', icon: '⚙', scope: 'key:manage' },
   { to: '/security', labelKey: 'nav.security', icon: '⚿' },
 ];
 

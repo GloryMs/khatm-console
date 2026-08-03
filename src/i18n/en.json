@@ -17,6 +17,7 @@
     "consumeSim": "Consume Simulator",
     "users": "Users",
     "tenants": "Tenants",
+    "keyManagement": "Key Management",
     "security": "Security"
   },
   "shell": {
@@ -64,7 +65,8 @@
         "retiring": "Retiring",
         "pending": "Pending",
         "retired": "Retired"
-      }
+      },
+      "manageLink": "Manage keys →"
     },
     "chart": {
       "title": "Credential lifecycle",
@@ -656,6 +658,55 @@
       "title": "Temporary password",
       "label": "Temporary password",
       "helper": "Shown once — copy it now and hand it to the user. It cannot be revealed again; use \"Reset password\" to generate a new one."
+    }
+  },
+  "keyManagement": {
+    "title": "Key Management",
+    "intro": "Signing keys for this tenant — lifecycle status, rotation, and retirement.",
+    "emptyTitle": "No signing keys yet",
+    "emptyBody": "No signing key has been created for this tenant.",
+    "validFrom": "Valid from",
+    "validTo": "Valid to",
+    "noExpiry": "No expiry set",
+    "columnKid": "Key ID",
+    "columnState": "State",
+    "columnActions": "Actions",
+    "states": {
+      "active": "Active",
+      "retiring": "Retiring",
+      "pending": "Pending",
+      "retired": "Retired"
+    },
+    "retireCta": "Retire",
+    "rotate": {
+      "cta": "Rotate key",
+      "noActiveKey": "No active key to rotate",
+      "title": "Rotate the signing key?",
+      "body": "Generates a new signing key and retires the current one. Documents already signed keep verifying — only new signing moves to the new key. Type the current active key's ID below to confirm.",
+      "typePrompt": "Type the active key ID to confirm",
+      "mismatch": "Doesn't match the active key ID",
+      "confirm": "Rotate",
+      "rotating": "Rotating…",
+      "cancel": "Cancel"
+    },
+    "retire": {
+      "title": "Retire this key?",
+      "kidLabel": "Key ID:",
+      "body": "Marks the key fully retired. It stays published in the key set so documents already signed with it keep verifying.",
+      "confirm": "Retire",
+      "retiring": "Retiring…",
+      "cancel": "Cancel",
+      "blocked": {
+        "title": "Too soon to retire",
+        "explanation": "Forcing retirement skips this safety guard, which protects long-lived offline documents signed with this key from losing verification too early.",
+        "forceCta": "Force retire anyway"
+      },
+      "force": {
+        "title": "Force-retire this key?",
+        "body": "This bypasses the minimum-retiring-age safety guard. Retiring early is audited and cannot be undone.",
+        "confirm": "Yes, force retire",
+        "confirming": "Force retiring…"
+      }
     }
   },
   "issueBulk": {

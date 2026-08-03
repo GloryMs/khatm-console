@@ -4,6 +4,22 @@
 
 ## Current phase / task
 
+- C8-key-rotation-ui (console side of FS-2.3's KMS key rotation, spec §2 C8 brief) —
+  **DELIVERED 2026-08-02, PR #22 open; IA revised 2026-08-03 per Majd's request (still same PR,
+  not merged), awaiting Majd's EN/AR walkthrough (merge gate).** Preamble (`npm run
+contract:update`) confirmed the contract was already current (no diff against what C7c had
+  vendored 2026-07-30) — `POST /api/v1/admin/signing-keys/rotate` and `POST
+/api/v1/admin/signing-keys/{kid}/retire` both present with `RotateKeyResponse`/
+  `RetireKeyResponse`/`RetireKeyRequest` schemas and `KH-KEY-0404/0409/0422` error codes, gate
+  cleared. See "Last completed" 2026-08-02/2026-08-03 for the full delivery record, including two
+  self-stops/judgment calls made in the first pass: no `provider` field exists anywhere in the
+  contract yet (KH-2.3b-BE/Vault Transit territory, not yet merged) so the brief's "provider
+  column" wasn't built; and the brief's "type the tenant slug to confirm" has no contract surface
+  for the caller's own tenant slug (checked `MeResponse` and everywhere else reachable — absent),
+  so the rotate confirm is keyed off the current ACTIVE key's `kid` instead. **2026-08-03: rotate
+  and retire moved off the dashboard onto their own `/key-management` page** (Majd's explicit
+  request after reviewing the first pass — see that day's "Last completed" entry for the full
+  rationale and the resulting deviation from the FS-2.3 spec's literal placement).
 - C7c-totp-2fa (console side of FS-2.2's TOTP 2FA, spec §4 V1 / session KH-2.2c-BE) —
   **DONE. PR #21 merged 2026-07-30** (squash, branch deleted), after self-stopping earlier the
   same day at the preamble gate (KH-2.2c-BE and KH-2.3a-BE not yet merged), resuming once Majd
@@ -77,6 +93,165 @@
   manual EN/AR + RTL walkthrough of that specific banner was never explicitly logged as run.
 
 ## Last completed
+
+- 2026-08-03 (chore/C8-key-rotation-ui, same PR #22 — signing-key management moved off the
+  dashboard onto its own page, per Majd's explicit request): after the 2026-08-02 delivery,
+  Majd reviewed it live (rebuilt container, `docker compose build`/`up -d --force-recreate`
+  against the already-running backend stack) and raised a UX concern: rotate/retire are
+  irreversible, `key:manage`-gated admin actions squeezed into a dashboard card, unlike every
+  other admin action in this console (Users, Tenants, Consuming Parties), which each get their
+  own scoped page. Agreed and asked for a recommendation before touching anything (exploratory
+  question, no code changed yet) — recommended splitting: keep a lightweight read-only status
+  glance on the dashboard (matches the FS-2.3 spec's literal "dashboard panel gains..." wording
+  and "ops at a glance" intent) but move the mutating actions to their own nav-linked page.
+  Flagged explicitly that this deviates from the spec's literal placement before Majd confirmed
+  wanting the split — recorded here per that request, not silently done.
+  - **New feature `src/features/keyManagement/`** (`api.ts`/`hooks.ts` moved verbatim out of
+    `dashboard/`, same `getSigningKeyStatuses`/`rotateSigningKey`/`retireSigningKey` functions and
+    types; query-key namespace renamed `dashboardKeys.signingKeys()` →
+    `keyManagementKeys.list()`). New route `/key-management` → `KeyManagementPage`, self-gated on
+    `key:manage` via `RequireScope` (same pattern as `UsersPage`, not wrapped at the `App.tsx`
+    route level). New Sidebar nav item (`nav.keyManagement`, `⚙`, `scope: 'key:manage'`) between
+    Tenants and Security.
+  - **`KeyManagementPage.tsx`** (+ `KeyList.tsx`, reusing the shared `Table.module.css` idiom
+    `UserList.tsx` already established, rather than the dashboard's card/`<ul>` shape) hosts the
+    exact same Rotate/Retire logic delivered 2026-08-02 — `TypeToConfirmDialog` keyed off the
+    ACTIVE key's `kid`, `RetireKeyDialog`'s staged min-age-guard flow — moved, not rewritten.
+    `RetireKeyDialog.tsx`/`.module.css` `git mv`'d from `dashboard/components/` into
+    `keyManagement/components/`.
+  - **Dashboard's `SigningKeysPanel.tsx` reverted to read-only** (its pre-2026-08-02 shape) plus
+    one addition: a "Manage keys →" link in the `PanelCard` header routing to `/key-management`,
+    shown only when `hasScope('key:manage')`. It now imports `useSigningKeyStatuses` from
+    `@/features/keyManagement/hooks` rather than owning the query itself — same query key as the
+    new page, so a rotate/retire done on `/key-management` refreshes this glance with no separate
+    invalidation, and vice versa. This is a cross-feature import; same precedent as `tenants`
+    reusing `users/components/UserList` (C7).
+  - **i18n**: every `dashboard.keys.rotate.*`/`retire.*`/`retireCta` key moved to a new top-level
+    `keyManagement.*` namespace (kept `dashboard.keys.*`'s read-only display keys —
+    title/empty/adminOnly/validFrom/validTo/noExpiry/states — as-is for the glance, duplicating
+    the small states/labels set into `keyManagement.*` too rather than cross-referencing
+    `dashboard.*` from a different feature — deliberate: each feature owns its full i18n subtree,
+    a few duplicated short strings is cheaper than a cross-feature i18n dependency). Added
+    `dashboard.keys.manageLink` and `nav.keyManagement`. **Caught a real bug from the 2026-08-02
+    session while moving these**: `RetireKeyDialog`'s "Force retire anyway" button referenced
+    `dashboard.keys.retire.blocked.forceCta`, which was never actually added to either `en.json`
+    or `ar.json` — it silently rendered the raw key string in the browser. The 2026-08-02
+    session's own test suite didn't catch it because the test asserted against `i18n.t()` of the
+    _same_ missing key, so both sides evaluated to the identical (wrong) fallback string and
+    matched anyway; the i18n parity script only checks that `en`/`ar` have an identical key set,
+    not that every key referenced in code actually exists in either file. Added the missing
+    `forceCta` copy to both languages this session; wrote a one-off Node script cross-checking
+    every `t('...')` call in the touched components against the resolved JSON (not just parity)
+    to confirm no other such gaps existed — none did. Worth remembering as a real blind spot in
+    this repo's test conventions: a hardcoded literal in a test's expected value would have caught
+    this; asserting against `i18n.t()` of the same key a component uses does not, when that key is
+    simply absent from the JSON on both sides.
+  - Tests: 234 total now (was 231) — `KeyManagementPage.test.tsx` (new, 5 cases: scope-gate
+    no-permission + never-fetches, the same rotate type-to-confirm mismatch/match/submit case,
+    rotate disabled with no active key, retire happy path, and the full `KH-KEY-0422` →
+    blocked → force-armed → second confirm flow — all moved from the old
+    `SigningKeysPanel.test.tsx`); `SigningKeysPanel.test.tsx` rewritten to 2 lightweight cases
+    (renders lifecycle status with no rotate/retire controls and a working "Manage keys" link;
+    no link and no fetch without `key:manage`); `DashboardPage.test.tsx` updated to mock
+    `@/features/keyManagement/api` instead of its own `./api` for signing-key data, and wrapped
+    in `MemoryRouter` (the panel now renders a real `<Link>`).
+  - `npm run typecheck`, `npm run lint` (only the pre-existing `FormField.tsx` fast-refresh
+    warning), `npm run test` (234/234), and `npm run build` all clean. `format:check` clean on
+    every file this session touched; still fails only on the same pre-existing untracked files as
+    every prior session. RTL grep (`(margin|padding|border)-(left|right)`, bare `left:`/`right:`,
+    physical `text-align`, `float:`) across every new/changed stylesheet: zero matches.
+  - **Rebuilt and ran the container** (`docker compose build --no-cache` + `up -d
+--force-recreate` against the already-running backend stack — `khatm-api`/`khatm-worker`/
+    `khatm-postgres`/`khatm-redis` untouched) both before this change (to verify the 2026-08-02
+    delivery statically — confirmed `signing-keys/rotate`, `KH-KEY-0422`, and the EN/AR rotate
+    copy present in the served bundle) and this restructuring is ready for the same rebuild-and-
+    grep confirmation before Majd's walkthrough. No browser-driven walkthrough this session either
+    (same standing limitation — no browser-automation tool available); Majd's own EN/AR walkthrough
+    remains the merge gate, now exercising `/key-management` instead of the dashboard card.
+  - Still on **PR #22** (not a new PR) — the branch was updated with these commits rather than
+    opening a second PR, since the underlying deliverable (rotate/retire UI) is unchanged, only
+    its location moved before any merge happened.
+
+- 2026-08-02 (chore/C8-key-rotation-ui, spec FS-2.3 C8 brief — delivered): Preamble ran
+  `npm run contract:update` against `origin/main` — **zero diff**, the contract was already
+  current (KH-2.3a-BE landed in the 2026-07-30 C7c session's incidental vendor of PR #50).
+  Confirmed directly in `contracts/openapi.json` before writing code: `GET
+/api/v1/admin/signing-keys` (`SigningKeysResponse`/`SigningKeyView`, `state` as a free-text
+  string — PENDING/ACTIVE/RETIRING/RETIRED only exist as prose/`STATE_TONE`/`STATE_LABEL_KEY`
+  client maps, no server-side enum, same shape as every other status field in this contract);
+  `POST /api/v1/admin/signing-keys/rotate` → `RotateKeyResponse{kid,state,validFrom}`; `POST
+/api/v1/admin/signing-keys/{kid}/retire` → `RetireKeyRequest{force?}` /
+  `RetireKeyResponse{kid,state,validTo}`, with `KH-KEY-0404` (no such key), `KH-KEY-0409` (not
+  currently RETIRING), `KH-KEY-0422` (min-retiring-age not reached, `force=true` bypasses).
+  Generated `schema.ts` already had all five types current — no `gen:api` re-run needed. Gate
+  cleared — proceeded.
+  - **Item 1 — signing-keys panel gains rotate + retire.** `SigningKeysPanel.tsx` (previously
+    read-only) gained a `PanelCard` header action (Rotate, `danger` variant, disabled with a
+    tooltip when no ACTIVE key exists to rotate) and a per-row Retire action on RETIRING keys
+    only. New `dashboard/api.ts#rotateSigningKey`/`retireSigningKey` and
+    `hooks.ts#useRotateKey`/`useRetireKey` (both invalidate `dashboardKeys.signingKeys()` on
+    success) follow the exact shape of every other dashboard mutation.
+  - **Rotate — hardened type-to-confirm, substituted for the missing tenant slug.** The brief's
+    own instruction: "types the tenant slug to confirm — irreversible-action pattern; verify if
+    one exists, else this becomes the precedent." Verified one exists:
+    `features/revoke/components/RevokeConfirmDialog.tsx` (retype the credential id). Generalized
+    it into a new shared `components/ui/TypeToConfirmDialog.tsx` (+ `.module.css`) — deliberately
+    did **not** refactor `RevokeConfirmDialog` onto it in place (out of scope: risks its own
+    already-shipped tests for a session that didn't touch revoke at all; noted as available for
+    future adoption instead). **Self-stop on the literal instruction**: grepped every reachable
+    schema (`MeResponse` most importantly — `displayNameI18n`/`mustChangePassword`/
+    `preferredLang`/`scopes`/`username` only) and confirmed **no tenant-slug field exists
+    anywhere for the caller's own session** — `LoginRequest.tenantSlug` (C7b) is write-only,
+    for logging into a tenant other than the caller's own; nothing reads it back. Judgment call:
+    substituted the current **ACTIVE key's own `kid`** as the `expectedText` — a real,
+    contract-backed, on-screen identifier of exactly the thing being rotated out, which is
+    arguably closer to `RevokeConfirmDialog`'s original intent (retype the specific record you're
+    about to affect) than a tenant slug would have been anyway. Recorded as a platform ask below
+    if a literal tenant-slug field is still wanted.
+  - **Retire — staged for the min-age guard, per the brief's exact shape.** New
+    `dashboard/components/RetireKeyDialog.tsx`: stage 1 is a plain confirm; on `KH-KEY-0422`
+    (checked via `error.code`, same `isApiError` idiom as C7's `KH-USR-0423` handling) it
+    switches to an inline `Banner` (tone `warning`) explanation instead of the generic error
+    banner, with a "Force retire anyway" action; forcing opens stage 3, a visually distinct
+    dialog (`.severe` — 2px danger-colored border + `color-mix` glow, ⚠ in the title, same
+    `color-mix(in oklch, ...)` idiom `Banner`/`RevokePage` already use) requiring an explicit
+    second "Yes, force retire" click before retrying the mutation with `force: true`. `KH-KEY-0409`
+    /`0404` (shouldn't occur from the UI — Retire only renders on RETIRING rows with a real `kid`)
+    fall through to the generic `resolveError` fallback in whichever stage they surface in.
+  - **Item 2 — provider column: self-stopped, not built.** Grepped the entire refreshed contract
+    case-insensitively for `provider` — zero schema/field matches (only prose in the rotate
+    endpoint's description: "generate a new key via the configured KeyProvider"). D5/D6 (Vault
+    Transit, `provider_ref`) are KH-2.3b-BE's own scope per the spec's own session split, and
+    that session hasn't been run yet. Same "self-stop one sub-item, build the rest" precedent as
+    every prior C-series session (C7's on-behalf-of listing, C7c's forced enrollment).
+  - **EN/AR + RTL**: every new key added to both `en.json`/`ar.json` in the same commit;
+    `i18n/parity.test.ts` (part of `npm run test`) verifies key-set parity — green. RTL grep
+    (`(margin|padding|border)-(left|right)`, bare `left:`/`right:`, physical `text-align`,
+    `float:`) across every new/changed stylesheet (`SigningKeysPanel.module.css`,
+    `RetireKeyDialog.module.css`, `TypeToConfirmDialog.module.css`): zero matches — logical
+    properties throughout, same as every prior session.
+  - Tests: 231 total now (was 227) — new `SigningKeysPanel.test.tsx` (4 cases): rotate
+    type-to-confirm mismatch/match/submit, rotate disabled with no ACTIVE key, retire happy path
+    (`force: false`), and the full `KH-KEY-0422` → blocked explanation → force-armed → second
+    confirm → `retireSigningKey` called a second time with `force: true` flow. No existing test
+    file needed changes — `DashboardPage.test.tsx` uses `vi.spyOn` on individual `api.ts` exports
+    rather than a blanket `vi.mock`, so the two new exported functions didn't affect it (it never
+    exercises rotate/retire, since its tests never open those dialogs).
+  - `npm run typecheck`, `npm run lint` (only the pre-existing `FormField.tsx` fast-refresh
+    warning), `npm run test` (231/231), and `npm run build` all clean. `format:check` clean on
+    every file this session touched (`prettier --write` needed on 3 files mid-session, all
+    re-verified clean after); still fails only on the same pre-existing untracked files as every
+    prior session (`.vscode/extensions.json`, `docs/sessions/*.md`,
+    `docs/specs/FS-2.3-kms-key-rotation.md` — left untracked again, same standing precedent since
+    the 2026-07-30 self-stop session first noted it).
+  - **No live walkthrough this session** — no running compose stack available. The DoD's live
+    walkthrough (rotate → list shows new ACTIVE + old RETIRING → retire early blocked with clear
+    copy, EN/AR) is Majd's own step per the brief and remains the merge gate.
+  - **PR #22 opened, not merged** — awaiting Majd's walkthrough.
+  - **Platform ask (new)**: if a literal tenant-slug (or tenant display name) field on the
+    caller's own session is ever wanted for confirm-typing UX (this session substituted the
+    active key's `kid` instead, see above), `MeResponse` would need one added — today it only
+    round-trips through `LoginRequest.tenantSlug` for cross-tenant login, never back out.
 
 - 2026-07-30 (feat/C7c-totp-2fa, resumed and delivered): Majd reported `khatm-platform` PRs #49
   (KH-2.2c-BE, TOTP 2FA) and #50 (KH-2.3a-BE, KMS key rotation — unrelated but bundled in the same
@@ -1484,8 +1659,13 @@ source), not console bugs:
 3. **Custom/ad-hoc roles don't exist.** The three-role catalog (`ISSUER_OPERATOR`,
    `TENANT_ADMIN`, `PLATFORM_ADMIN`) is fixed; a tenant can't define its own role with a custom
    scope combination (planned for a later phase per spec FS-2.2).
-4. **The signing-key panel shows lifecycle status only**, not rotation controls — `key:manage`
-   currently gates a read-only view.
+4. ~~**The signing-key panel shows lifecycle status only.**~~ **RESOLVED 2026-08-02
+   (chore/C8-key-rotation-ui).** Rotate (hardened type-to-confirm) and per-key Retire (staged for
+   the min-retiring-age guard) are now live, `key:manage`-gated — moved 2026-08-03 to their own
+   `/key-management` page (nav item, `RequireScope`-gated) rather than living in the dashboard
+   card; the dashboard panel is back to a read-only glance with a "Manage keys →" link out. Still
+   no provider column — no `provider` field exists in the contract until KH-2.3b-BE (Vault
+   Transit) lands. See "Last completed" 2026-08-02/2026-08-03.
 5. **The tenant-scoped `/users` list is identical for every `tenant:admin`-holding user of the
    same tenant, including `PLATFORM_ADMIN`.** Not a privilege leak: the list is tenant-scoped,
    not role-scoped, and `PLATFORM_ADMIN`'s own session lives in the platform's default tenant —

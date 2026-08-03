@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge';
 import { ApiErrorBanner } from '@/components/ui/ApiErrorBanner';
 import { useAuth } from '@/features/auth/useAuth';
-import { useSigningKeyStatuses } from '../hooks';
+import { useSigningKeyStatuses } from '@/features/keyManagement/hooks';
 import { PanelCard } from './PanelCard';
 import styles from './SigningKeysPanel.module.css';
 
@@ -22,10 +23,17 @@ const STATE_LABEL_KEY: Record<string, string> = {
 };
 
 /**
- * Every signing key's lifecycle status from `GET /api/v1/admin/signing-keys`
+ * Read-only signing-key lifecycle glance from `GET /api/v1/admin/signing-keys`
  * (KH-1.1.5-BE, `key:manage`-scoped) — real `state`/`validFrom`/`validTo`,
- * never the JWK material. Unlike the public `/.well-known/jwks.json` this
- * includes RETIRED keys and is only visible to key:manage-scoped operators.
+ * never the public JWK or any private material. Unlike the public
+ * `/.well-known/jwks.json` this includes RETIRED keys.
+ *
+ * Rotate/retire actions moved to their own `/key-management` page 2026-08-03
+ * per Majd's request (see `docs/STATE.md`) — every other irreversible admin
+ * action in this console (Users, Tenants, Consuming Parties) lives on its
+ * own scoped page rather than inside a dashboard card. This panel shares its
+ * query (`useSigningKeyStatuses`, from the `keyManagement` feature) with that
+ * page, so a rotate/retire done there refreshes this glance too.
  */
 export function SigningKeysPanel() {
   const { t, i18n } = useTranslation();
@@ -35,7 +43,16 @@ export function SigningKeysPanel() {
   const dateFormat = new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium' });
 
   return (
-    <PanelCard title={t('dashboard.keys.title')}>
+    <PanelCard
+      title={t('dashboard.keys.title')}
+      action={
+        canViewKeys && (
+          <Link to="/key-management" className={styles.manageLink}>
+            {t('dashboard.keys.manageLink')}
+          </Link>
+        )
+      }
+    >
       {!canViewKeys && (
         <EmptyState
           title={t('dashboard.keys.adminOnlyTitle')}

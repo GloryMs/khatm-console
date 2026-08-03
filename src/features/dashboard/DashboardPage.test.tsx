@@ -2,9 +2,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
+import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import i18n from '@/i18n';
 import { AuthContext, type AuthContextValue } from '@/features/auth/AuthContext';
+import * as keyManagementApi from '@/features/keyManagement/api';
+import type { SigningKeysResponse } from '@/features/keyManagement/api';
 import { DashboardPage } from './DashboardPage';
 import * as api from './api';
 import type {
@@ -12,7 +15,6 @@ import type {
   AttentionResponse,
   ConsumingPartyStatsResponse,
   DailyStatsResponse,
-  SigningKeysResponse,
   StatsResponse,
 } from './api';
 import * as csv from './csv';
@@ -43,7 +45,9 @@ function renderPage(auth: AuthContextValue = adminAuth) {
     <I18nextProvider i18n={i18n}>
       <AuthContext.Provider value={auth}>
         <QueryClientProvider client={queryClient}>
-          <DashboardPage />
+          <MemoryRouter>
+            <DashboardPage />
+          </MemoryRouter>
         </QueryClientProvider>
       </AuthContext.Provider>
     </I18nextProvider>,
@@ -156,7 +160,7 @@ function mockAllEndpoints(overrides: Partial<Record<string, unknown>> = {}) {
   vi.spyOn(api, 'getDailyStats').mockResolvedValue(
     (overrides.dailyStats as DailyStatsResponse) ?? fullDailyStats,
   );
-  vi.spyOn(api, 'getSigningKeyStatuses').mockResolvedValue(
+  vi.spyOn(keyManagementApi, 'getSigningKeyStatuses').mockResolvedValue(
     (overrides.signingKeys as SigningKeysResponse) ?? oneSigningKey,
   );
   vi.spyOn(api, 'getActivity').mockResolvedValue(
@@ -221,7 +225,7 @@ describe('DashboardPage', () => {
     renderPage({ ...adminAuth, hasScope: () => false });
 
     expect(await screen.findByText(i18n.t('dashboard.keys.adminOnlyTitle'))).toBeInTheDocument();
-    expect(api.getSigningKeyStatuses).not.toHaveBeenCalled();
+    expect(keyManagementApi.getSigningKeyStatuses).not.toHaveBeenCalled();
   });
 
   it('renders recent activity rows with resolved refs and party names', async () => {
