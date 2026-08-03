@@ -137,7 +137,7 @@ contract:update`) confirmed the contract was already current (no diff against wh
     `dashboard.keys.retire.blocked.forceCta`, which was never actually added to either `en.json`
     or `ar.json` — it silently rendered the raw key string in the browser. The 2026-08-02
     session's own test suite didn't catch it because the test asserted against `i18n.t()` of the
-    *same* missing key, so both sides evaluated to the identical (wrong) fallback string and
+    _same_ missing key, so both sides evaluated to the identical (wrong) fallback string and
     matched anyway; the i18n parity script only checks that `en`/`ar` have an identical key set,
     not that every key referenced in code actually exists in either file. Added the missing
     `forceCta` copy to both languages this session; wrote a one-off Node script cross-checking
