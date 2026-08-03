@@ -1,15 +1,11 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import {
   getActivity,
   getAttention,
   getConsumingPartyStats,
   getDailyStats,
-  getSigningKeyStatuses,
   getStats,
-  retireSigningKey,
-  rotateSigningKey,
   type ActivityParams,
-  type RetireKeyRequest,
 } from './api';
 import { computeComparisonWindow, computeWindow, type StatsWindowOption } from './windows';
 
@@ -20,15 +16,11 @@ export const dashboardKeys = {
   consumingPartyStats: (days: StatsWindowOption) =>
     [...dashboardKeys.all, 'consumingPartyStats', days] as const,
   attention: () => [...dashboardKeys.all, 'attention'] as const,
-  signingKeys: () => [...dashboardKeys.all, 'signingKeys'] as const,
   activity: (params: ActivityParams) => [...dashboardKeys.all, 'activity', params] as const,
 };
 
 /** 60s, per the brief: no websockets — a manual refresh button plus staleTime-based auto-refetch. */
 const STATS_REFRESH_MS = 60_000;
-
-/** Signing keys rotate on the order of weeks/months — a 5-minute staleness window is plenty. */
-const SIGNING_KEYS_REFRESH_MS = 5 * 60_000;
 
 /** Pilot-metrics counters for the last 7 or 30 days; auto-refetches every 60s and stays stale after that. */
 export function useStats(days: StatsWindowOption) {
@@ -76,40 +68,6 @@ export function useAttention() {
     queryFn: getAttention,
     staleTime: STATS_REFRESH_MS,
     refetchInterval: STATS_REFRESH_MS,
-  });
-}
-
-/**
- * Every signing key's lifecycle status — the signing-keys panel.
- * `key:manage`-scoped on the server; pass `enabled: hasScope('key:manage')`
- * so an operator without that scope never fires a request that can only 403.
- */
-export function useSigningKeyStatuses(enabled: boolean) {
-  return useQuery({
-    queryKey: dashboardKeys.signingKeys(),
-    queryFn: getSigningKeyStatuses,
-    enabled,
-    staleTime: SIGNING_KEYS_REFRESH_MS,
-    refetchInterval: SIGNING_KEYS_REFRESH_MS,
-  });
-}
-
-/** Rotates the tenant's signing key; refetches the signing-keys list on success. */
-export function useRotateKey() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: rotateSigningKey,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: dashboardKeys.signingKeys() }),
-  });
-}
-
-/** Retires a RETIRING key (optionally forcing past the min-age guard); refetches the list on success. */
-export function useRetireKey() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ kid, force }: { kid: string } & RetireKeyRequest) =>
-      retireSigningKey(kid, { force }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: dashboardKeys.signingKeys() }),
   });
 }
 

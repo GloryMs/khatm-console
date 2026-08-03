@@ -7,7 +7,9 @@ fully wired to real data as of khatm-platform's KH-1.1.5-BE.
 **Routes:** `/dashboard` (`DashboardPage`), any authenticated operator — also
 the post-login landing page (`/` redirects here). The signing-keys panel is
 `key:manage`-scoped (spec FS-2.2 D2, matches the backend endpoint) and shows
-a "not available" state for operators without that scope.
+a "not available" state for operators without that scope. It's read-only — a
+"Manage keys" link routes to `/key-management` (`features/keyManagement`) for
+rotate/retire, moved there 2026-08-03 (see `docs/STATE.md`).
 
 **Queries** (all `src/features/dashboard/hooks.ts`, 60s `staleTime`/
 `refetchInterval` unless noted):
@@ -28,21 +30,13 @@ a "not available" state for operators without that scope.
   generic fallback rather than assuming an unverified shape.
 - `useConsumingPartyStats(windowDays)` → `GET /api/v1/stats/consuming-parties`
   — the top-consuming-parties panel, ranked by call volume.
-- `useSigningKeyStatuses(enabled)` → `GET /api/v1/admin/signing-keys`
+- `useSigningKeyStatuses(enabled)` (imported from `@/features/keyManagement/hooks`
+  — this panel doesn't own the query) → `GET /api/v1/admin/signing-keys`
   (5-minute refresh, `key:manage`-scoped) — real `kid`/`state`/`validFrom`/
   `validTo`; `enabled` is wired to `hasScope('key:manage')` so an operator
-  without that scope never fires a request that can only 403.
-- `useRotateKey()` → `POST /api/v1/admin/signing-keys/rotate` (KH-2.3a-BE
-  D2) — atomically retires the current ACTIVE key and activates a new one;
-  invalidates the signing-keys list on success. Gated behind a
-  `TypeToConfirmDialog` keyed off the current ACTIVE key's `kid` — the
-  contract exposes no tenant-slug field for the caller's own session (spec
-  FS-2.3 C8 asked for the tenant slug specifically; see `docs/STATE.md` for
-  the substitution rationale).
-- `useRetireKey()` → `POST /api/v1/admin/signing-keys/{kid}/retire` (D4) —
-  RETIRING→RETIRED only; staged through `RetireKeyDialog` for the
-  `khatm.keys.min-retiring-age` guard (KH-KEY-0422 explained inline, a
-  severe second confirm required to retry with `force: true`).
+  without that scope never fires a request that can only 403. Same query key
+  as the `/key-management` page, so a rotate/retire done there refreshes
+  this glance too, with no separate invalidation needed here.
 
 **Export:** the toolbar's Export button is real — `csv.ts`'s `buildStatsCsv`
 serializes the currently-displayed stats snapshot (window + all 7 counters)

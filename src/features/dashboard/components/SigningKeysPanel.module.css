@@ -48,7 +48,8 @@
   flex-wrap: wrap;
 }
 
-.rowActions {
-  display: flex;
-  justify-content: flex-end;
+.manageLink {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  white-space: nowrap;
 }

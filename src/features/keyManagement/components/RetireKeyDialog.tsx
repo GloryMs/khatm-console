@@ -34,7 +34,7 @@ export function RetireKeyDialog({ kid, isBusy, error, onConfirm, onCancel }: Ret
 
   const kidRow = (
     <p className={styles.kidRow}>
-      <span>{t('dashboard.keys.retire.kidLabel')}</span> <span className="ltr-embed">{kid}</span>
+      <span>{t('keyManagement.retire.kidLabel')}</span> <span className="ltr-embed">{kid}</span>
     </p>
   );
 
@@ -48,19 +48,19 @@ export function RetireKeyDialog({ kid, isBusy, error, onConfirm, onCancel }: Ret
           aria-labelledby="retire-blocked-title"
         >
           <h2 id="retire-blocked-title" className={styles.title}>
-            {t('dashboard.keys.retire.blocked.title')}
+            {t('keyManagement.retire.blocked.title')}
           </h2>
           {kidRow}
           <Banner tone="warning">
             <p>{resolveError(error)}</p>
-            <p>{t('dashboard.keys.retire.blocked.explanation')}</p>
+            <p>{t('keyManagement.retire.blocked.explanation')}</p>
           </Banner>
           <div className={styles.actions}>
             <Button variant="secondary" onClick={onCancel} disabled={isBusy}>
-              {t('dashboard.keys.retire.cancel')}
+              {t('keyManagement.retire.cancel')}
             </Button>
             <Button variant="danger" onClick={() => setForceArmed(true)} disabled={isBusy}>
-              {t('dashboard.keys.retire.blocked.forceCta')}
+              {t('keyManagement.retire.blocked.forceCta')}
             </Button>
           </div>
         </div>
@@ -79,19 +79,19 @@ export function RetireKeyDialog({ kid, isBusy, error, onConfirm, onCancel }: Ret
         >
           <h2 id="retire-force-title" className={styles.title}>
             <span aria-hidden="true">⚠ </span>
-            {t('dashboard.keys.retire.force.title')}
+            {t('keyManagement.retire.force.title')}
           </h2>
           {kidRow}
-          <p className={styles.body}>{t('dashboard.keys.retire.force.body')}</p>
+          <p className={styles.body}>{t('keyManagement.retire.force.body')}</p>
           {otherErrorMessage && <p className={styles.errorText}>{otherErrorMessage}</p>}
           <div className={styles.actions}>
             <Button variant="secondary" onClick={() => setForceArmed(false)} disabled={isBusy}>
-              {t('dashboard.keys.retire.cancel')}
+              {t('keyManagement.retire.cancel')}
             </Button>
             <Button variant="danger" onClick={() => onConfirm(true)} disabled={isBusy}>
               {isBusy
-                ? t('dashboard.keys.retire.force.confirming')
-                : t('dashboard.keys.retire.force.confirm')}
+                ? t('keyManagement.retire.force.confirming')
+                : t('keyManagement.retire.force.confirm')}
             </Button>
           </div>
         </div>
@@ -108,17 +108,17 @@ export function RetireKeyDialog({ kid, isBusy, error, onConfirm, onCancel }: Ret
         aria-labelledby="retire-confirm-title"
       >
         <h2 id="retire-confirm-title" className={styles.title}>
-          {t('dashboard.keys.retire.title')}
+          {t('keyManagement.retire.title')}
         </h2>
         {kidRow}
-        <p className={styles.body}>{t('dashboard.keys.retire.body')}</p>
+        <p className={styles.body}>{t('keyManagement.retire.body')}</p>
         {otherErrorMessage && <p className={styles.errorText}>{otherErrorMessage}</p>}
         <div className={styles.actions}>
           <Button variant="secondary" onClick={onCancel} disabled={isBusy}>
-            {t('dashboard.keys.retire.cancel')}
+            {t('keyManagement.retire.cancel')}
           </Button>
           <Button variant="primary" onClick={() => onConfirm(false)} disabled={isBusy}>
-            {isBusy ? t('dashboard.keys.retire.retiring') : t('dashboard.keys.retire.confirm')}
+            {isBusy ? t('keyManagement.retire.retiring') : t('keyManagement.retire.confirm')}
           </Button>
         </div>
       </div>
