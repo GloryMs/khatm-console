@@ -5,8 +5,9 @@
 ## Current phase / task
 
 - C8b-provider-column (console side of FS-2.3's KMS provider column/badge, spec §2 C8 brief,
-  `docs/sessions/SESSION-C8b.md`) — **DELIVERED 2026-08-04, PR opened, not merged; Majd's EN/AR +
-  RTL walkthrough (incl. the live SOFT→VAULT scenario) is the merge gate.** Self-stopped earlier
+  `docs/sessions/SESSION-C8b.md`) — **DELIVERED 2026-08-04, PR #23 open, not merged; Majd's
+  EN/AR + RTL walkthrough (incl. the live SOFT→VAULT scenario) is the merge gate.** Self-stopped
+  earlier
   the same day at the preamble gate (`khatm-platform` PR #51 was still open despite the brief's
   stated prereq — see "Last completed" 2026-08-04, first entry), resumed once Majd confirmed #51
   merged. Second "Last completed" entry the same day has the full delivery record.
@@ -197,7 +198,9 @@ SOFT->Vault migration`) is still open. Per this repo's standing rule (vendored c
     walkthrough gate** — everything else in the brief's DoD (freshness gate, additive-only diff,
     EN/AR parity + built-bundle presence, all tests green, no self-comparison test) is done and
     confirmed above.
-  - PR opened against `main` off `chore/C8b-provider-column`, **not merged**.
+  - **PR #23 opened against `main`** off `chore/C8b-provider-column`, **not merged** — awaiting
+    Majd's walkthrough (see the "not a platform ask" blocker entry below for exactly what it
+    needs to cover).
 
 - 2026-08-03 (chore/C8-key-rotation-ui, same PR #22 — signing-key management moved off the
   dashboard onto its own page, per Majd's explicit request): after the 2026-08-02 delivery,
