@@ -4,9 +4,21 @@
 
 ## Current phase / task
 
+- C8b-provider-column (console side of FS-2.3's KMS provider column/badge, spec §2 C8 brief,
+  `docs/sessions/SESSION-C8b.md`) — **DELIVERED 2026-08-04, PR #23 open, not merged; Majd's
+  EN/AR + RTL walkthrough (incl. the live SOFT→VAULT scenario) is the merge gate.** Self-stopped
+  earlier
+  the same day at the preamble gate (`khatm-platform` PR #51 was still open despite the brief's
+  stated prereq — see "Last completed" 2026-08-04, first entry), resumed once Majd confirmed #51
+  merged. Second "Last completed" entry the same day has the full delivery record.
 - C8-key-rotation-ui (console side of FS-2.3's KMS key rotation, spec §2 C8 brief) —
-  **DELIVERED 2026-08-02, PR #22 open; IA revised 2026-08-03 per Majd's request (still same PR,
-  not merged), awaiting Majd's EN/AR walkthrough (merge gate).** Preamble (`npm run
+  **DONE. PR #22 merged to `main` 2026-08-03T12:40:36Z** (was still shown "open, awaiting
+  walkthrough" in this file until the 2026-08-04 C8b session checked `gh pr view 22` and found
+  it merged — corrected here, same kind of stale-STATE fix as the 2026-07-27 C6b hygiene pass;
+  the merge itself was never narrated in an intervening "Last completed" entry). IA revised
+  2026-08-03 per Majd's request (rotate/retire moved off the dashboard onto their own
+  `/key-management` page — see that day's "Last completed" for the full rationale). Preamble
+  (`npm run
 contract:update`) confirmed the contract was already current (no diff against what C7c had
   vendored 2026-07-30) — `POST /api/v1/admin/signing-keys/rotate` and `POST
 /api/v1/admin/signing-keys/{kid}/retire` both present with `RotateKeyResponse`/
@@ -93,6 +105,102 @@ contract:update`) confirmed the contract was already current (no diff against wh
   manual EN/AR + RTL walkthrough of that specific banner was never explicitly logged as run.
 
 ## Last completed
+
+- 2026-08-04 (chore/C8b-provider-column, spec FS-2.3 §console, `docs/sessions/SESSION-C8b.md`
+  — **self-stopped at the preamble, zero code changed**): the session brief states its prereq as
+  met ("Prereq: platform PR #51 مدموج (حقل `provider` صار في `SigningKeyView`)"). Branched off
+  latest `origin/main`, ran the mandated preamble (`npm run contract:update`, which fetches
+  `khatm-platform`'s published `docs/api/openapi.json` via the public raw URL with a `gh api`
+  fallback — the fallback fired, raw URL still 404s on this private repo, same as every prior
+  session). Result: **zero diff** against the already-vendored `contracts/openapi.json`, and
+  `SigningKeyView` there has exactly four properties — `kid`/`state`/`validFrom`/`validTo` — no
+  `provider`. Cross-checked directly: `gh pr view 51 --repo GloryMs/khatm-platform` →
+  `"state":"OPEN","mergedAt":null`; re-fetched `docs/api/openapi.json` straight from
+  `khatm-platform`'s `main` via `gh api` independent of the console's own script → same four
+  properties, confirming this isn't a caching artifact of the update script. So the brief's
+  stated prereq does not hold yet — PR #51 (`feat(key): KH-2.3b Vault Transit KMS provider +
+SOFT->Vault migration`) is still open. Per this repo's standing rule (vendored contract is the
+  sole authority; a value/field cannot be built against a guess — same reasoning as every prior
+  self-stop, e.g. C6b's missing `status` query param, C7's missing `mustChangePassword`), none of
+  the session's four scope items (provider column, badge, dashboard glance, i18n keys) can be
+  built without guessing the field's shape. No UI code touched. Branch `chore/C8b-provider-column`
+  was created, found to have zero commits (the contract fetch was a no-op diff), and deleted —
+  nothing to keep. Also used this session to fix a stale STATE.md line noticed while re-reading
+  "Current phase / task" for the preamble: it still said PR #22 was "open, awaiting walkthrough,"
+  but `gh pr view 22` shows it merged 2026-08-03T12:40:36Z — corrected above (same kind of
+  hygiene fix as C6b's PR #15 correction). **Next step is platform-side, not console-side**: once
+  PR #51 merges, re-run this exact session — no further console-side investigation needed, the
+  brief's scope items 2-4 are otherwise fully actionable (badge color mapping SOFT/gray vs
+  VAULT/green, unknown-value fallback, dashboard one-line addition, i18n keys) the moment the
+  field exists.
+
+- 2026-08-04 (chore/C8b-provider-column, resumed and delivered same day — Majd confirmed live
+  that `khatm-platform` PR #51 had merged, `mergedAt: 2026-08-04T07:19:39Z`): re-ran the preamble
+  — `npm run contract:update` this time pulled a real, additive-only diff (`git diff --stat`: 46
+  insertions/2 deletions in `contracts/openapi.json`): new `RotateKeyRequest{provider?}` schema
+  (optional provider override on rotate — this is D6's SOFT→Vault migration mechanism, per its
+  own description field), `provider?: string` added to both `RotateKeyResponse` and
+  `SigningKeyView`, and new `400`/`503` responses on the rotate endpoint
+  (`KH-KEY-0400`/`KH-KEY-0503`, unknown provider / target provider unreachable) — none of this
+  session's scope, noted for whoever eventually wires the "rotate onto a specific provider" UI
+  (explicitly out of scope here, see brief §3). `npm run gen:api` regenerated
+  `src/api/generated/schema.ts` clean. `provider` is a free-text `string` in the schema (no
+  server-side enum), same shape as `state` — confirms the brief's "read the value, don't guess."
+  - **`KeyList.tsx`** (`/key-management` table): new Provider column, a `StatusBadge` per row —
+    `PROVIDER_TONE` map (`SOFT` → `neutral`, `VAULT` → `success`), any other/missing value falls
+    back to `neutral` with the raw string (`.ltr-embed`, same treatment as `kid`) or, if `provider`
+    is entirely absent, `keyManagement.providerUnknown`. Deliberately did **not** touch
+    `rotateSigningKey()`/the rotate dialog to accept a provider override — the brief's §3 explicitly
+    keeps "rotate onto a specific provider" out of this session (Game-day does that via direct API
+    call per runbook Step 1b).
+  - **`SigningKeysPanel.tsx`** (dashboard glance): same `PROVIDER_TONE` map duplicated locally
+    (2026-08-03 precedent — each feature owns its own tone/i18n subtree rather than a cross-feature
+    import) — a second `StatusBadge` added inline next to the existing state badge on every row in
+    the `.head` flex row (already `display:flex` with no fixed width budget, so this is a true
+    one-line addition, no panel restructuring). Read literally, the brief says "if it shows the
+    ACTIVE key" — the panel already lists every key's state, not just ACTIVE, so the provider badge
+    was added to every row rather than special-casing just the ACTIVE one; simpler and consistent
+    with how the state badge itself is already rendered per-row.
+  - **i18n**: `keyManagement.columnProvider` / `dashboard.keys.providerUnknown` /
+    `keyManagement.providerUnknown` (3 new keys, EN+AR same commit). `SOFT`/`VAULT` themselves are
+    **not** translated — the brief's own wording treats them as the literal badge text (like `kid`,
+    a technical identifier), not prose; only the column header and the "field genuinely absent"
+    fallback needed real translation. Manually cross-checked both `en.json`/`ar.json` for the exact
+    new key strings (grep, not just the parity test) per the C8 lesson (parity only checks the two
+    files have the same key _set_, not that a key referenced in code actually exists) — all three
+    present symmetrically.
+  - Tests: 235 total now (was 234) — one new case in `KeyManagementPage.test.tsx` (VAULT/SOFT
+    badges render their literal raw value — a hardcoded string assertion, not `i18n.t()` of the
+    same untranslated value, so immune to the C8 blind spot by construction; a key with no
+    `provider` renders the "Unknown" fallback) and `SigningKeysPanel.test.tsx` extended (existing
+    case now also asserts the `SOFT` badge). `npm run typecheck`/`lint` (only the pre-existing
+    `FormField.tsx` fast-refresh warning)/`format:check` (clean on every file this session
+    touched; same pre-existing untracked-file failures as every prior session, none of them
+    touched)/`test` (235/235) and `npm run build` all clean. RTL grep
+    (`(margin|padding|border)-(left|right)`, bare `left:`/`right:`, physical `text-align`,
+    `float:`) on every changed `.tsx` (no `.css` files were touched — both badges reuse the
+    existing shared `StatusBadge`/`Table.module.css`/`SigningKeysPanel.module.css`, work rule 4):
+    zero matches.
+  - **Verified against the local compose stack** (already running: `khatm-api`/`khatm-worker`/
+    `khatm-postgres`/`khatm-redis`/**`khatm-vault`** — Majd's own stack, DoD item 3's Vault
+    scenario is live-testable here). `docker compose build --no-cache && up -d --force-recreate`;
+    confirmed the container serves the new bundle (`docker exec khatm-console grep` found
+    `columnProvider`-driven "Provider"/`المزوّد`/`غير معروف` inside the built JS) and that
+    `http://localhost:3000/api/v1/admin/signing-keys` correctly proxies through to the backend
+    (401, not a broken-proxy 502/404). **Could not complete a full authenticated walkthrough**:
+    the local `admin` account now has TOTP 2FA enrolled (KH-2.2c-BE) and this session has no
+    authenticator-app access or browser automation, so `POST /auth/login` stops at the TOTP
+    challenge — no way to reach the actual rotate-with-`provider:VAULT` call or a real screenshot
+    non-interactively. This is the same standing limitation as every prior console session (no
+    browser tool available), now compounded by 2FA closing off the curl-based fallback C5–C7 used.
+    **DoD items 2/3/5 (SOFT badge screenshot, live SOFT→VAULT rotation via the API against
+    `khatm-vault`, full-page RTL review) are unverified by this session and remain Majd's actual
+    walkthrough gate** — everything else in the brief's DoD (freshness gate, additive-only diff,
+    EN/AR parity + built-bundle presence, all tests green, no self-comparison test) is done and
+    confirmed above.
+  - **PR #23 opened against `main`** off `chore/C8b-provider-column`, **not merged** — awaiting
+    Majd's walkthrough (see the "not a platform ask" blocker entry below for exactly what it
+    needs to cover).
 
 - 2026-08-03 (chore/C8-key-rotation-ui, same PR #22 — signing-key management moved off the
   dashboard onto its own page, per Majd's explicit request): after the 2026-08-02 delivery,
@@ -1505,6 +1613,20 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 
 ## Open decisions / blockers
 
+- **Platform ask, new 2026-08-04 (chore/C8b-provider-column preamble self-stop) — CLOSED the
+  same day.** `khatm-platform` PR #51 merged `2026-08-04T07:19:39Z` (Majd confirmed live), adding
+  `provider` to `SigningKeyView`/`RotateKeyResponse` and a new optional `provider` on
+  `RotateKeyRequest`. Session resumed and delivered — see "Last completed" 2026-08-04 (the
+  "resumed and delivered" entry) for the full record.
+- **New, 2026-08-04 (chore/C8b-provider-column delivery) — not a platform ask, a console
+  verification gap.** The local `admin` account now has TOTP 2FA enrolled, so this session's
+  usual curl-based live-verification fallback (used successfully by C5/C6/C7 before 2FA existed)
+  no longer works without an authenticator code, and no browser-automation tool is available
+  either. The Vault-provider scenario (rotate with `provider: VAULT` against the already-running
+  `khatm-vault` container, confirm the badge flips) and the RTL screenshot are consequently
+  unverified by this session — both remain Majd's live walkthrough gate, same as every prior UI
+  session's standing browser-automation limitation, now doubled by 2FA. See "Last completed"
+  2026-08-04 for exactly what was and wasn't checked.
 - **Platform ask, new 2026-07-30 (feat/C7c-totp-2fa preamble self-stop) — CLOSED the same day**,
   fixed by `khatm-platform` PRs #49 (KH-2.2c-BE) and #50 (KH-2.3a-BE, unrelated KMS rotation).
   All five surfaces confirmed live: `POST /auth/login`'s `LoginChallengeResponse`, `POST

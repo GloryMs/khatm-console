@@ -37,7 +37,14 @@ function renderPanel(auth: AuthContextValue = adminAuth) {
 }
 
 const oneSigningKey: SigningKeysResponse = {
-  keys: [{ kid: 'khatm-default:key-1', state: 'ACTIVE', validFrom: '2026-06-01T00:00:00Z' }],
+  keys: [
+    {
+      kid: 'khatm-default:key-1',
+      state: 'ACTIVE',
+      provider: 'SOFT',
+      validFrom: '2026-06-01T00:00:00Z',
+    },
+  ],
 };
 
 describe('SigningKeysPanel (read-only dashboard glance)', () => {
@@ -51,6 +58,7 @@ describe('SigningKeysPanel (read-only dashboard glance)', () => {
 
     expect(await screen.findByText('khatm-default:key-1')).toBeInTheDocument();
     expect(screen.getByText(i18n.t('dashboard.keys.states.active'))).toBeInTheDocument();
+    expect(screen.getByText('SOFT')).toBeInTheDocument();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
 
     const link = screen.getByRole('link', { name: i18n.t('dashboard.keys.manageLink') });

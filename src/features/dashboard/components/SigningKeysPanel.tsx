@@ -22,6 +22,13 @@ const STATE_LABEL_KEY: Record<string, string> = {
   RETIRED: 'dashboard.keys.states.retired',
 };
 
+// Same SOFT/VAULT mapping as keyManagement/components/KeyList.tsx — duplicated per this
+// feature's own i18n/tone conventions rather than a cross-feature import (2026-08-03 precedent).
+const PROVIDER_TONE: Record<string, StatusTone> = {
+  SOFT: 'neutral',
+  VAULT: 'success',
+};
+
 /**
  * Read-only signing-key lifecycle glance from `GET /api/v1/admin/signing-keys`
  * (KH-1.1.5-BE, `key:manage`-scoped) — real `state`/`validFrom`/`validTo`,
@@ -74,6 +81,13 @@ export function SigningKeysPanel() {
                 <div className={styles.head}>
                   <span className={`${styles.kid} ltr-embed`}>{key.kid}</span>
                   <StatusBadge tone={tone}>{labelKey ? t(labelKey) : key.state}</StatusBadge>
+                  <StatusBadge tone={PROVIDER_TONE[key.provider ?? ''] ?? 'neutral'}>
+                    {key.provider ? (
+                      <span className="ltr-embed">{key.provider}</span>
+                    ) : (
+                      t('dashboard.keys.providerUnknown')
+                    )}
+                  </StatusBadge>
                 </div>
                 <div className={styles.meta}>
                   <span>

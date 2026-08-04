@@ -66,6 +66,7 @@
         "pending": "قيد الانتظار",
         "retired": "متقاعد"
       },
+      "providerUnknown": "غير معروف",
       "manageLink": "إدارة المفاتيح ←"
     },
     "chart": {
@@ -670,6 +671,7 @@
     "noExpiry": "بلا تاريخ انتهاء",
     "columnKid": "معرّف المفتاح",
     "columnState": "الحالة",
+    "columnProvider": "المزوّد",
     "columnActions": "الإجراءات",
     "states": {
       "active": "نشط",
@@ -677,6 +679,7 @@
       "pending": "قيد الانتظار",
       "retired": "متقاعد"
     },
+    "providerUnknown": "غير معروف",
     "retireCta": "تقاعد",
     "rotate": {
       "cta": "تدوير المفتاح",
