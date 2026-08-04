@@ -66,6 +66,7 @@
         "pending": "Pending",
         "retired": "Retired"
       },
+      "providerUnknown": "Unknown",
       "manageLink": "Manage keys →"
     },
     "chart": {
@@ -670,6 +671,7 @@
     "noExpiry": "No expiry set",
     "columnKid": "Key ID",
     "columnState": "State",
+    "columnProvider": "Provider",
     "columnActions": "Actions",
     "states": {
       "active": "Active",
@@ -677,6 +679,7 @@
       "pending": "Pending",
       "retired": "Retired"
     },
+    "providerUnknown": "Unknown",
     "retireCta": "Retire",
     "rotate": {
       "cta": "Rotate key",

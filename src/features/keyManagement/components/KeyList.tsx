@@ -19,6 +19,14 @@ const STATE_LABEL_KEY: Record<string, string> = {
   RETIRED: 'keyManagement.states.retired',
 };
 
+// SOFT (neutral/gray — transitional) vs VAULT (success/green — the migration target, FS-2.3 D5/D6).
+// An unrecognized future provider (AWS/GCP on the same SPI) falls through to 'neutral' and its raw
+// value, rather than breaking — see SESSION-C8b scope.
+const PROVIDER_TONE: Record<string, StatusTone> = {
+  SOFT: 'neutral',
+  VAULT: 'success',
+};
+
 interface KeyListProps {
   keys: SigningKeyView[];
   onRetire: (key: SigningKeyView) => void;
@@ -39,6 +47,7 @@ export function KeyList({ keys, onRetire }: KeyListProps) {
         <tr>
           <th className={tableStyles.codeCell}>{t('keyManagement.columnKid')}</th>
           <th>{t('keyManagement.columnState')}</th>
+          <th>{t('keyManagement.columnProvider')}</th>
           <th>{t('keyManagement.validFrom')}</th>
           <th>{t('keyManagement.validTo')}</th>
           <th>{t('keyManagement.columnActions')}</th>
@@ -53,6 +62,15 @@ export function KeyList({ keys, onRetire }: KeyListProps) {
               <td className={`${tableStyles.codeCell} ltr-embed`}>{key.kid}</td>
               <td>
                 <StatusBadge tone={tone}>{labelKey ? t(labelKey) : key.state}</StatusBadge>
+              </td>
+              <td>
+                <StatusBadge tone={PROVIDER_TONE[key.provider ?? ''] ?? 'neutral'}>
+                  {key.provider ? (
+                    <span className="ltr-embed">{key.provider}</span>
+                  ) : (
+                    t('keyManagement.providerUnknown')
+                  )}
+                </StatusBadge>
               </td>
               <td className="ltr-embed">
                 {key.validFrom ? dateFormat.format(new Date(key.validFrom)) : '—'}

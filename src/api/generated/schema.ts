@@ -218,7 +218,7 @@ export interface paths {
         };
         /**
          * List every signing key's lifecycle status
-         * @description Every signing key for the tenant, newest first, every state including RETIRED — lifecycle fields only (kid/state/validFrom/validTo), never the public JWK or any private material. Requires the key:manage scope (any actor kind).
+         * @description Every signing key for the tenant, newest first, every state including RETIRED — lifecycle fields only (kid/state/provider/validFrom/validTo), never the public JWK or any private material. Requires the key:manage scope (any actor kind).
          */
         get: operations["signingKeys"];
         put?: never;
@@ -240,7 +240,7 @@ export interface paths {
         put?: never;
         /**
          * Rotate the tenant's signing key
-         * @description Atomically: generate a new key via the configured KeyProvider, move the current ACTIVE key to RETIRING, and activate the new one. The one-ACTIVE-per-tenant partial unique index is the final arbiter under concurrent rotations — at most one concurrent caller ever succeeds. All of the tenant's status lists are also forced stale in the same operation, so the existing periodic sweep re-signs them with the new key within one cycle. Requires the key:manage scope (any actor kind).
+         * @description Atomically: generate a new key via the configured KeyProvider, move the current ACTIVE key to RETIRING, and activate the new one. The one-ACTIVE-per-tenant partial unique index is the final arbiter under concurrent rotations — at most one concurrent caller ever succeeds. All of the tenant's status lists are also forced stale in the same operation, so the existing periodic sweep re-signs them with the new key within one cycle. An optional 'provider' in the request body rotates onto a different KeyProvider (e.g. SOFT -> VAULT) — this IS the provider-migration mechanism (spec FS-2.3 D6): omitted, the new key stays on the tenant's current provider. Requires the key:manage scope (any actor kind).
          */
         post: operations["rotate"];
         delete?: never;
@@ -1508,9 +1508,14 @@ export interface components {
             /** Format: date-time */
             validTo?: string;
         };
+        /** @description Optional provider override — the SOFT->Vault migration mechanism (spec D6) */
+        RotateKeyRequest: {
+            provider?: string;
+        };
         /** @description The newly created, now-ACTIVE signing key */
         RotateKeyResponse: {
             kid?: string;
+            provider?: string;
             state?: string;
             /** Format: date-time */
             validFrom?: string;
@@ -1562,6 +1567,7 @@ export interface components {
         /** @description A signing key's lifecycle status, no JWK material */
         SigningKeyView: {
             kid?: string;
+            provider?: string;
             state?: string;
             /** Format: date-time */
             validFrom?: string;
@@ -2180,7 +2186,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RotateKeyRequest"];
+            };
+        };
         responses: {
             /** @description The newly created, now-ACTIVE key */
             200: {
@@ -2189,6 +2199,15 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["RotateKeyResponse"];
+                };
+            };
+            /** @description Unknown/unregistered provider named in the request body (KH-KEY-0400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description No valid session or API key */
@@ -2202,6 +2221,15 @@ export interface operations {
             };
             /** @description Authenticated without the key:manage scope */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The target provider (e.g. Vault) is unreachable (KH-KEY-0503) */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

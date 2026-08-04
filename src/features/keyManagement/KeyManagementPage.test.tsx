@@ -61,6 +61,28 @@ describe('KeyManagementPage — scope gate', () => {
   });
 });
 
+describe('KeyManagementPage — provider column', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('shows the column header and a colored badge with the raw SOFT/VAULT value, unknown falls back', async () => {
+    vi.spyOn(api, 'getSigningKeyStatuses').mockResolvedValue({
+      keys: [
+        { kid: 'khatm-default:key-2', state: 'ACTIVE', provider: 'VAULT' },
+        { kid: 'khatm-default:key-1', state: 'RETIRING', provider: 'SOFT' },
+        { kid: 'khatm-default:key-0', state: 'RETIRED' },
+      ],
+    });
+    renderPage();
+
+    expect(await screen.findByText('Provider')).toBeInTheDocument();
+    expect(screen.getByText('VAULT')).toBeInTheDocument();
+    expect(screen.getByText('SOFT')).toBeInTheDocument();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+  });
+});
+
 describe('KeyManagementPage — rotate', () => {
   afterEach(() => {
     vi.restoreAllMocks();
