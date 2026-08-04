@@ -106,6 +106,20 @@ contract:update`) confirmed the contract was already current (no diff against wh
 
 ## Last completed
 
+- 2026-08-04 (repo administration, not a coding session — no branch/PR): Majd made both
+  `khatm-console` and `khatm-platform` public on GitHub. Verified CI green on `khatm-console`
+  `main` after the change (`gh run view` on the latest run: all 10 steps —
+  checkout/setup-node/install/typecheck/lint/format/unit-tests/build/contract-freshness —
+  succeeded). Added branch protection to `khatm-console` `main` per Majd's choices (asked via
+  three questions rather than assuming): block force-push and branch deletion; direct pushes
+  still allowed (not requiring PRs, to preserve the existing STATE.md-direct-commit pattern); no
+  required status checks (CI stays advisory, Majd's explicit choice — the recommended default
+  was "require CI" but he chose otherwise); no required approving reviews (sole
+  maintainer/reviewer). See "Environment facts" above for the exact settings and for the
+  incidental discovery that `scripts/update-contract.mjs`'s public-URL fetch path now works
+  directly against `khatm-platform` (no longer needs the `gh api` fallback every prior session
+  actually hit).
+
 - 2026-08-04 (chore/C8b-provider-column, spec FS-2.3 §console, `docs/sessions/SESSION-C8b.md`
   — **self-stopped at the preamble, zero code changed**): the session brief states its prereq as
   met ("Prereq: platform PR #51 مدموج (حقل `provider` صار في `SigningKeyView`)"). Branched off
@@ -1571,6 +1585,20 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 
 ## Environment facts
 
+- **Both `khatm-console` (this repo) and `khatm-platform` are public as of 2026-08-04** (were
+  private before). CI (GitHub Actions) confirmed green on `khatm-console` `main` post-change —
+  no billing/permission issue like the 2026-07-30 PR #21 CI failure (that one was a GitHub
+  Actions billing/spending-limit issue on the then-private repo, job never started; unrelated to
+  going public, but worth noting the symptom looked similar). `scripts/update-contract.mjs`'s
+  public `raw.githubusercontent.com` fetch now succeeds directly (verified: 200) — the `gh api`
+  fallback that every prior session's `contract:update` run actually used (public URL 404'd on
+  the private repo) should no longer be needed going forward, though the fallback code itself is
+  harmless to leave in place. Branch protection added the same day on `khatm-console` `main`:
+  `allow_force_pushes: false`, `allow_deletions: false`, no required status checks, no required
+  PR reviews, `enforce_admins: false` — direct pushes to `main` are still allowed (matches this
+  project's existing pattern of pushing STATE.md-only updates directly rather than through a PR),
+  only force-push and branch deletion are blocked. `khatm-platform`'s own branch protection (if
+  any) wasn't touched — out of scope for a console-repo session.
 - Dev: web on :5173, Vite proxies `/api`, `/.well-known`, and `/t` (per-tenant public
   endpoints, added C5) to `localhost:8080`.
 - Container: nginx on :3000→80, proxies `/api`, `/.well-known`, and `/t` to
