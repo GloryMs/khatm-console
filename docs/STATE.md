@@ -5,12 +5,12 @@
 ## Current phase / task
 
 - C8b-provider-column (console side of FS-2.3's KMS provider column/badge, spec §2 C8 brief,
-  `docs/sessions/SESSION-C8b.md`) — **DELIVERED 2026-08-04, PR #23 open, not merged; Majd's
-  EN/AR + RTL walkthrough (incl. the live SOFT→VAULT scenario) is the merge gate.** Self-stopped
-  earlier
-  the same day at the preamble gate (`khatm-platform` PR #51 was still open despite the brief's
-  stated prereq — see "Last completed" 2026-08-04, first entry), resumed once Majd confirmed #51
-  merged. Second "Last completed" entry the same day has the full delivery record.
+  `docs/sessions/SESSION-C8b.md`) — **DONE. PR #23 merged to `main` 2026-08-04T09:11:08Z**
+  (squash, branch deleted), on Majd's go-ahead to merge. Self-stopped earlier the same day at the
+  preamble gate (`khatm-platform` PR #51 was still open despite the brief's stated prereq — see
+  "Last completed" 2026-08-04, first entry), resumed once Majd confirmed #51 merged. Second "Last
+  completed" entry the same day has the full delivery record, including what this session itself
+  could and couldn't verify live (no TOTP/browser access) before Majd's own review.
 - C8-key-rotation-ui (console side of FS-2.3's KMS key rotation, spec §2 C8 brief) —
   **DONE. PR #22 merged to `main` 2026-08-03T12:40:36Z** (was still shown "open, awaiting
   walkthrough" in this file until the 2026-08-04 C8b session checked `gh pr view 22` and found
@@ -198,9 +198,12 @@ SOFT->Vault migration`) is still open. Per this repo's standing rule (vendored c
     walkthrough gate** — everything else in the brief's DoD (freshness gate, additive-only diff,
     EN/AR parity + built-bundle presence, all tests green, no self-comparison test) is done and
     confirmed above.
-  - **PR #23 opened against `main`** off `chore/C8b-provider-column`, **not merged** — awaiting
-    Majd's walkthrough (see the "not a platform ask" blocker entry below for exactly what it
-    needs to cover).
+  - **PR #23 merged to `main` 2026-08-04T09:11:08Z** (squash, branch `chore/C8b-provider-column`
+    deleted), on Majd's explicit instruction ("Merge Open PRs") after the container rebuild +
+    manual test-case list handed off in this same session. Not independently confirmed here
+    that every DoD item (SOFT badge screenshot, live SOFT→VAULT rotation, full RTL pass) was
+    walked through before the merge decision — recorded as Majd's call, not re-verified by this
+    session.
 
 - 2026-08-03 (chore/C8-key-rotation-ui, same PR #22 — signing-key management moved off the
   dashboard onto its own page, per Majd's explicit request): after the 2026-08-02 delivery,
@@ -1618,15 +1621,16 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
   `provider` to `SigningKeyView`/`RotateKeyResponse` and a new optional `provider` on
   `RotateKeyRequest`. Session resumed and delivered — see "Last completed" 2026-08-04 (the
   "resumed and delivered" entry) for the full record.
-- **New, 2026-08-04 (chore/C8b-provider-column delivery) — not a platform ask, a console
-  verification gap.** The local `admin` account now has TOTP 2FA enrolled, so this session's
-  usual curl-based live-verification fallback (used successfully by C5/C6/C7 before 2FA existed)
-  no longer works without an authenticator code, and no browser-automation tool is available
-  either. The Vault-provider scenario (rotate with `provider: VAULT` against the already-running
-  `khatm-vault` container, confirm the badge flips) and the RTL screenshot are consequently
-  unverified by this session — both remain Majd's live walkthrough gate, same as every prior UI
-  session's standing browser-automation limitation, now doubled by 2FA. See "Last completed"
-  2026-08-04 for exactly what was and wasn't checked.
+- **Standing, since 2026-08-04 (chore/C8b-provider-column delivery) — not a platform ask, a
+  console-session tooling gap, still open for future sessions.** The local `admin` account now
+  has TOTP 2FA enrolled, so the curl-based live-verification fallback used successfully by
+  C5/C6/C7 (before 2FA existed) no longer works without an authenticator code, and no
+  browser-automation tool is available either. For this specific PR the Vault-provider scenario
+  and RTL screenshot went unverified by the session itself — PR #23 merged anyway 2026-08-04 on
+  Majd's own instruction, not on this session's confirmation of those DoD items (see "Last
+  completed" 2026-08-04 for exactly what was and wasn't checked). Flagging this as **standing**
+  because it will recur on every future session that needs a live authenticated walkthrough: no
+  headless path exists now that 2FA is on.
 - **Platform ask, new 2026-07-30 (feat/C7c-totp-2fa preamble self-stop) — CLOSED the same day**,
   fixed by `khatm-platform` PRs #49 (KH-2.2c-BE) and #50 (KH-2.3a-BE, unrelated KMS rotation).
   All five surfaces confirmed live: `POST /auth/login`'s `LoginChallengeResponse`, `POST
