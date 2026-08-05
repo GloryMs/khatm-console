@@ -106,6 +106,17 @@ contract:update`) confirmed the contract was already current (no diff against wh
 
 ## Last completed
 
+- 2026-08-05 (ad hoc container setup, not a coding session — no branch/PR/code change): stood up
+  `staging-khatm-console` on `:3001` pointing at Majd's Bunny-deployed staging `khatm-api`, so the
+  console can be checked against a real deployed backend rather than only the local
+  docker-compose stack. Verified with a real request (not just a 200 on `/`):
+  `GET /api/v1/admin/signing-keys` through the proxy returned the actual platform error envelope
+  (`KH-RBC-0401`, fresh `traceId`), confirming it reaches the live app rather than a CDN error
+  page. Re-run once when Majd gave a second, different staging URL (`mc-qzln0zm7z7.b-cdn.net`,
+  superseding `mc-we1w25akdr.b-cdn.net`) — same verification repeated, green. Full setup mechanics
+  (why no `.env` var exists, the Bunny `Host`-header requirement, how the image is built) recorded
+  under "Environment facts" above rather than here, since it's a durable fact about this
+  environment, not a one-time delivery.
 - 2026-08-04 (repo administration, not a coding session — no branch/PR): Majd made both
   `khatm-console` and `khatm-platform` public on GitHub. Verified CI green on `khatm-console`
   `main` after the change (`gh run view` on the latest run: all 10 steps —
@@ -1585,6 +1596,28 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 
 ## Environment facts
 
+- **`staging-khatm-console` — ad hoc local container for testing against Majd's deployed
+  staging backend, set up 2026-08-05.** Runs at `http://localhost:3001` (alongside the normal
+  `khatm-console` container on `:3000`, which still points at the local docker-compose backend —
+  both run simultaneously, side by side). Points at `khatm-api` deployed on Bunny containers,
+  currently `https://mc-qzln0zm7z7.b-cdn.net` (superseded an earlier
+  `https://mc-we1w25akdr.b-cdn.net` used briefly the same day — re-run with the new URL when
+  Majd gave it). **Not reproducible from the git repo alone** — deliberately kept out of any
+  tracked file (see the 2026-08-04 session: `src/api/client.ts` is same-origin-only by design, no
+  client-side API-base env var exists, so this had to be done via nginx's `proxy_pass`, and doing
+  it via a hand-edited _checked-in_ `nginx.conf`/`Dockerfile` risked an accidental staging-pointed
+  commit). Built as a second, tiny image (`khatm-console-staging`) layered on top of whatever
+  `khatm-console-khatm-console:latest` was most recently built locally — `COPY --from=` reuses
+  its already-built `dist/`, only the nginx config differs — from a Dockerfile + nginx.conf that
+  live in the session scratchpad dir, not this repo. The nginx config forwards `/api/`,
+  `/.well-known/`, `/t/` to the staging URL with `proxy_ssl_server_name on` and an explicit
+  `proxy_set_header Host <the staging hostname>` (**not** `$host` — Bunny's CDN edge routes by
+  the `Host` header, so passing through the browser's own request Host, as the local-backend
+  config does, would leave the CDN unable to route to the right origin). To rebuild after a
+  console code change or a new staging URL: rebuild `khatm-console-khatm-console` first (`docker
+compose build`), then rebuild/recreate `khatm-console-staging` /`staging-khatm-console` on top
+  of it — the exact commands are in this session's transcript, not scripted anywhere yet (worth a
+  small script if this becomes a recurring need rather than a one-off check).
 - **Both `khatm-console` (this repo) and `khatm-platform` are public as of 2026-08-04** (were
   private before). CI (GitHub Actions) confirmed green on `khatm-console` `main` post-change —
   no billing/permission issue like the 2026-07-30 PR #21 CI failure (that one was a GitHub
