@@ -106,6 +106,18 @@ contract:update`) confirmed the contract was already current (no diff against wh
 
 ## Last completed
 
+- 2026-08-06 (ad hoc container fix, not a coding session — no branch/PR/code change): Majd
+  pointed out the 2026-08-05 `staging-khatm-console` setup missed `VITE_QR_API_BASE` — the
+  single-issue screen's wallet QR was still encoding `window.location.origin`
+  (`http://localhost:3001`), unreachable by a physical phone, so wallet scan-redeem against
+  staging would have silently failed even though the console's own API calls worked. Rebuilt as a
+  genuine fresh `npm run build` (not layered on the local image) with
+  `--build-arg VITE_QR_API_BASE=https://mc-qzln0zm7z7.b-cdn.net`, verified the literal string
+  landed in the built JS and the API proxy still works. Also answered Majd's "why does the
+  console own this at all" question — checked the contract, confirmed there's no server-side
+  source of truth for a platform's own public base URL, recorded as a platform-ask candidate
+  below rather than acted on. Full mechanics under "Environment facts" →
+  `staging-khatm-console`.
 - 2026-08-05 (ad hoc container setup, not a coding session — no branch/PR/code change): stood up
   `staging-khatm-console` on `:3001` pointing at Majd's Bunny-deployed staging `khatm-api`, so the
   console can be checked against a real deployed backend rather than only the local
@@ -1597,27 +1609,48 @@ Bearer khk_...` — confirmed to be the platform's actual API-key header by read
 ## Environment facts
 
 - **`staging-khatm-console` — ad hoc local container for testing against Majd's deployed
-  staging backend, set up 2026-08-05.** Runs at `http://localhost:3001` (alongside the normal
-  `khatm-console` container on `:3000`, which still points at the local docker-compose backend —
-  both run simultaneously, side by side). Points at `khatm-api` deployed on Bunny containers,
-  currently `https://mc-qzln0zm7z7.b-cdn.net` (superseded an earlier
-  `https://mc-we1w25akdr.b-cdn.net` used briefly the same day — re-run with the new URL when
-  Majd gave it). **Not reproducible from the git repo alone** — deliberately kept out of any
-  tracked file (see the 2026-08-04 session: `src/api/client.ts` is same-origin-only by design, no
-  client-side API-base env var exists, so this had to be done via nginx's `proxy_pass`, and doing
-  it via a hand-edited _checked-in_ `nginx.conf`/`Dockerfile` risked an accidental staging-pointed
-  commit). Built as a second, tiny image (`khatm-console-staging`) layered on top of whatever
-  `khatm-console-khatm-console:latest` was most recently built locally — `COPY --from=` reuses
-  its already-built `dist/`, only the nginx config differs — from a Dockerfile + nginx.conf that
-  live in the session scratchpad dir, not this repo. The nginx config forwards `/api/`,
-  `/.well-known/`, `/t/` to the staging URL with `proxy_ssl_server_name on` and an explicit
-  `proxy_set_header Host <the staging hostname>` (**not** `$host` — Bunny's CDN edge routes by
-  the `Host` header, so passing through the browser's own request Host, as the local-backend
-  config does, would leave the CDN unable to route to the right origin). To rebuild after a
-  console code change or a new staging URL: rebuild `khatm-console-khatm-console` first (`docker
-compose build`), then rebuild/recreate `khatm-console-staging` /`staging-khatm-console` on top
-  of it — the exact commands are in this session's transcript, not scripted anywhere yet (worth a
-  small script if this becomes a recurring need rather than a one-off check).
+  staging backend, set up 2026-08-05, revised 2026-08-06.** Runs at `http://localhost:3001`
+  (alongside the normal `khatm-console` container on `:3000`, which still points at the local
+  docker-compose backend — both run simultaneously, side by side). Points at `khatm-api` deployed
+  on Bunny containers, currently `https://mc-qzln0zm7z7.b-cdn.net` (superseded an earlier
+  `https://mc-we1w25akdr.b-cdn.net` used briefly on 2026-08-05). **Not reproducible from the git
+  repo alone** — deliberately kept out of any tracked file (`src/api/client.ts` is
+  same-origin-only by design, no client-side API-base env var exists for its own calls, so
+  pointing it at staging has to happen via nginx's `proxy_pass`, and doing that via a hand-edited
+  _checked-in_ `nginx.conf`/`Dockerfile` risked an accidental staging-pointed commit).
+  - **2026-08-06 revision — now a real fresh build from repo source, not layered on the local
+    image.** The original 2026-08-05 version reused `khatm-console-khatm-console:latest`'s
+    already-built `dist/` via `COPY --from=`, swapping only the nginx config. That missed
+    `VITE_QR_API_BASE` (Majd caught it): the single-issue screen's wallet QR encodes a platform
+    base URL (`qrPayload.ts`'s `getQrApiBase()`) that a wallet POSTs the claim code to on
+    redemption — Vite inlines this **at `npm run build` time**, so it can't be fixed by swapping
+    nginx config after the fact; the JS has to be rebuilt. New build: `docker build -f
+<scratchpad>/staging/Dockerfile --build-context staging-conf=<scratchpad>/staging
+--build-arg VITE_QR_API_BASE=https://mc-qzln0zm7z7.b-cdn.net -t khatm-console-staging .` from
+    the repo root as context — a full `npm ci && npm run build` inside the image (mirrors the
+    real `Dockerfile`'s build stage plus the `ARG`/`ENV` for the QR base), with the staging
+    `nginx.conf` pulled in via a named buildx build-context (`staging-conf`) rather than needing
+    the file to sit inside the repo's own build context. Verified both halves post-rebuild: the
+    API proxy still works (`KH-RBC-0401` envelope through `/api/...`), and the literal string
+    `https://mc-qzln0zm7z7.b-cdn.net` is now present in the built JS (`docker exec ... grep`).
+    Everything (Dockerfile, nginx.conf) still lives only in the session scratchpad dir.
+  - **Raised, not yet acted on**: Majd asked why the console has to be told this at all rather
+    than reading it from the backend. Checked — the vendored contract has no field anywhere for
+    "the platform's own public base URL" (`baseUrl`/`apiBase`/`publicUrl`, zero hits in
+    `contracts/openapi.json`). Recorded as a platform-ask candidate in "Open decisions" below
+    rather than implemented — would need a new contract surface (e.g. a `/config` or
+    `/.well-known` endpoint) on the platform side first.
+  - The nginx config (unchanged from 2026-08-05) forwards `/api/`, `/.well-known/`, `/t/` to the
+    staging URL with `proxy_ssl_server_name on` and an explicit
+    `proxy_set_header Host <the staging hostname>` (**not** `$host` — Bunny's CDN edge routes by
+    the `Host` header, so passing through the browser's own request Host, as the local-backend
+    config does, would leave the CDN unable to route to the right origin).
+  - To rebuild after a console code change, a new staging URL, or a QR-base change: re-run the
+    `docker build --build-context ... --build-arg VITE_QR_API_BASE=...` command above (the exact
+    invocation is in this session's transcript, not scripted anywhere yet — worth a small script
+    if this becomes a recurring need rather than an occasional check), then `docker rm -f
+staging-khatm-console && docker run -d --name staging-khatm-console -p 3001:80
+khatm-console-staging`.
 - **Both `khatm-console` (this repo) and `khatm-platform` are public as of 2026-08-04** (were
   private before). CI (GitHub Actions) confirmed green on `khatm-console` `main` post-change —
   no billing/permission issue like the 2026-07-30 PR #21 CI failure (that one was a GitHub
@@ -1677,6 +1710,19 @@ compose build`), then rebuild/recreate `khatm-console-staging` /`staging-khatm-c
 
 ## Open decisions / blockers
 
+- **Platform ask, new 2026-08-06 (staging container QR-base fix) — OPEN, no contract surface
+  requested yet, just recorded.** The console has to be told its own publicly-reachable base URL
+  by hand (`VITE_QR_API_BASE`, baked in at build time) because the platform contract exposes no
+  way to ask `khatm-api` "what's your own public base URL" — confirmed by grepping
+  `contracts/openapi.json` for `baseUrl`/`apiBase`/`publicUrl` (zero hits). This is arguably not
+  fully fixable server-side either — a `khatm-api` instance behind a CDN (Bunny, in the current
+  staging deploy) has no reliable way to introspect which public hostname/pull-zone external
+  devices should use, that's deployment topology known only to whoever configured the CDN. A
+  `/config` or `/.well-known` endpoint where ops sets this explicitly (rather than the console
+  needing a per-deploy env var) would still remove a manual step and a class of "QR silently
+  points at an unreachable host" bugs. Not actioned — just flagged per this repo's own rule that
+  a platform gap gets recorded here, not routed around client-side. See "Environment facts" →
+  `staging-khatm-console` for the concrete case that surfaced this.
 - **Platform ask, new 2026-08-04 (chore/C8b-provider-column preamble self-stop) — CLOSED the
   same day.** `khatm-platform` PR #51 merged `2026-08-04T07:19:39Z` (Majd confirmed live), adding
   `provider` to `SigningKeyView`/`RotateKeyResponse` and a new optional `provider` on
