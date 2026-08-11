@@ -15,6 +15,8 @@ export interface SchemaBuilderFormValues {
   defaultMaxUses: string;
   defaultValidityDays: string;
   defaultValidityHours: string;
+  /** Non-automated issuer portal (KH-2.4, spec FS-2.4 item 1): gates whether this schema issues via the attested-document wizard. */
+  requiresAttestation: boolean;
   rows: BuilderFieldRow[];
 }
 
@@ -45,6 +47,18 @@ function buildSchema(t: TFunction, requireCode: boolean) {
       .trim()
       .min(1, { message: t('schemaManagement.builder.labelRequired') }),
     selective: z.boolean(),
+    pattern: z.string().refine(
+      (value) => {
+        if (!value.trim()) return true;
+        try {
+          new RegExp(value);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      { message: t('schemaManagement.builder.patternInvalid') },
+    ),
   });
 
   return z.object({
@@ -65,6 +79,7 @@ function buildSchema(t: TFunction, requireCode: boolean) {
     defaultMaxUses: z.string(),
     defaultValidityDays: z.string(),
     defaultValidityHours: z.string(),
+    requiresAttestation: z.boolean(),
     rows: z
       .array(rowSchema)
       .min(1, { message: t('schemaManagement.builder.atLeastOneField') })
@@ -203,6 +218,24 @@ export function SchemaBuilderForm({
             />
           </div>
         </div>
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="schema-requiresAttestation">
+            {t('schemaManagement.builder.requiresAttestation')}
+          </label>
+          <div className={styles.control}>
+            <label className={styles.checkboxRow}>
+              <input
+                id="schema-requiresAttestation"
+                type="checkbox"
+                {...register('requiresAttestation')}
+              />
+              {t('schemaManagement.builder.requiresAttestationInline')}
+            </label>
+            <span className={styles.help}>
+              {t('schemaManagement.builder.requiresAttestationHelp')}
+            </span>
+          </div>
+        </div>
       </div>
 
       <div className={styles.rowsBlock}>
@@ -269,6 +302,26 @@ export function SchemaBuilderForm({
                 />
                 {errors.rows?.[index]?.labelAr && (
                   <span className={styles.fieldError}>{errors.rows[index]?.labelAr?.message}</span>
+                )}
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor={`rows.${index}.pattern`}>
+                  {t('schemaManagement.builder.fieldPattern')}
+                </label>
+                <input
+                  id={`rows.${index}.pattern`}
+                  type="text"
+                  autoComplete="off"
+                  className="ltr-embed"
+                  placeholder={t('schemaManagement.builder.fieldPatternPlaceholder')}
+                  {...register(`rows.${index}.pattern`)}
+                />
+                {errors.rows?.[index]?.pattern ? (
+                  <span className={styles.fieldError}>{errors.rows[index]?.pattern?.message}</span>
+                ) : (
+                  <span className={styles.help}>
+                    {t('schemaManagement.builder.fieldPatternHelp')}
+                  </span>
                 )}
               </div>
               <div className={styles.checkboxField}>

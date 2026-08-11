@@ -1162,6 +1162,10 @@ export interface components {
         AttentionResponse: {
             items?: components["schemas"]["AttentionEntry"][];
         };
+        /** @description Human attestation of a scanned document, required by schemas with requires_attestation=true */
+        AttestationRequest: {
+            note?: string;
+        };
         /** @description Batch-wide defaults, overridable per item */
         BulkIssueDefaults: {
             /** Format: int32 */
@@ -1233,6 +1237,7 @@ export interface components {
                 [key: string]: string;
             };
             name: string;
+            pattern?: string;
             type: string;
         };
         /** @description Request to redeem a one-time wallet claim code */
@@ -1432,6 +1437,7 @@ export interface components {
         };
         /** @description Request to issue a new SD-JWT verifiable credential */
         IssueRequest: {
+            attestation?: components["schemas"]["AttestationRequest"];
             claims?: {
                 [key: string]: Record<string, never>;
             };
@@ -1528,6 +1534,7 @@ export interface components {
             nameI18n: {
                 [key: string]: string;
             };
+            requiresAttestation?: boolean;
             sdFields?: string[];
         };
         SchemaCreateRequest: {
@@ -1539,6 +1546,7 @@ export interface components {
             nameI18n: {
                 [key: string]: string;
             };
+            requiresAttestation?: boolean;
             sdFields?: string[];
         };
         SchemaDetail: {
@@ -1550,6 +1558,7 @@ export interface components {
             /** Format: uuid */
             id?: string;
             nameI18n?: components["schemas"]["LocalizedText"];
+            requiresAttestation?: boolean;
             sdFields?: string[];
             status?: string;
             /** Format: int32 */
@@ -1560,6 +1569,7 @@ export interface components {
             /** Format: uuid */
             id?: string;
             nameI18n?: components["schemas"]["LocalizedText"];
+            requiresAttestation?: boolean;
             status?: string;
             /** Format: int32 */
             version?: number;

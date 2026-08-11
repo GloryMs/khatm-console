@@ -8,10 +8,25 @@ export type IssueResponse = components['schemas']['IssueResponse'];
 export type ClaimCodeMintRequest = components['schemas']['ClaimCodeMintRequest'];
 export type ClaimCodeMintResponse = components['schemas']['ClaimCodeMintResponse'];
 
-/** Published schemas available for credential issuance. */
+/**
+ * Published schemas available for the standard (non-attested) issue flow.
+ * Excludes `requiresAttestation` schemas — those only ever issue via the
+ * dedicated attested-document wizard (`attestedIssuance`), which submits the
+ * `attestation` object this flow never sends; picking one here would be a
+ * guaranteed `KH-ATT-0400` (spec FS-2.4 item 2, deny-by-default). Shared by
+ * both the single-issue picker and the bulk-issue picker (`bulkIssuance`
+ * re-exports this hook) — bulk issuance rejects attested schemas wholesale
+ * (`KH-ATT-0402`) for the same reason, so filtering here covers both screens.
+ */
 export async function listPublishedSchemas(): Promise<SchemaSummary[]> {
   const schemas = await apiFetch<SchemaSummary[]>('/api/v1/schemas');
-  return schemas.filter((schema) => schema.status === 'PUBLISHED');
+  return schemas.filter((schema) => schema.status === 'PUBLISHED' && !schema.requiresAttestation);
+}
+
+/** Published schemas for the attested-document wizard — the mirror image of {@link listPublishedSchemas}. */
+export async function listAttestedSchemas(): Promise<SchemaSummary[]> {
+  const schemas = await apiFetch<SchemaSummary[]>('/api/v1/schemas');
+  return schemas.filter((schema) => schema.status === 'PUBLISHED' && schema.requiresAttestation);
 }
 
 /** Full schema detail used to render an issue form from `claimsDefJson`. */

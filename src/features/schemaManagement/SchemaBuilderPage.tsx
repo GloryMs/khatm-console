@@ -37,6 +37,7 @@ function blankFormValues(): SchemaBuilderFormValues {
     defaultMaxUses: '',
     defaultValidityDays: '',
     defaultValidityHours: '',
+    requiresAttestation: false,
     rows: [emptyRow()],
   };
 }
@@ -53,6 +54,7 @@ function buildAuthoringBody(values: SchemaBuilderFormValues): SchemaAuthoringReq
     defaultValidity,
     claimsDef: toClaimsDef(values.rows),
     sdFields: deriveSdFields(values.rows),
+    requiresAttestation: values.requiresAttestation,
   };
 }
 
@@ -88,6 +90,7 @@ function SchemaBuilderPageBody({ mode }: SchemaBuilderPageProps) {
         detail.data.defaultMaxUses === undefined ? '' : String(detail.data.defaultMaxUses),
       defaultValidityDays: days ? String(days) : '',
       defaultValidityHours: hours ? String(hours) : '',
+      requiresAttestation: detail.data.requiresAttestation ?? false,
       rows: fromSchemaDetail(detail.data),
     };
   }, [mode, detail.data]);

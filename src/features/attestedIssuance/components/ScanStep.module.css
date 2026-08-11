@@ -1,0 +1,57 @@
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.help {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+}
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-6) var(--space-4);
+  border: 2px dashed var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-2);
+  cursor: pointer;
+  text-align: center;
+}
+
+.dropzoneLabel {
+  font-weight: 600;
+}
+
+.fileInput {
+  /* Native input hidden behind the styled dropzone label; still keyboard/AT accessible via the label's `for`. */
+  position: absolute;
+  inset-inline-start: -9999px;
+}
+
+.fileInfo {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.progressRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  font-size: var(--fs-sm);
+}
+
+.progress {
+  width: 100%;
+  height: 0.5rem;
+}

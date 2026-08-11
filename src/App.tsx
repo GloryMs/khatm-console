@@ -3,6 +3,7 @@ import { Navigate, Route, BrowserRouter, Routes } from 'react-router-dom';
 import { queryClient } from '@/api/queryClient';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { AppShell } from '@/components/ui/AppShell';
+import { AttestedIssuePage } from '@/features/attestedIssuance/AttestedIssuePage';
 import { AuthProvider } from '@/features/auth/AuthProvider';
 import { ChangePasswordPage } from '@/features/auth/ChangePasswordPage';
 import { LoginPage } from '@/features/auth/LoginPage';
@@ -48,6 +49,7 @@ export function App() {
                     }
                   />
                   <Route path="/issue/bulk" element={<BulkIssuePage />} />
+                  <Route path="/issue/attested" element={<AttestedIssuePage />} />
                   <Route path="/schemas" element={<SchemasPage />} />
                   <Route path="/schemas/manage" element={<SchemaManagementPage />} />
                   <Route path="/schemas/manage/new" element={<SchemaBuilderPage mode="create" />} />

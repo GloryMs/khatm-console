@@ -4,6 +4,27 @@
 
 ## Current phase / task
 
+- C9-attested-issuance-ui (console side of FS-2.4's non-automated issuer portal, session
+  `SESSION-C9-attested-issuance-ui.md`, prereq `khatm-platform` KH-2.4-BE PR #54 merged
+  2026-08-10) — **DELIVERED this session (2026-08-11), not yet a PR.** Full record below under
+  "Last completed" 2026-08-11. Veto answers actually used: **V1=(a)** verifier-side hash compare
+  built into `/verify` (`HashCompare`, session-scoped to any disclosed claim shaped like a 64-hex
+  digest, not just a literal `doc_sha256` name); **V2=(a)** the picked `File` is never retained in
+  React state past the `hashFile` call — only its name/size and the digest string persist;
+  **V3=(b)** a dedicated route `/issue/attested` (`features/attestedIssuance`), not a branch of
+  the existing `/issue` wizard — `requires_attestation` schemas are filtered out of both `/issue`
+  and `/issue/bulk`'s pickers so they can only ever be picked here; **V4=(a)** both the
+  `requiresAttestation` toggle and the claim-field `pattern` input shipped on the schema builder
+  this session. **One contract-vendoring gap found and worked around by reading platform source
+  directly, not self-stopped on**: `KH-ATT-0400`/`0401`/`0402` exist and are fully wired
+  server-side (`ErrorCode.java`, `CredentialService#issue`, `BulkIssuanceService#bulkIssue`) but
+  are absent from the vendored `openapi.json` — no `@ApiResponse` annotations were added to the
+  affected endpoints, so springdoc never emitted them. Recorded as a platform ask below.
+  **Print/label output (spec FS-2.4 D5, the parent spec's own session-split table's "التدفق كاملاً
+  + الطباعة" for C9) was NOT built** — the actual session brief's five numbered scope items and
+  DoD never mention a print screen at all, only the claim-code success path; treated the brief
+  (more specific, more current) as authoritative over the parent spec table rather than silently
+  expanding scope, and flagged this explicitly rather than quietly matching the older table.
 - C8b-provider-column (console side of FS-2.3's KMS provider column/badge, spec §2 C8 brief,
   `docs/sessions/SESSION-C8b.md`) — **DONE. PR #23 merged to `main` 2026-08-04T09:11:08Z**
   (squash, branch deleted), on Majd's go-ahead to merge. Self-stopped earlier the same day at the
@@ -105,6 +126,136 @@ contract:update`) confirmed the contract was already current (no diff against wh
   manual EN/AR + RTL walkthrough of that specific banner was never explicitly logged as run.
 
 ## Last completed
+
+- 2026-08-11 (feat/KH-2.4.1-attested-issuance, spec FS-2.4, session
+  `SESSION-C9-attested-issuance-ui.md` — delivered, not yet a PR): **Preamble.** `npm run
+contract:update` against `origin/main` (public raw fetch, no `gh api` fallback needed, per the
+  2026-08-04 precedent) — 29 insertions, purely additive: `AttestationRequest{note}` (new schema),
+  `attestation?` on `IssueRequest`, `pattern?` on `ClaimFieldRequest`, `requiresAttestation?` on
+  `SchemaSummary`/`SchemaDetail`/`SchemaCreateRequest`/`SchemaAuthoringRequest`. Three of the four
+  gate items confirmed directly in the refreshed contract. **The fourth — `KH-ATT-0400`/`0401`/
+  `0402` — is genuinely absent from `contracts/openapi.json`** (grepped case-insensitively, zero
+  hits, including in the `issue`/`bulk` endpoints' own response descriptions, unlike every other
+  error code in this contract which appears as `"... (KH-XXX-NNNN)"` prose in a response
+  `description`). Per the brief's own instruction ("KH-2.4-BE verified all of these on the
+  platform side, so absence means a contract-vendoring problem, not a missing feature — report it
+  as such"), cross-checked the local `khatm-platform` checkout directly (same precedent as every
+  prior session's non-guess policy) rather than self-stopping: `ErrorCode.java` has all three,
+  fully documented (`KH_ATT_0400`/`attestation.required`, `KH_ATT_0401`/`attestation.not-
+  applicable`, `KH_ATT_0402`/`attestation.bulk-not-supported`, all HTTP 400), wired into
+  `CredentialService#issue`'s `validateAttestation` (deny-by-default in both directions) and
+  `BulkIssuanceService#bulkIssue` (wholesale reject on `requiresAttestation`). The affected
+  endpoints simply have no `@ApiResponse` springdoc annotations for these paths, so they never
+  reach the generated spec — a documentation gap, not a missing feature, exactly as the brief
+  predicted. Built the error UI against the confirmed-real `messageKey`s (`errors.attestation.*`)
+  rather than self-stopping on item 3. **Recorded as a fresh platform ask below.** Also confirmed
+  in platform source (not just the contract): `AttestationRequest` carries only `note` — `doc_type`/
+  `original_issue_date`/`attestation_note` are ordinary schema claim fields, not part of the
+  attestation object; the `AttestedDocumentSeeder`'s exact `AttestedDocument/v1` demo schema
+  (`doc_sha256` field name, `^[0-9a-f]{64}$` pattern, `required: false` on every field) is the
+  literal convention this session built against, not a guess. Endpoint path re-confirmed: issuance
+  is `POST /api/v1/credentials/issue` (already correct in `issuance/api.ts`, untouched).
+  `npm run gen:api` regenerated `schema.ts` clean. `npm run check` baseline green (235/235,
+  typecheck/lint clean) before any code change.
+  - **Item 1 — `features/attestation/hashFile.ts`.** `hashFile(file, {chunkSize?, onProgress?})`
+    → lowercase-hex SHA-256 via `crypto.subtle.digest`, reading in bounded `FileReader` chunks
+    (default 8 MiB) rather than one `Blob#arrayBuffer()` call, reporting cumulative progress per
+    chunk. Documented the real constraint this design works within: `SubtleCrypto.digest` has no
+    incremental/streaming form, so one full-buffer digest call is unavoidable regardless — chunking
+    bounds each individual read and keeps the UI responsive/progress-reportable between them, it
+    does not reduce peak memory below the file's own size. `isHashingAvailable()` +
+    `InsecureHashingContextError` — the non-secure-context guard, never a JS-hash fallback (D1's
+    own requirement). 8 unit tests: known vectors (empty file, `"abc"`, both verified against
+    Node's own `crypto.createHash('sha256')` before being hardcoded), chunked-vs-single-shot
+    equivalence, monotonic progress reporting ending at the file size, the empty-file zero/zero
+    tick, and the insecure-context throw (stubs `globalThis.crypto` to `{}`). **Confirms this
+    toolchain's Node (24) exposes `crypto.subtle` natively in Vitest/jsdom** — no polyfill needed,
+    a real gap in the STATE.md environment notes until now (only the `File#text()`/`#arrayBuffer()`
+    jsdom gap was previously documented).
+  - **Item 2 — `features/attestedIssuance`, the dedicated wizard (route `/issue/attested`, V3).**
+    Five-step local state machine (`AttestedIssuePage.tsx`, not `react-router` sub-routes): schema
+    pick (`useAttestedSchemas`, attested-only) → `ScanStep` (file pick + hash, file reference
+    dropped immediately per V2 — only `{name, size}` and the digest string survive into the next
+    step) → `DetailsForm` (every other claim field, exactly like the standard `IssueForm`, plus the
+    request-level `attestation.note` — a **deliberately distinct field** from any schema claim
+    literally named `attestation_note`, labelled to avoid the collision) → `ReviewStep`
+    (acknowledgment checkbox + `TypeToConfirmDialog` keyed on the digest's first 8 hex chars, C8's
+    pattern reused verbatim) → issue + mint, reusing `issuance`'s existing
+    `useIssueAndMintCredential` unchanged. `claimFields.ts` splits a schema's parsed claims into the
+    `doc_sha256`-named convention field (locked, auto-filled from the computed digest, never
+    rendered as an editable input) and everything else; `request.ts`'s `buildAttestedIssueRequest`
+    always injects the digest under that key (overwriting anything a stray same-named form field
+    could otherwise contribute) and always sends a — possibly empty — `attestation` object, never
+    omits it (an omitted object is exactly what `KH-ATT-0400` exists to catch). No `api.ts` in this
+    feature — every network call is one `issuance/api.ts` already wraps; `hooks.ts` only re-exports.
+  - **Filtering design decision (not explicitly itemized in the brief, but load-bearing for V3):**
+    `issuance/api.ts#listPublishedSchemas` now excludes `requiresAttestation` schemas (they'd be a
+    guaranteed `KH-ATT-0400` dead end through the standard wizard), and a new
+    `listAttestedSchemas` is the mirror image. Because `bulkIssuance/hooks.ts` already re-exports
+    `usePublishedSchemas` from `issuance/hooks`, this one change **also satisfies item 3's bulk-
+    picker-filtering requirement for free** — no `BulkIssuePage.tsx` edit needed, `KH-ATT-0402`
+    schemas simply never appear there either. `schemaManagement/hooks.ts`'s
+    `useInvalidateAfterWrite` now invalidates both schema-list query keys.
+  - **Item 3 — error i18n + RTL.** `errors.attestation.{required,not-applicable,bulk-not-supported}`
+    (EN/AR) resolve through the existing `errors.<messageKey>` mechanism (`useErrorMessage.ts`) with
+    zero code changes needed there — confirms that mechanism generalizes to a module tag the app
+    had never seen before. RTL grep (`(margin|padding|border)-(left|right)`, bare `left:`/`right:`,
+    physical `text-align`, `float:`) across every new/changed stylesheet: zero matches, logical
+    properties throughout (`inset-inline-start` for the hidden dropzone file inputs).
+  - **Item 4 — `attestation.no-file-egress.test.tsx`, the D1 enforcement artifact.** Spies on the
+    real `globalThis.fetch` (not the `api.ts` wrapper functions — mocking those would hide exactly
+    what this test exists to prove) across a complete rendered scan-to-issue run, with the picked
+    file's own content (`"do-not-upload-me"`) as the tripwire. Asserts, over every captured call: no
+    `Content-Type: multipart/form-data`, no request body containing the raw file content or its hex/
+    base64 encoding, and the `issue` call's JSON body has `claims.doc_sha256` as a 64-hex string.
+    Named per the brief's own suggested pattern, header comment points at FS-2.4 D1.
+  - **Item 5 — schema authoring.** `claimsBuilder.ts`'s `BuilderFieldRow` gained `pattern: string`
+    (blank = no constraint; `toClaimsDef` omits the key entirely rather than sending an empty
+    string, matching how `fromSchemaDetail` reads an absent `pattern` back). `SchemaBuilderForm.tsx`
+    gained a schema-level `requiresAttestation` checkbox (helper text: "applies at issuance") and a
+    per-row `pattern` text input with **client-side regex-compilability validation** (`new
+    RegExp(...)` in a zod `.refine`, mirroring `SchemaAuthoringService`'s own `KH-SCH-0400`
+    server-side check) so an invalid pattern is caught before submit, not after. `SchemaBuilderPage.tsx`
+    wires both into `buildAuthoringBody`/prefill.
+  - **V1 — `features/verify/components/HashCompare.tsx`.** Not itemized in the brief's numbered
+    scope list, but session veto V1 answered "(a) in scope for C9" and §3's Out-of-scope line reads
+    "Verifier-side hash comparison unless V1=(a)" — built. Detects any **disclosed claim value**
+    shaped like a 64-hex digest (`/^[0-9a-f]{64}$/i`, not a hardcoded field name — a verifier's own
+    schema variant may name the field differently, the value shape is the only reliable signal
+    post-issuance) and offers a "compare against your own copy" affordance next to it in
+    `VerifyResult`, reusing `hashFile` — zero new crypto, same D1 guarantee (no upload, ever).
+  - **Tests: 253 total now (was 235)** — 8 new (`hashFile.test.ts`), 4 new/updated
+    (`claimsBuilder.test.ts`'s pattern round-trip + existing fixtures updated for the new field), 2
+    new (`SchemaBuilderForm.test.tsx`'s `requiresAttestation` toggle + invalid-pattern rejection), 3
+    new (`VerifyResult.test.tsx`'s hash-compare CTA-gating + match + mismatch, using real
+    `hashFile`), 2 new (`AttestedIssuePage.test.tsx`'s scope-gate + full walkthrough — schema pick →
+    real WebCrypto hash → details → review → type-to-confirm → issue, asserting the exact
+    `IssueRequest` body), 1 new (the D1 no-egress test). `npm run typecheck`, `npm run lint` (only
+    the pre-existing `FormField.tsx` fast-refresh warning), `npm run test` (253/253), and `npm run
+    build` all clean. `format:check` clean on every file this session touched (prettier --write
+    needed on 5 files mid-session, re-verified clean after) — still fails only on the same
+    pre-existing untracked files as every prior session. `npm run gen:api` re-run twice back-to-back
+    produces the identical diff both times (stable, additive-only) — will show zero diff once this
+    session's changes are committed, confirming the contract-freshness CI gate will pass.
+  - **No live walkthrough this session** — same standing limitation recorded 2026-08-04 (no
+    browser-automation tool, local `admin` account has TOTP 2FA enrolled so the old curl-based
+    fallback no longer works either). The DoD's live walkthrough (real scanned PDF, watch the
+    digest appear, issue, verify, and confirm in DevTools' Network tab that no request ever carried
+    the file) is explicitly Majd's own step per the brief §5 and remains the merge gate — the
+    automated D1 test proves the same thing in CI, seeing it once by hand is what the brief itself
+    says makes it believable to a government counterparty later. **PR not yet opened** — branch
+    `feat/KH-2.4.1-attested-issuance` has all commits ready; opening the PR and Majd's Arabic
+    string review (hard gate per brief §5) are the next steps.
+  - **Platform ask, new 2026-08-11 (KH-ATT error codes undocumented in the OpenAPI spec) — OPEN.**
+    `KH-ATT-0400`/`0401`/`0402` are fully implemented and correct server-side (confirmed by reading
+    `ErrorCode.java`/`CredentialService`/`BulkIssuanceService` directly) but the `issue`/`bulk`
+    endpoints carry no springdoc `@ApiResponse` annotations documenting them, unlike most other
+    error-bearing endpoints in this contract (which at least name their codes in a response
+    `description` string, e.g. `KH-KEY-0404`'s "No such key for the current tenant (KH-KEY-0404)").
+    Low cost, real value: a future console session (or an external API consumer) grepping the
+    vendored contract for these codes will find nothing and may wrongly self-stop, the way this
+    session almost did before checking the platform source directly per the brief's own instruction
+    that absence here likely means a vendoring gap, not a missing feature.
 
 - 2026-08-06 (ad hoc container fix, not a coding session — no branch/PR/code change): Majd
   pointed out the 2026-08-05 `staging-khatm-console` setup missed `VITE_QR_API_BASE` — the
@@ -1710,6 +1861,15 @@ khatm-console-staging`.
 
 ## Open decisions / blockers
 
+- **Platform ask, new 2026-08-11 (feat/KH-2.4.1-attested-issuance preamble) — OPEN.**
+  `KH-ATT-0400`/`0401`/`0402` (attestation deny-by-default, bulk-attested rejection) are absent
+  from the vendored `openapi.json` even though they're fully implemented server-side — the
+  affected endpoints have no springdoc `@ApiResponse` annotations for these paths. Worked around by
+  reading `khatm-platform`'s `ErrorCode.java`/`CredentialService`/`BulkIssuanceService` directly
+  rather than self-stopping (the session brief itself predicted this exact gap and called it a
+  vendoring problem, not a missing feature). Fix would be adding the annotations so a future
+  contract refresh surfaces these codes the way most others already do. See "Last completed"
+  2026-08-11 for the full delivery this was built against.
 - **Platform ask, new 2026-08-06 (staging container QR-base fix) — OPEN, no contract surface
   requested yet, just recorded.** The console has to be told its own publicly-reachable base URL
   by hand (`VITE_QR_API_BASE`, baked in at build time) because the platform contract exposes no

@@ -11,6 +11,7 @@
     "dashboard": "Dashboard",
     "issue": "Issue",
     "issueBulk": "Bulk Issue",
+    "issueAttested": "Attested Document",
     "verify": "Verify",
     "revoke": "Revoke",
     "consumingParties": "Consuming Parties",
@@ -212,6 +213,11 @@
       "invalid-slug": "The tenant slug is invalid. Use a lowercase slug (letters, digits, hyphen, underscore), 2 to 63 characters, starting with a letter or digit.",
       "duplicate-slug": "A tenant with this slug already exists."
     },
+    "attestation": {
+      "required": "This schema requires attestation. Pick a scanned file to hash and attest before issuing.",
+      "not-applicable": "This schema doesn't require attestation — an attestation was sent anyway. Use the standard issue flow for this schema.",
+      "bulk-not-supported": "Attested-document schemas can't be issued in bulk. Use the attested-document flow for this schema, one document at a time."
+    },
     "error": {
       "rbc": {
         "api_key_invalid": "This API key is invalid, unknown, or the consuming party has been suspended."
@@ -264,6 +270,41 @@
     "qrLocalhostHint": "This QR embeds a localhost address and will not work when scanned from a phone — set VITE_QR_API_BASE to your machine's LAN IP.",
     "issueAnother": "Issue another"
   },
+  "issueAttested": {
+    "title": "Issue Attested Document",
+    "intro": "For paper archives and scanned documents: hash the scan locally, attest to having seen the original, then issue.",
+    "pickPrompt": "Select a schema that requires attestation.",
+    "noSchemas": "No published attested-document schemas are available. Create one on the schema authoring screen.",
+    "scan": {
+      "prompt": "Pick the scanned file. It is hashed in your browser and never sent anywhere.",
+      "neverUploaded": "The file itself is not uploaded and never leaves this device — you are attesting to having seen the original.",
+      "pickFile": "Choose file…",
+      "hashing": "Computing digest…",
+      "hashFailed": "Could not compute the digest for this file. Try again or pick a different file.",
+      "insecureContext": "Hashing requires a secure context (HTTPS, or localhost). This page was opened over plain HTTP, so the browser has no WebCrypto available — reopen it over HTTPS to continue."
+    },
+    "details": {
+      "digestLabel": "Document SHA-256",
+      "changeFile": "Change file",
+      "attestationNote": "Attestation note",
+      "attestationNoteHelp": "Optional. Recorded in this attestation's audit entry — not a document field.",
+      "noteTooLong": "Attestation note must be 500 characters or fewer.",
+      "continueToReview": "Continue to review"
+    },
+    "review": {
+      "neverUploaded": "The file itself is not uploaded and never leaves this device — you are attesting to having seen the original.",
+      "guaranteeLimit": "This signature proves your organization attested that the file with this digest is authentic. The link between the physical paper and the scanned file is your attestation as a human operator, not a cryptographic one.",
+      "fileName": "File name",
+      "acknowledge": "I compared this scan against the physical original and confirm it is a true copy.",
+      "issueCta": "Issue credential",
+      "confirmTitle": "Confirm attested issuance",
+      "confirmBody": "This action is audited and cannot be undone. Retype the first 8 characters of the digest to confirm.",
+      "typePrompt": "Type the first 8 characters of the digest",
+      "mismatch": "Doesn't match the digest shown above.",
+      "confirmCta": "Confirm and issue",
+      "issuing": "Issuing…"
+    }
+  },
   "verify": {
     "title": "Verify Credential",
     "prompt": "Paste an SD-JWT presentation to verify it.",
@@ -284,7 +325,14 @@
     "noClaims": "No claims were disclosed in this presentation.",
     "statusChecked": "Status list checked",
     "statusVersion": "Status list version",
-    "statusUri": "Status list URI"
+    "statusUri": "Status list URI",
+    "hashCompare": {
+      "cta": "Compare against your own copy",
+      "prompt": "Pick your own copy of the document. It's hashed in your browser and never sent anywhere.",
+      "pickFile": "Choose file…",
+      "match": "Matches — the digest of your file matches this disclosed value.",
+      "mismatch": "Does not match — the digest of your file is different from this disclosed value."
+    }
   },
   "revoke": {
     "title": "Revoke Credential",
@@ -378,6 +426,9 @@
       "defaultMaxUsesHelp": "Optional; prefills the Issue form.",
       "defaultValidityDays": "Default validity — days",
       "defaultValidityHours": "Default validity — hours",
+      "requiresAttestation": "Non-automated issuer portal",
+      "requiresAttestationInline": "Requires attestation",
+      "requiresAttestationHelp": "Issues only via the attested-document wizard (scan, hash, attest) rather than the standard Issue screen. Applies at issuance.",
       "fieldsHeading": "Claim fields",
       "addField": "Add field",
       "removeField": "Remove",
@@ -393,6 +444,10 @@
       "fieldLabelAr": "Label (Arabic)",
       "labelRequired": "Both English and Arabic labels are required",
       "fieldSelective": "Selective disclosure",
+      "fieldPattern": "Pattern (optional)",
+      "fieldPatternPlaceholder": "e.g. ^[0-9a-f]{64}$",
+      "fieldPatternHelp": "Regular expression a claim value must match. Applies at issuance, not here.",
+      "patternInvalid": "Not a valid regular expression",
       "atLeastOneField": "At least one claim field is required",
       "duplicateFieldName": "Field names must be unique",
       "submitCreate": "Create schema",

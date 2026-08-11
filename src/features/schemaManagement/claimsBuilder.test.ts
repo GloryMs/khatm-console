@@ -16,14 +16,23 @@ const rows: BuilderFieldRow[] = [
     labelEn: 'Case number',
     labelAr: 'رقم القضية',
     selective: true,
+    pattern: '',
   },
-  { name: 'result', type: 'text', labelEn: 'Result', labelAr: 'النتيجة', selective: false },
+  {
+    name: 'result',
+    type: 'text',
+    labelEn: 'Result',
+    labelAr: 'النتيجة',
+    selective: false,
+    pattern: '',
+  },
   {
     name: 'issuedOn',
     type: 'date',
     labelEn: 'Issued on',
     labelAr: 'تاريخ الإصدار',
     selective: false,
+    pattern: '',
   },
 ];
 
@@ -67,14 +76,65 @@ describe('deriveSdFields', () => {
 });
 
 describe('emptyRow', () => {
-  it('starts blank, non-selective, and typed as text', () => {
+  it('starts blank, non-selective, typed as text, and with no pattern', () => {
     expect(emptyRow()).toEqual({
       name: '',
       type: 'text',
       labelEn: '',
       labelAr: '',
       selective: false,
+      pattern: '',
     });
+  });
+});
+
+describe('pattern (KH-2.4, spec FS-2.4 item 3)', () => {
+  it('is included in the serialized request only when non-blank', () => {
+    const withPattern: BuilderFieldRow = {
+      name: 'docSha256',
+      type: 'text',
+      labelEn: 'Document SHA-256',
+      labelAr: 'بصمة SHA-256',
+      selective: true,
+      pattern: '^[0-9a-f]{64}$',
+    };
+    expect(toClaimsDef([withPattern, rows[0]])).toEqual([
+      {
+        name: 'docSha256',
+        type: 'text',
+        labelI18n: { en: 'Document SHA-256', ar: 'بصمة SHA-256' },
+        pattern: '^[0-9a-f]{64}$',
+      },
+      { name: 'caseNumber', type: 'text', labelI18n: { en: 'Case number', ar: 'رقم القضية' } },
+    ]);
+  });
+
+  it('round-trips a patterned field through fromSchemaDetail', () => {
+    const detail: SchemaDetail = {
+      id: 's1',
+      code: 'AttestedDocument/v1',
+      version: 1,
+      status: 'DRAFT',
+      nameI18n: { en: 'Attested Document', ar: 'وثيقة مصدَّقة' },
+      sdFields: [],
+      claimsDefJson: JSON.stringify({
+        docSha256: {
+          type: 'text',
+          pattern: '^[0-9a-f]{64}$',
+          label_i18n: { en: 'Document SHA-256', ar: 'بصمة SHA-256' },
+        },
+      }),
+    };
+    expect(fromSchemaDetail(detail)).toEqual([
+      {
+        name: 'docSha256',
+        type: 'text',
+        labelEn: 'Document SHA-256',
+        labelAr: 'بصمة SHA-256',
+        selective: false,
+        pattern: '^[0-9a-f]{64}$',
+      },
+    ]);
   });
 });
 
@@ -108,13 +168,21 @@ describe('fromSchemaDetail', () => {
     };
 
     expect(fromSchemaDetail(detail)).toEqual([
-      { name: 'result', type: 'text', labelEn: 'Result', labelAr: 'النتيجة', selective: false },
+      {
+        name: 'result',
+        type: 'text',
+        labelEn: 'Result',
+        labelAr: 'النتيجة',
+        selective: false,
+        pattern: '',
+      },
       {
         name: 'caseNumber',
         type: 'text',
         labelEn: 'Case number',
         labelAr: 'رقم القضية',
         selective: true,
+        pattern: '',
       },
     ]);
   });
@@ -132,7 +200,14 @@ describe('fromSchemaDetail', () => {
     };
 
     expect(fromSchemaDetail(detail)).toEqual([
-      { name: 'result', type: 'text', labelEn: 'Result', labelAr: 'النتيجة', selective: false },
+      {
+        name: 'result',
+        type: 'text',
+        labelEn: 'Result',
+        labelAr: 'النتيجة',
+        selective: false,
+        pattern: '',
+      },
     ]);
   });
 
@@ -171,7 +246,14 @@ describe('fromSchemaDetail', () => {
       }),
     };
     expect(fromSchemaDetail(detail)).toEqual([
-      { name: 'weird', type: 'text', labelEn: 'Weird', labelAr: 'غريب', selective: false },
+      {
+        name: 'weird',
+        type: 'text',
+        labelEn: 'Weird',
+        labelAr: 'غريب',
+        selective: false,
+        pattern: '',
+      },
     ]);
   });
 });

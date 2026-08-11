@@ -1,7 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { HashCompare } from './HashCompare';
 import type { VerifyResponse } from '../api';
 import styles from './VerifyResult.module.css';
+
+/** A disclosed claim shaped like a hex digest (spec FS-2.4 D3's `doc_sha256` convention) can be locally re-verified — session veto V1. */
+const HEX_DIGEST_PATTERN = /^[0-9a-f]{64}$/i;
 
 /**
  * The optional status-list fields the KH-1.3 lane may add to `VerifyResponse`.
@@ -62,12 +66,19 @@ export function VerifyResult({ result }: { result: VerifyResponse }) {
           <span className={styles.note}>{t('verify.noClaims')}</span>
         ) : (
           <ul className={styles.claims}>
-            {claimEntries.map(([key, value]) => (
-              <li key={key} className={styles.claim}>
-                <span className={`${styles.claimKey} ltr-embed`}>{key}</span>
-                <span className={`${styles.value} ltr-embed`}>{renderClaimValue(value)}</span>
-              </li>
-            ))}
+            {claimEntries.map(([key, value]) => {
+              const rendered = renderClaimValue(value);
+              const isDigest = typeof value === 'string' && HEX_DIGEST_PATTERN.test(value);
+              return (
+                <li key={key} className={styles.claimRow}>
+                  <div className={styles.claim}>
+                    <span className={`${styles.claimKey} ltr-embed`}>{key}</span>
+                    <span className={`${styles.value} ltr-embed`}>{rendered}</span>
+                  </div>
+                  {isDigest && <HashCompare expectedDigest={rendered} />}
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

@@ -2,6 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   getIssueSchema,
   issueCredential,
+  listAttestedSchemas,
   listPublishedSchemas,
   mintClaimCode,
   type ClaimCodeMintRequest,
@@ -12,13 +13,22 @@ export const issuanceKeys = {
   all: ['issuance'] as const,
   schemas: () => [...issuanceKeys.all, 'schemas'] as const,
   schema: (id: string) => [...issuanceKeys.schemas(), id] as const,
+  attestedSchemas: () => [...issuanceKeys.all, 'attestedSchemas'] as const,
 };
 
-/** List schemas that can be used for the Issue flow. */
+/** List schemas that can be used for the standard (non-attested) Issue flow. */
 export function usePublishedSchemas() {
   return useQuery({
     queryKey: issuanceKeys.schemas(),
     queryFn: listPublishedSchemas,
+  });
+}
+
+/** List schemas for the attested-document wizard (`requiresAttestation` only). */
+export function useAttestedSchemas() {
+  return useQuery({
+    queryKey: issuanceKeys.attestedSchemas(),
+    queryFn: listAttestedSchemas,
   });
 }
 
