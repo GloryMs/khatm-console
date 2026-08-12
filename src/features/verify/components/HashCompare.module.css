@@ -1,0 +1,28 @@
+.compare {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-start: var(--space-1);
+}
+
+.help {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--fs-xs);
+  flex-basis: 100%;
+}
+
+.pick {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  cursor: pointer;
+  font-size: var(--fs-sm);
+}
+
+.fileInput {
+  position: absolute;
+  inset-inline-start: -9999px;
+}

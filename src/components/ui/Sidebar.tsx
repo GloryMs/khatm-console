@@ -17,6 +17,7 @@ const NAV_ITEMS: NavItemDef[] = [
   { to: '/dashboard', labelKey: 'nav.dashboard', icon: '▦' },
   { to: '/issue', labelKey: 'nav.issue', icon: '＋' },
   { to: '/issue/bulk', labelKey: 'nav.issueBulk', icon: '≡' },
+  { to: '/issue/attested', labelKey: 'nav.issueAttested', icon: '⌘' },
   { to: '/schemas', labelKey: 'nav.schemas', icon: '▤' },
   { to: '/schemas/manage', labelKey: 'nav.schemaManage', icon: '✎', scope: 'schema:manage' },
   { to: '/credentials', labelKey: 'nav.credentials', icon: '◈' },

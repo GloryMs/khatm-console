@@ -2,20 +2,28 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QRCodeSVG } from 'qrcode.react';
 import { ApiErrorBanner } from '@/components/ui/ApiErrorBanner';
+import { Banner } from '@/components/ui/Banner';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SecretReveal } from '@/components/ui/SecretReveal';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { copyToClipboard } from '@/components/ui/clipboard';
+import { useErrorMessage } from '@/api/useErrorMessage';
+import { RequireScope } from '@/features/auth/RequireScope';
+import { parseClaimsDef } from '@/features/issuance/claimsDef';
+import { SchemaPicker } from '@/features/issuance/components/SchemaPicker';
+import { minutesToFormValue, parseIsoDurationMinutes } from '@/features/issuance/duration';
+import { getQrApiBase, isLocalhostOrigin, serializeQrPayload } from '@/features/issuance/qrPayload';
 import { useLocalizedText } from '@/hooks/useLocalizedText';
-import { parseClaimsDef } from './claimsDef';
-import { IssueForm, type IssueFormValues } from './components/IssueForm';
-import { SchemaPicker } from './components/SchemaPicker';
-import { minutesToFormValue, parseIsoDurationMinutes } from './duration';
-import { useIssueAndMintCredential, useIssueSchema, usePublishedSchemas } from './hooks';
-import { getQrApiBase, isLocalhostOrigin, serializeQrPayload } from './qrPayload';
-import type { IssueRequest, SchemaDetail } from './api';
-import styles from './IssuePage.module.css';
+import { splitClaimFields } from './claimFields';
+import { DetailsForm } from './components/DetailsForm';
+import { ScanStep, type ScannedFileMeta } from './components/ScanStep';
+import { ReviewStep } from './components/ReviewStep';
+import { useAttestedSchemas, useIssueAndMintCredential, useIssueSchema } from './hooks';
+import { buildAttestedIssueRequest, type AttestedIssueFormValues } from './request';
+import styles from './AttestedIssuePage.module.css';
+
+type WizardStep = 'schema' | 'scan' | 'details' | 'review' | 'success';
 
 interface SuccessState {
   ref: string;
@@ -23,19 +31,6 @@ interface SuccessState {
   expiresAt: string;
   qrApiBase: string;
   qrPayload: string;
-}
-
-function toNumber(value: string): number | undefined {
-  const trimmed = value.trim();
-  return trimmed ? Number(trimmed) : undefined;
-}
-
-function buildClaims(values: Record<string, string>): IssueRequest['claims'] {
-  const claims: NonNullable<IssueRequest['claims']> = {};
-  for (const [key, value] of Object.entries(values)) {
-    claims[key] = value as unknown as Record<string, never>;
-  }
-  return claims;
 }
 
 function requireText(value: string | undefined, errorKey: string): string {
@@ -49,32 +44,6 @@ function formatExpiresAt(value: string, locale: string): string {
   return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 }
 
-function formatCountdown(value: string, locale: string): string {
-  const expiresAt = new Date(value).getTime();
-  if (Number.isNaN(expiresAt)) return '';
-  const diffMinutes = Math.ceil((expiresAt - Date.now()) / 60_000);
-  if (diffMinutes <= 0)
-    return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(0, 'minute');
-  if (diffMinutes < 60)
-    return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(diffMinutes, 'minute');
-  const diffHours = Math.ceil(diffMinutes / 60);
-  return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(diffHours, 'hour');
-}
-
-function buildIssueRequest(detail: SchemaDetail, values: IssueFormValues): IssueRequest {
-  return {
-    holderRef: values.holderRef,
-    schemaCode: requireText(detail.code, 'issue.missingSchemaCode'),
-    // Pins issuance to the exact schema version the operator picked, not whatever
-    // (schemaCode, version=1) the backend would otherwise resolve on its own.
-    schemaId: requireText(detail.id, 'issue.missingSchemaCode'),
-    claims: buildClaims(values.claims),
-    maxUses: toNumber(values.maxUses),
-    validMinutes: toNumber(values.validMinutes),
-    sdFields: detail.sdFields,
-  };
-}
-
 function SuccessView({
   success,
   onIssueAnother,
@@ -83,13 +52,15 @@ function SuccessView({
   onIssueAnother: () => void;
 }) {
   const { t, i18n } = useTranslation();
-  const countdown = formatCountdown(success.expiresAt, i18n.language);
   return (
     <div className={styles.successGrid}>
       <div className={styles.successHead}>
         <StatusBadge tone="success">{t('issue.issuedBadge')}</StatusBadge>
         <h2 className={styles.panelTitle}>{t('issue.successTitle')}</h2>
       </div>
+
+      <Banner tone="warning">{t('issueAttested.review.guaranteeLimit')}</Banner>
+
       <div className={styles.valueRow}>
         <span className={styles.valueLabel}>{t('issue.refLabel')}</span>
         <span className={`${styles.codeValue} ltr-embed`}>{success.ref}</span>
@@ -97,7 +68,6 @@ function SuccessView({
           {t('common.copy')}
         </Button>
       </div>
-      <p className={styles.help}>{t('issue.refHelp')}</p>
 
       <SecretReveal
         label={t('issue.claimCodeLabel')}
@@ -114,43 +84,50 @@ function SuccessView({
       <div className={styles.valueRow}>
         <span className={styles.valueLabel}>{t('issue.codeExpiresAt')}</span>
         <span>{formatExpiresAt(success.expiresAt, i18n.language)}</span>
-        {countdown && <span>{countdown}</span>}
       </div>
 
       <div className={styles.qrBox}>
         <h3 className={styles.panelTitle}>{t('issue.qrTitle')}</h3>
         <QRCodeSVG value={success.qrPayload} size={220} className={styles.qrCode} />
-        <p className={`${styles.help} ltr-embed`}>
-          {t('issue.qrApiBase')}: {success.qrApiBase}
-        </p>
         {isLocalhostOrigin(success.qrApiBase) && (
           <p className={styles.warning} role="alert">
             {t('issue.qrLocalhostHint')}
           </p>
         )}
       </div>
-      <Button
-        variant="secondary"
-        type="button"
-        className={styles.issueAnotherButton}
-        onClick={onIssueAnother}
-      >
+
+      <Button variant="secondary" type="button" onClick={onIssueAnother}>
         {t('issue.issueAnother')}
       </Button>
     </div>
   );
 }
 
-export function IssuePage() {
+export function AttestedIssuePage() {
+  return (
+    <RequireScope scope="issue">
+      <AttestedIssueWizard />
+    </RequireScope>
+  );
+}
+
+function AttestedIssueWizard() {
   const { t } = useTranslation();
   const localize = useLocalizedText();
-  const schemas = usePublishedSchemas();
+  const resolveError = useErrorMessage();
+  const schemas = useAttestedSchemas();
   const issueAndMint = useIssueAndMintCredential();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [success, setSuccess] = useState<SuccessState | null>(null);
-  const detail = useIssueSchema(selectedId);
 
-  const fields = useMemo(() => parseClaimsDef(detail.data?.claimsDefJson).fields, [detail.data]);
+  const [step, setStep] = useState<WizardStep>('schema');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [digestHex, setDigestHex] = useState<string | null>(null);
+  const [fileMeta, setFileMeta] = useState<ScannedFileMeta | null>(null);
+  const [formValues, setFormValues] = useState<AttestedIssueFormValues | null>(null);
+  const [success, setSuccess] = useState<SuccessState | null>(null);
+
+  const detail = useIssueSchema(selectedId);
+  const allFields = useMemo(() => parseClaimsDef(detail.data?.claimsDefJson).fields, [detail.data]);
+  const { otherFields } = useMemo(() => splitClaimFields(allFields), [allFields]);
   const defaults = useMemo(
     () => ({
       maxUses: detail.data?.defaultMaxUses === undefined ? '' : String(detail.data.defaultMaxUses),
@@ -161,10 +138,26 @@ export function IssuePage() {
 
   const selectedName = detail.data ? localize(detail.data.nameI18n) || detail.data.code : undefined;
 
-  const onSubmit = async (values: IssueFormValues) => {
-    if (!detail.data) return;
+  const resetAll = () => {
+    setStep('schema');
+    setSelectedId(null);
+    setDigestHex(null);
+    setFileMeta(null);
+    setFormValues(null);
+    setSuccess(null);
+    issueAndMint.reset();
+  };
+
+  const backToScan = () => {
+    setDigestHex(null);
+    setFileMeta(null);
+    setStep('scan');
+  };
+
+  const onConfirmIssue = async () => {
+    if (!detail.data || !digestHex || !formValues) return;
     const response = await issueAndMint.mutateAsync({
-      issue: buildIssueRequest(detail.data, values),
+      issue: buildAttestedIssueRequest(detail.data, formValues, digestHex),
     });
     const code = requireText(response.claimCode.code, 'issue.missingClaimCode');
     const expiresAt = requireText(response.claimCode.expiresAt, 'issue.missingClaimCodeExpiry');
@@ -176,37 +169,35 @@ export function IssuePage() {
       qrApiBase,
       qrPayload: serializeQrPayload({ v: 1, api: qrApiBase, code }),
     });
-  };
-
-  const resetFlow = () => {
-    setSelectedId(null);
-    setSuccess(null);
-    issueAndMint.reset();
+    setStep('success');
   };
 
   return (
     <section className={styles.page}>
-      <h1 className={styles.title}>{t('issue.title')}</h1>
+      <h1 className={styles.title}>{t('issueAttested.title')}</h1>
+      <p className={styles.help}>{t('issueAttested.intro')}</p>
 
-      <section className={styles.panel}>
-        <h2 className={styles.panelTitle}>{t('issue.stepPick')}</h2>
-        <p className={styles.help}>{t('issue.pickPrompt')}</p>
-        {schemas.isPending && <p>{t('common.loading')}</p>}
-        {schemas.isError && <ApiErrorBanner error={schemas.error} />}
-        {schemas.data && (
-          <SchemaPicker
-            schemas={schemas.data}
-            onPick={(schema) => {
-              if (schema.id) {
-                setSelectedId(schema.id);
-                setSuccess(null);
-              }
-            }}
-          />
-        )}
-      </section>
+      {step === 'schema' && (
+        <section className={styles.panel}>
+          <h2 className={styles.panelTitle}>{t('issue.stepPick')}</h2>
+          <p className={styles.help}>{t('issueAttested.pickPrompt')}</p>
+          {schemas.isPending && <p>{t('common.loading')}</p>}
+          {schemas.isError && <ApiErrorBanner error={schemas.error} />}
+          {schemas.data && (
+            <SchemaPicker
+              schemas={schemas.data}
+              onPick={(schema) => {
+                if (schema.id) {
+                  setSelectedId(schema.id);
+                  setStep('scan');
+                }
+              }}
+            />
+          )}
+        </section>
+      )}
 
-      {selectedId && (
+      {step !== 'schema' && (
         <section className={styles.formPanel}>
           <div className={styles.formPanelHead}>
             <div className={styles.selectedSchema}>
@@ -214,39 +205,65 @@ export function IssuePage() {
                 <h2 className={styles.panelTitle}>{t('issue.stepForm')}</h2>
                 {selectedName && <p className={styles.help}>{selectedName}</p>}
               </div>
-              <Button variant="ghost" type="button" onClick={resetFlow}>
+              <Button variant="ghost" type="button" onClick={resetAll}>
                 {t('issue.changeSchema')}
               </Button>
             </div>
-
             {detail.isPending && <p>{t('common.loading')}</p>}
             {detail.isError && <ApiErrorBanner error={detail.error} />}
           </div>
 
           {detail.data && (
-            <div className={styles.grid}>
-              <div className={styles.left}>
-                <IssueForm
-                  key={detail.data.id}
-                  fields={fields}
-                  defaults={defaults}
-                  sdFields={detail.data.sdFields ?? []}
-                  onSubmit={onSubmit}
-                  onBack={resetFlow}
-                  isSubmitting={issueAndMint.isPending}
-                  error={issueAndMint.error}
+            <div className={styles.body}>
+              {step === 'scan' && (
+                <ScanStep
+                  onHashed={(digest, file) => {
+                    setDigestHex(digest);
+                    setFileMeta(file);
+                    setStep('details');
+                  }}
+                  onBack={resetAll}
                 />
-              </div>
-              <div className={styles.right}>
-                {success ? (
-                  <SuccessView success={success} onIssueAnother={resetFlow} />
+              )}
+
+              {step === 'details' && digestHex && (
+                <DetailsForm
+                  digestHex={digestHex}
+                  fields={otherFields}
+                  sdFields={detail.data.sdFields ?? []}
+                  defaults={defaults}
+                  initialValues={formValues ?? undefined}
+                  onSubmit={(values) => {
+                    setFormValues(values);
+                    setStep('review');
+                  }}
+                  onChangeFile={backToScan}
+                  onBack={resetAll}
+                />
+              )}
+
+              {step === 'review' && digestHex && fileMeta && formValues && (
+                <ReviewStep
+                  digestHex={digestHex}
+                  fileName={fileMeta.name}
+                  fields={otherFields}
+                  values={formValues}
+                  isBusy={issueAndMint.isPending}
+                  errorMessage={issueAndMint.isError ? resolveError(issueAndMint.error) : undefined}
+                  onConfirm={() => void onConfirmIssue()}
+                  onBack={() => setStep('details')}
+                />
+              )}
+
+              {step === 'success' &&
+                (success ? (
+                  <SuccessView success={success} onIssueAnother={resetAll} />
                 ) : (
                   <EmptyState
                     title={t('issue.resultEmptyTitle')}
                     body={t('issue.resultEmptyBody')}
                   />
-                )}
-              </div>
+                ))}
             </div>
           )}
         </section>

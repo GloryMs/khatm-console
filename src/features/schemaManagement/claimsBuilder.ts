@@ -6,9 +6,9 @@ export const BUILDER_FIELD_TYPES: readonly BuilderFieldType[] = ['text', 'number
 
 /**
  * One claims-def builder row. The authoring contract (`ClaimFieldRequest`)
- * carries only `name`/`type`/`labelI18n` — no per-field `required` flag — so
- * that concept has no editable representation here (brief/contract gap,
- * noted in STATE.md).
+ * carries only `name`/`type`/`labelI18n`/`pattern` — no per-field `required`
+ * flag — so that concept has no editable representation here (brief/contract
+ * gap, noted in STATE.md).
  */
 export interface BuilderFieldRow {
   name: string;
@@ -16,6 +16,8 @@ export interface BuilderFieldRow {
   labelEn: string;
   labelAr: string;
   selective: boolean;
+  /** Optional regex a claim value must match at issuance (KH-2.4, spec FS-2.4 item 3). Blank = no constraint. */
+  pattern: string;
 }
 
 export function isBuilderFieldType(value: string): value is BuilderFieldType {
@@ -23,15 +25,21 @@ export function isBuilderFieldType(value: string): value is BuilderFieldType {
 }
 
 export function emptyRow(): BuilderFieldRow {
-  return { name: '', type: 'text', labelEn: '', labelAr: '', selective: false };
+  return { name: '', type: 'text', labelEn: '', labelAr: '', selective: false, pattern: '' };
 }
 
-/** Serialize builder rows to the request's `claimsDef` array, preserving row order. */
+/**
+ * Serialize builder rows to the request's `claimsDef` array, preserving row
+ * order. `pattern` is omitted entirely (not sent as an empty string) when
+ * blank — matches how a field with no format constraint reads back from
+ * `fromSchemaDetail` (an absent `pattern` key, not an empty one).
+ */
 export function toClaimsDef(rows: BuilderFieldRow[]): ClaimFieldRequest[] {
   return rows.map((row) => ({
     name: row.name,
     type: row.type,
     labelI18n: { en: row.labelEn, ar: row.labelAr },
+    ...(row.pattern.trim() ? { pattern: row.pattern.trim() } : {}),
   }));
 }
 
@@ -44,6 +52,7 @@ interface RawField {
   type?: unknown;
   label_i18n?: unknown;
   labelI18n?: unknown;
+  pattern?: unknown;
 }
 
 function asString(value: unknown): string {
@@ -100,6 +109,7 @@ export function fromSchemaDetail(detail: SchemaDetail): BuilderFieldRow[] {
       labelEn: label.en,
       labelAr: label.ar,
       selective: sdFields.includes(name),
+      pattern: asString(raw.pattern),
     });
   }
   return rows;

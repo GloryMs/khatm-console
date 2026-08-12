@@ -14,6 +14,7 @@ function blankValues(): SchemaBuilderFormValues {
     defaultMaxUses: '',
     defaultValidityDays: '',
     defaultValidityHours: '',
+    requiresAttestation: false,
     rows: [emptyRow()],
   };
 }
@@ -57,7 +58,16 @@ describe('SchemaBuilderForm', () => {
       code: 'X/v1',
       nameEn: 'X',
       nameAr: 'اكس',
-      rows: [{ name: 'result', type: 'text', labelEn: 'Result', labelAr: '', selective: false }],
+      rows: [
+        {
+          name: 'result',
+          type: 'text',
+          labelEn: 'Result',
+          labelAr: '',
+          selective: false,
+          pattern: '',
+        },
+      ],
     });
     const user = userEvent.setup();
     await user.click(
@@ -77,7 +87,14 @@ describe('SchemaBuilderForm', () => {
       nameEn: 'X',
       nameAr: '',
       rows: [
-        { name: 'result', type: 'text', labelEn: 'Result', labelAr: 'نتيجة', selective: false },
+        {
+          name: 'result',
+          type: 'text',
+          labelEn: 'Result',
+          labelAr: 'نتيجة',
+          selective: false,
+          pattern: '',
+        },
       ],
     });
     const user = userEvent.setup();
@@ -150,7 +167,74 @@ describe('SchemaBuilderForm', () => {
       .calls[0][0] as SchemaBuilderFormValues;
     expect(values.code).toBe('X/v1');
     expect(values.rows).toEqual([
-      { name: 'result', type: 'text', labelEn: 'Result', labelAr: 'النتيجة', selective: true },
+      {
+        name: 'result',
+        type: 'text',
+        labelEn: 'Result',
+        labelAr: 'النتيجة',
+        selective: true,
+        pattern: '',
+      },
     ]);
+  });
+
+  it('toggles requiresAttestation and submits it on the form values', async () => {
+    const onSubmit = renderForm('create', {
+      ...blankValues(),
+      code: 'AttestedDocument/v1',
+      nameEn: 'Attested Document',
+      nameAr: 'وثيقة مصدَّقة',
+      rows: [
+        {
+          name: 'doc_sha256',
+          type: 'text',
+          labelEn: 'Document SHA-256',
+          labelAr: 'بصمة SHA-256',
+          selective: true,
+          pattern: '',
+        },
+      ],
+    });
+    const user = userEvent.setup();
+
+    await user.click(
+      screen.getByLabelText(i18n.t('schemaManagement.builder.requiresAttestationInline')),
+    );
+    await user.click(
+      screen.getByRole('button', { name: i18n.t('schemaManagement.builder.submitCreate') }),
+    );
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const values = (onSubmit as ReturnType<typeof vi.fn>).mock
+      .calls[0][0] as SchemaBuilderFormValues;
+    expect(values.requiresAttestation).toBe(true);
+  });
+
+  it('rejects an unparseable regex in a claim field pattern', async () => {
+    const onSubmit = renderForm('create', {
+      ...blankValues(),
+      code: 'X/v1',
+      nameEn: 'X',
+      nameAr: 'اكس',
+      rows: [
+        {
+          name: 'result',
+          type: 'text',
+          labelEn: 'Result',
+          labelAr: 'النتيجة',
+          selective: false,
+          pattern: '[unclosed',
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole('button', { name: i18n.t('schemaManagement.builder.submitCreate') }),
+    );
+
+    expect(
+      await screen.findByText(i18n.t('schemaManagement.builder.patternInvalid')),
+    ).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 });

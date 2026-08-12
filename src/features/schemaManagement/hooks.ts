@@ -37,8 +37,9 @@ export function useManagedSchema(id: string | null) {
 
 /**
  * Every schema write invalidates the management list, the read-only catalog
- * (`/schemas`), and the Issue picker's published-schemas query — so a freshly
- * published (or archived) schema shows up there with no code change.
+ * (`/schemas`), and both Issue pickers' queries — so a freshly published (or
+ * archived, or `requiresAttestation`-toggled) schema shows up there with no
+ * code change, on whichever picker it now belongs to.
  */
 function useInvalidateAfterWrite() {
   const queryClient = useQueryClient();
@@ -46,6 +47,7 @@ function useInvalidateAfterWrite() {
     void queryClient.invalidateQueries({ queryKey: schemaManagementKeys.all });
     void queryClient.invalidateQueries({ queryKey: schemasKeys.list() });
     void queryClient.invalidateQueries({ queryKey: issuanceKeys.schemas() });
+    void queryClient.invalidateQueries({ queryKey: issuanceKeys.attestedSchemas() });
   };
 }
 
