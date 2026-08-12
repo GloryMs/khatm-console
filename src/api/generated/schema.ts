@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/.well-known/jwks.json": {
+    "/api/v1/schemas/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -12,12 +12,15 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Fetch the JWKS
-         * @deprecated
-         * @description Public signing keys of every lifecycle state (ACTIVE/RETIRING/RETIRED), no authentication required. Deprecated (spec FS-2.1 V2): aliases the default tenant only — every other tenant's JWKS is at GET /t/{tenantSlug}/.well-known/jwks.json. Stays available through Phase 2.
+         * Fetch a credential schema's detail
+         * @description Adds the raw claims definition to the list view's fields, so a console issue screen can render the schema's claim fields. Same access rule as the list endpoint — authenticated, any scope.
          */
-        get: operations["jwks_1"];
-        put?: never;
+        get: operations["get"];
+        /**
+         * Rewrite a DRAFT schema's authoring fields in place
+         * @description Requires the schema:manage scope. DRAFT only — fixes mistakes before publish. Validated identically to POST /api/v1/schemas.
+         */
+        put: operations["update"];
         post?: never;
         delete?: never;
         options?: never;
@@ -25,7 +28,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/activity": {
+    "/api/v1/users": {
         parameters: {
             query?: never;
             header?: never;
@@ -33,19 +36,23 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Fetch the recent-activity feed
-         * @description The most recent credential-lifecycle audit events (issued/consumed/revoked/schema-denied/claim-redeemed/verify-ok/verify-failed), newest first, resolved for display: entity_ref is always the credential's ref (never a bare id), and consuming-party attribution is resolved where the underlying event supports it. event, if present, is a comma-separated subset of AuditAction names to filter to (unknown values are ignored); omit it for every eligible action. Requires a console session — no API key of any kind works here (same gate as GET /api/v1/stats).
+         * List tenant users
+         * @description Every user of the caller's tenant, newest first. Requires the tenant:admin scope.
          */
-        get: operations["activity"];
+        get: operations["list"];
         put?: never;
-        post?: never;
+        /**
+         * Create a tenant user
+         * @description Creates a user with a generated temporary password (shown once) and forces a change at first login. Roles are chosen from the fixed seeded catalog. Requires the tenant:admin scope.
+         */
+        post: operations["create"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/api-keys": {
+    "/api/v1/users/{id}/unlock": {
         parameters: {
             query?: never;
             header?: never;
@@ -55,17 +62,17 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Create an API key
-         * @description The response's rawKey is shown exactly once — the platform stores only its SHA-256 hash and prefix (spec FS-0.6b §4). tenantId (spec FS-2.1) defaults to the caller's own tenant, requiring only the tenant:admin scope (spec FS-2.2 V4). Naming a tenantId other than the caller's own — a platform admin provisioning a newly onboarded tenant's first key — additionally requires the platform:admin scope (spec FS-2.2 D4), enforced by shared.OnBehalfOfExecutor and recorded as AuditAction.ON_BEHALF_OF.
+         * Unlock a user
+         * @description Restores a LOCKED/DISABLED user to ACTIVE. Requires the tenant:admin scope.
          */
-        post: operations["createApiKey"];
+        post: operations["unlock"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/api-keys/{id}/revoke": {
+    "/api/v1/users/{id}/totp/reset": {
         parameters: {
             query?: never;
             header?: never;
@@ -75,41 +82,17 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Revoke an API key
-         * @description The key stops authenticating on the very next request (spec FS-0.6b DoD #5). Idempotent — revoking an already-revoked or unknown key still returns 200. Requires the tenant:admin scope (spec FS-2.2 V4); RLS scopes visibility to the caller's own tenant's keys regardless.
+         * Reset a user's TOTP enrollment
+         * @description Clears the target user's TOTP enrollment and invalidates their remaining recovery codes — they re-enroll at next login if a mandatory scope requires it. Idempotent (a user with no TOTP enrolled is a no-op). Requires the tenant:admin scope.
          */
-        post: operations["revokeApiKey"];
+        post: operations["resetTotp"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/consuming-parties": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List consuming parties
-         * @description Every consuming party registered for the tenant (newest first), each with its status and resolved schema allowlist. Requires the consumer:manage scope.
-         */
-        get: operations["list_4"];
-        put?: never;
-        /**
-         * Register a consuming party
-         * @description Creates a party with the given code and bilingual name. The code is a lowercase slug (^[a-z0-9][a-z0-9-_]{1,62}$); the row's id is derived deterministically from (tenant, code), so this is idempotent by identity — but registering an already-registered code is a conflict (KH-CNS-0409), not a silent overwrite. Requires the consumer:manage scope.
-         */
-        post: operations["create_2"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/consuming-parties/{id}/activate": {
+    "/api/v1/users/{id}/roles": {
         parameters: {
             query?: never;
             header?: never;
@@ -119,17 +102,17 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Reactivate a consuming party
-         * @description Flips a SUSPENDED party back to ACTIVE — its API keys authenticate again. Idempotent. Requires the consumer:manage scope.
+         * Replace a user's roles
+         * @description Replaces the user's entire role set. Requires the tenant:admin scope. Refused with 409 (KH-USR-0423) if it would remove the tenant's last active administrator.
          */
-        post: operations["activate_1"];
+        post: operations["replaceRoles"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/consuming-parties/{id}/allowed-schemas": {
+    "/api/v1/users/{id}/reset-password": {
         parameters: {
             query?: never;
             header?: never;
@@ -139,37 +122,17 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Add a schema to a party's allowlist
-         * @description Scopes the party to consume credentials issued against the given schema (deny-by-default: a party with an empty allowlist can consume nothing). Idempotent. The schema must exist in the tenant (KH-CNS-1404 otherwise). Requires the admin scope.
+         * Reset a user's password
+         * @description Generates a new temporary password (shown once) and forces a change at next login. Requires the tenant:admin scope.
          */
-        post: operations["allowSchema"];
+        post: operations["resetPassword"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/consuming-parties/{id}/allowed-schemas/{schemaId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Remove a schema from a party's allowlist
-         * @description Idempotent — removing a pair that is not allowed (including for an unknown party) is a successful 204 no-op. Requires the consumer:manage scope.
-         */
-        delete: operations["disallowSchema"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/consuming-parties/{id}/api-keys": {
+    "/api/v1/users/{id}/lock": {
         parameters: {
             query?: never;
             header?: never;
@@ -179,17 +142,17 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Mint an API key for a consuming party
-         * @description Creates a CONSUMING_PARTY-owned API key (scope: consume) for the given party. The response's rawKey is shown exactly once — the platform stores only its SHA-256 hash and prefix (spec FS-0.6b §4). Revoke it later via POST /api/v1/admin/api-keys/{id}/revoke. Requires the consumer:manage scope.
+         * Lock a user
+         * @description Sets the user LOCKED. Requires the tenant:admin scope. Refused with 409 (KH-USR-0423) if this is the tenant's last active administrator.
          */
-        post: operations["mintKey"];
+        post: operations["lock"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/consuming-parties/{id}/suspend": {
+    "/api/v1/users/{id}/disable": {
         parameters: {
             query?: never;
             header?: never;
@@ -199,37 +162,17 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Suspend a consuming party
-         * @description Flips the party to SUSPENDED — its API keys immediately stop authenticating (KH-1.4.4 D4), the same outcome as a revoked key. Idempotent. Requires the consumer:manage scope.
+         * Disable a user
+         * @description Sets the user DISABLED. Requires the tenant:admin scope. Refused with 409 (KH-USR-0423) if this is the tenant's last active administrator.
          */
-        post: operations["suspend_1"];
+        post: operations["disable"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/signing-keys": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List every signing key's lifecycle status
-         * @description Every signing key for the tenant, newest first, every state including RETIRED — lifecycle fields only (kid/state/provider/validFrom/validTo), never the public JWK or any private material. Requires the key:manage scope (any actor kind).
-         */
-        get: operations["signingKeys"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/signing-keys/rotate": {
+    "/api/v1/users/me/totp/enroll": {
         parameters: {
             query?: never;
             header?: never;
@@ -239,17 +182,17 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Rotate the tenant's signing key
-         * @description Atomically: generate a new key via the configured KeyProvider, move the current ACTIVE key to RETIRING, and activate the new one. The one-ACTIVE-per-tenant partial unique index is the final arbiter under concurrent rotations — at most one concurrent caller ever succeeds. All of the tenant's status lists are also forced stale in the same operation, so the existing periodic sweep re-signs them with the new key within one cycle. An optional 'provider' in the request body rotates onto a different KeyProvider (e.g. SOFT -> VAULT) — this IS the provider-migration mechanism (spec FS-2.3 D6): omitted, the new key stays on the tenant's current provider. Requires the key:manage scope (any actor kind).
+         * Begin TOTP enrollment
+         * @description Generates a fresh secret (encrypted at rest) and returns it, Base32-encoded, plus an otpauth:// enrollment URI — shown exactly once. Any authenticated console session may enroll its own user. Refused with 409 if TOTP is already active (an administrator must reset it first); calling this again before confirming simply supersedes the previous, not-yet-confirmed secret.
          */
-        post: operations["rotate"];
+        post: operations["enrollTotp"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/signing-keys/{kid}/retire": {
+    "/api/v1/users/me/totp/confirm": {
         parameters: {
             query?: never;
             header?: never;
@@ -259,10 +202,344 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Retire a RETIRING signing key
-         * @description Moves a RETIRING key to RETIRED. Only a RETIRING key may be retired (409 otherwise). Rejected with 422 if the key has not yet reached khatm.keys.min-retiring-age (default P30D) unless force=true (bypasses the guard, audited). A RETIRED key stays published in JWKS and stays verifiable — retiring never breaks verification of documents already signed with it. Requires the key:manage scope (any actor kind).
+         * Confirm TOTP enrollment
+         * @description Activates a pending enrollment with a live code from the authenticator app and returns 10 one-time recovery codes — shown exactly once. Refused with 409 if there is no pending enrollment, it is already active, or it has expired (re-enroll in any of those cases); refused with 400 if the code does not match.
          */
-        post: operations["retire"];
+        post: operations["confirmTotp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/me/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change own password
+         * @description The self-service password change — the one call a temporary-password user may make while must_change_password is set, and the call that clears it. Any authenticated console user may call it; the target user is taken from the session principal, never the body.
+         */
+        post: operations["changeMyPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/schemas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List credential schemas
+         * @description Read-only tenant metadata (id, display name, version, status) — every authenticated actor kind may call this, no specific scope required (a deliberate, documented decision: see rbac.security.SecurityConfig's Javadoc). The optional status filter (KH-1.1.1) lets the console's schema management view show DRAFT rows too; the issue-form picker keeps filtering to PUBLISHED client-side, as before.
+         */
+        get: operations["list_1"];
+        put?: never;
+        /**
+         * Create a new DRAFT credential schema (version 1)
+         * @description Requires the schema:manage scope. Server-side validation rejects an empty claimsDef, a claim field with an unsupported type (text/number/date), a nameI18n or claim labelI18n missing en or ar, an sdFields entry not among the claim field names, or a code already registered at version 1 — all as KH-SCH-0400. The schema starts DRAFT and unavailable for issuance until POST /{id}/publish.
+         */
+        post: operations["create_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/schemas/{id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a new DRAFT version of a PUBLISHED schema
+         * @description Requires the schema:manage scope. Same code, version + 1. The console is responsible for prefilling the request body from the source schema's current fields — this endpoint validates the submitted body exactly like POST /api/v1/schemas, with no server-side default-merging.
+         */
+        post: operations["createVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/schemas/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish a DRAFT schema
+         * @description Requires the schema:manage scope. DRAFT -> PUBLISHED — the immutability line: a published schema's claim fields can never be mutated again (no general update endpoint exists for a PUBLISHED schema); a mistake found later needs a new version (POST /{id}/versions) instead. A PUBLISHED schema becomes a valid issuance target for POST /api/v1/credentials/issue's schemaCode.
+         */
+        post: operations["publish"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/schemas/{id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Archive a PUBLISHED schema
+         * @description Requires the schema:manage scope. PUBLISHED -> ARCHIVED — stops NEW issuance against this schema (POST /api/v1/credentials/issue and the internal find-or-create path both reject it, KH-SCH-1409); every credential already issued against it, and its verification/consumption, is completely unaffected.
+         */
+        post: operations["archive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/credentials/{id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke a credential
+         * @description Immediately and permanently invalidates the credential — a subsequent /verify or /consume call reports it revoked. Requires the revoke scope and a console session (an API key is always 403 here). Irreversible.
+         */
+        post: operations["revoke"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/credentials/{id}/claim-code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mint a fresh wallet claim code for an already-issued credential
+         * @description The console-facing counterpart to POST /issue's one-time claim-code delivery — spec FS-1.2.1 D2's explicit recovery path: if a code never reached the wallet (lost response, expired unclaimed, or the issuer simply wants to hand the credential out again), the issuer mints a new one here rather than re-issuing the whole credential. Requires the exact sdJwt presentation string the original /issue call returned — the platform never stores disclosures outside a claim_code row (P1), so this endpoint cannot reconstruct them on its own; the caller is expected to have retained that one-time delivery for exactly this purpose.
+         *
+         *     Minting voids any prior still-live code for this credential (its disclosures_enc is zeroed, the same mechanism the redeem and expiry-sweep paths use) — at most one code is ever redeemable per credential at a time.
+         *
+         *     The response's code is a one-time delivery, exactly like /issue's sdJwt: it appears in this response and nowhere else, ever. It is what a console issue screen encodes into the QR v1 payload described on POST /api/v1/claims/redeem — {"v":1,"api":"<platform base URL>","code":"<this code>"} — for a wallet to scan and redeem at that endpoint.
+         */
+        post: operations["mintClaimCode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/credentials/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify an SD-JWT credential presentation
+         * @description Accepts the standard tilde-separated SD-JWT presentation, or a bare compact JWT. Passing a bare JWT with no disclosures at all is a valid zero-disclosure presentation (spec FS-0.4 §5) — it will typically (and correctly) fail with reason 'withheld_mandatory_claim' unless the schema's sd_fields happens to cover every claims_def field. A verification failure is always HTTP 200 with valid:false (spec FS-0.6a D1) — it is a domain result, never an error envelope. Only a completely blank sdJwt is rejected as a 400.
+         */
+        post: operations["verify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/credentials/issue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue a new SD-JWT verifiable credential
+         * @description Every claim becomes a salted, selectively-disclosable SD-JWT disclosure (spec FS-0.4 D1) — none of them appear as a plaintext value in the persisted, signed payload. The response's sdJwt is a one-time delivery of the full presentation (compact JWT plus every disclosure); the platform never stores it in that form.
+         */
+        post: operations["issue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/credentials/holder-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check a credential's lifecycle status by proof of possession
+         * @description Public endpoint, like /verify — no session or API key (spec FS-1.6 D3, a deliberate, explicit reversal of PR #33's original 'no live uses-remaining channel' stance). The request body's jwt is the bare compact SD-JWT (no disclosures); proving possession of a validly signed token is the only authentication this endpoint needs — it never reads or returns claim content (P1 rule), only status/maxUses/usesRemaining/lastConsumedAt. An invalid signature or an unresolvable credential both collapse to the same 404 (KH-CRD-0404) so an external caller cannot distinguish 'not a real credential' from 'forged' (anti-enumeration).
+         */
+        post: operations["holderStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/credentials/consume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Consume one use of a credential
+         * @description The atomic double-spend guard: a single-transaction conditional UPDATE decrements the remaining uses only if the credential is still ACTIVE and unexpired, so exactly one caller wins under concurrency. Requires the consume scope and a CONSUMING_PARTY API key (a console session, or a TENANT key even with the consume scope, is always 403 here). The caller's consuming party must also be scoped to the credential's schema via consuming_party_schema (KH-1.4.3, deny-by-default — an unconfigured party can consume nothing). An optional idempotencyKey makes repeated calls with the same key return the first outcome without re-running the UPDATE.
+         */
+        post: operations["consume"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/credentials/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue a batch of credentials against one schema
+         * @description The C3 console wizard's CSV-per-schema flow (KH-1.1.3) — up to 200 items, one schema per batch, each issued independently through the same single-issue path (no parallel issuance logic, no bypass of any single-issue guard). One bad row never rolls back the batch: the response reports every item's outcome by index, ISSUED or FAILED with its own error. Setting mintClaimCodes:true mints a one-time wallet claim code for every successfully issued item (the existing POST /{id}/claim-code path) and returns it in that item's result — shown here exactly once. Requires the same scope as /issue: session or TENANT API key (a CONSUMING_PARTY key is always 403 here).
+         */
+        post: operations["bulkIssue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/claims/redeem": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Redeem a one-time wallet claim code
+         * @description The single-use exchange that hands a freshly issued credential to a wallet: the code is consumed atomically (locked, validated, decrypted, marked claimed, and the platform's only copy of the disclosures zeroed — all in one transaction, before this response is built) so exactly one caller can ever redeem a given code. Authenticates by possession of the code alone — no session or API key, ever (spec FS-1.2.1 §9); public, rate-limited per source address instead.
+         *
+         *     **QR contract v1** (spec FS-1.2.1 D8, stable): the QR payload a console issue screen renders is the JSON text `{"v":1,"api":"<platform base URL>","code":"<claim code>"}`. A wallet decodes it and POSTs `code` here, against `{api}/api/v1/claims/redeem`. `v` exists so a future incompatible QR shape can be introduced without breaking wallets still reading `v:1`.
+         *
+         *     The wallet is contractually obligated to persist the full response immediately on receipt, before any display — the platform cannot hand it out a second time. A lost response after a successful redeem (e.g. the connection drops) is not recoverable by retrying; the issuer must create a new claim code from the console.
+         *
+         *     The response's `maxUses`/`expiresAt` are a redeem-time snapshot of the credential row, for display only. There is deliberately no live "uses remaining" channel: the holder is anonymous by design (P1 — no PII, no holder identity to authorize a lookup against), and a polling endpoint keyed by a credential reference would itself be new attack surface. Out of scope by design, not an oversight.
+         */
+        post: operations["redeem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/totp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complete a TOTP login challenge
+         * @description Completes a login that POST /api/v1/auth/login flagged totpRequired, with either a live TOTP code or a one-time recovery code (exactly one of the two). On success, establishes the session exactly like a direct login. Rate-limited identically to the password step (spec FS-2.2 V1); every failure reason returns the same generic 401 as login itself.
+         */
+        post: operations["completeTotp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Console logout
+         * @description Invalidates the current session.
+         */
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Console login
+         * @description Authenticates a username/password pair and establishes a server-side session (Redis-backed, cookie KHATM_SESSION). The optional tenantSlug (spec FS-2.2) authenticates against that tenant specifically; omit or leave it blank to log into the caller's ambient default tenant, unchanged from before. Every failure reason — unknown user, wrong password, temporary lockout, administrative LOCKED/DISABLED, or an unknown/SUSPENDED tenantSlug — returns the identical generic 401 (spec FS-0.6b D7); the real reason is recorded only in the audit log. If the account has an active TOTP enrollment (spec FS-2.2 V1), no session is created yet — the response body instead carries totpRequired:true and a challengeId to submit to POST /api/v1/auth/totp.
+         */
+        post: operations["login"];
         delete?: never;
         options?: never;
         head?: never;
@@ -287,66 +564,6 @@ export interface paths {
          * @description Full onboarding: tenant row + first ACTIVE signing key + default status list (delegated to tenant::api), the three-role catalog seeded, and — when initialAdmin is present — the tenant's first TENANT_ADMIN with a one-time temporary password. Resumable: a retried slug fills whatever a prior partial onboarding left missing (catalog and/or admin), never duplicates. Requires the platform:admin scope.
          */
         post: operations["onboard"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/tenants/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Fetch a tenant
-         * @description One tenant by id. Requires the platform:admin scope.
-         */
-        get: operations["get_2"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/tenants/{id}/activate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Reactivate a tenant
-         * @description Flips a SUSPENDED tenant back to ACTIVE — its users'/API keys' authentication resumes. Idempotent. Requires the platform:admin scope.
-         */
-        post: operations["activate"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/tenants/{id}/suspend": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Suspend a tenant
-         * @description Flips the tenant to SUSPENDED — its own users' sessions and API keys immediately stop authenticating (spec D7), the same outcome as a revoked key. Already-issued credentials keep verifying/consuming, and the tenant's JWKS + status lists stay public (spec V4) — suspension blocks new issuance only. Idempotent. Requires the platform:admin scope.
-         */
-        post: operations["suspend"];
         delete?: never;
         options?: never;
         head?: never;
@@ -397,7 +614,87 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/attention": {
+    "/api/v1/admin/tenants/{id}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suspend a tenant
+         * @description Flips the tenant to SUSPENDED — its own users' sessions and API keys immediately stop authenticating (spec D7), the same outcome as a revoked key. Already-issued credentials keep verifying/consuming, and the tenant's JWKS + status lists stay public (spec V4) — suspension blocks new issuance only. Idempotent. Requires the platform:admin scope.
+         */
+        post: operations["suspend"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/tenants/{id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reactivate a tenant
+         * @description Flips a SUSPENDED tenant back to ACTIVE — its users'/API keys' authentication resumes. Idempotent. Requires the platform:admin scope.
+         */
+        post: operations["activate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/signing-keys/{kid}/retire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retire a RETIRING signing key
+         * @description Moves a RETIRING key to RETIRED. Only a RETIRING key may be retired (409 otherwise). Rejected with 422 if the key has not yet reached khatm.keys.min-retiring-age (default P30D) unless force=true (bypasses the guard, audited). A RETIRED key stays published in JWKS and stays verifiable — retiring never breaks verification of documents already signed with it. Requires the key:manage scope (any actor kind).
+         */
+        post: operations["retire"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/signing-keys/rotate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rotate the tenant's signing key
+         * @description Atomically: generate a new key via the configured KeyProvider, move the current ACTIVE key to RETIRING, and activate the new one. The one-ACTIVE-per-tenant partial unique index is the final arbiter under concurrent rotations — at most one concurrent caller ever succeeds. All of the tenant's status lists are also forced stale in the same operation, so the existing periodic sweep re-signs them with the new key within one cycle. An optional 'provider' in the request body rotates onto a different KeyProvider (e.g. SOFT -> VAULT) — this IS the provider-migration mechanism (spec FS-2.3 D6): omitted, the new key stays on the tenant's current provider. Requires the key:manage scope (any actor kind).
+         */
+        post: operations["rotate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/consuming-parties": {
         parameters: {
             query?: never;
             header?: never;
@@ -405,10 +702,154 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Fetch the needs-attention feed
-         * @description Itemized, actionable anomalies computed on read from the audit trail — never a bare count (see GET /api/v1/stats for those). Ships two item types this session: recent CONSUME_SCHEMA_DENIED events within a configurable window, and a verify-failure-rate alert when the current window's failure rate clears a configurable multiplier of the immediately preceding window's baseline (with a minimum-volume floor to avoid noise). A third starter type (signing key approaching rotation) is deliberately out of scope this session. Requires a console session — no API key of any kind works here (same gate as GET /api/v1/stats).
+         * List consuming parties
+         * @description Every consuming party registered for the tenant (newest first), each with its status and resolved schema allowlist. Requires the consumer:manage scope.
          */
-        get: operations["attention"];
+        get: operations["list_4"];
+        put?: never;
+        /**
+         * Register a consuming party
+         * @description Creates a party with the given code and bilingual name. The code is a lowercase slug (^[a-z0-9][a-z0-9-_]{1,62}$); the row's id is derived deterministically from (tenant, code), so this is idempotent by identity — but registering an already-registered code is a conflict (KH-CNS-0409), not a silent overwrite. Requires the consumer:manage scope.
+         */
+        post: operations["create_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/consuming-parties/{id}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suspend a consuming party
+         * @description Flips the party to SUSPENDED — its API keys immediately stop authenticating (KH-1.4.4 D4), the same outcome as a revoked key. Idempotent. Requires the consumer:manage scope.
+         */
+        post: operations["suspend_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/consuming-parties/{id}/api-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mint an API key for a consuming party
+         * @description Creates a CONSUMING_PARTY-owned API key (scope: consume) for the given party. The response's rawKey is shown exactly once — the platform stores only its SHA-256 hash and prefix (spec FS-0.6b §4). Revoke it later via POST /api/v1/admin/api-keys/{id}/revoke. Requires the consumer:manage scope.
+         */
+        post: operations["mintKey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/consuming-parties/{id}/allowed-schemas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a schema to a party's allowlist
+         * @description Scopes the party to consume credentials issued against the given schema (deny-by-default: a party with an empty allowlist can consume nothing). Idempotent. The schema must exist in the tenant (KH-CNS-1404 otherwise). Requires the admin scope.
+         */
+        post: operations["allowSchema"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/consuming-parties/{id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reactivate a consuming party
+         * @description Flips a SUSPENDED party back to ACTIVE — its API keys authenticate again. Idempotent. Requires the consumer:manage scope.
+         */
+        post: operations["activate_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/api-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create an API key
+         * @description The response's rawKey is shown exactly once — the platform stores only its SHA-256 hash and prefix (spec FS-0.6b §4). tenantId (spec FS-2.1) defaults to the caller's own tenant, requiring only the tenant:admin scope (spec FS-2.2 V4). Naming a tenantId other than the caller's own — a platform admin provisioning a newly onboarded tenant's first key — additionally requires the platform:admin scope (spec FS-2.2 D4), enforced by shared.OnBehalfOfExecutor and recorded as AuditAction.ON_BEHALF_OF.
+         */
+        post: operations["createApiKey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/api-keys/{id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke an API key
+         * @description The key stops authenticating on the very next request (spec FS-0.6b DoD #5). Idempotent — revoking an already-revoked or unknown key still returns 200. Requires the tenant:admin scope (spec FS-2.2 V4); RLS scopes visibility to the caller's own tenant's keys regardless.
+         */
+        post: operations["revokeApiKey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/t/{tenantSlug}/.well-known/jwks.json": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fetch a tenant's JWKS
+         * @description Public signing keys of every lifecycle state (ACTIVE/RETIRING/RETIRED) for the named tenant, no authentication required. Stays available regardless of the tenant's suspension status (spec V4).
+         */
+        get: operations["jwks"];
         put?: never;
         post?: never;
         delete?: never;
@@ -417,47 +858,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/auth/login": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Console login
-         * @description Authenticates a username/password pair and establishes a server-side session (Redis-backed, cookie KHATM_SESSION). The optional tenantSlug (spec FS-2.2) authenticates against that tenant specifically; omit or leave it blank to log into the caller's ambient default tenant, unchanged from before. Every failure reason — unknown user, wrong password, temporary lockout, administrative LOCKED/DISABLED, or an unknown/SUSPENDED tenantSlug — returns the identical generic 401 (spec FS-0.6b D7); the real reason is recorded only in the audit log. If the account has an active TOTP enrollment (spec FS-2.2 V1), no session is created yet — the response body instead carries totpRequired:true and a challengeId to submit to POST /api/v1/auth/totp.
-         */
-        post: operations["login"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/logout": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Console logout
-         * @description Invalidates the current session.
-         */
-        post: operations["logout"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/me": {
+    "/sl/{tenantSlug}/{listCode}": {
         parameters: {
             query?: never;
             header?: never;
@@ -465,350 +866,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Current session's user
-         * @description Returns the authenticated user's username, display name, language, scopes, and mustChangePassword (spec FS-2.2 D5). This is the one endpoint exempt from the forced-password-change gate (rbac.security.PasswordChangeEnforcementFilter) — every other authenticated call returns 403 KH-USR-0403 while mustChangePassword is true, so a client should call this endpoint right after login to detect the state and route to the change screen before attempting anything else.
+         * Fetch a signed status-list artifact
+         * @description The public, unauthenticated source of revocation truth for offline verifiers (spec FS-1.3 D2, SAD §6). Returns the list's signed bitstring as a compact JWS (application/jose) — a verifier validates its signature against the tenant's own JWKS, then base64url-decodes and gunzips the `bits` claim to read the per-credential revocation bit at the index named in the credential's `status` claim. The ETag is the list's `version`; a matching If-None-Match returns 304 with no body. Cached for 60s.
          */
-        get: operations["me"];
+        get: operations["getStatusList"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/totp": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Complete a TOTP login challenge
-         * @description Completes a login that POST /api/v1/auth/login flagged totpRequired, with either a live TOTP code or a one-time recovery code (exactly one of the two). On success, establishes the session exactly like a direct login. Rate-limited identically to the password step (spec FS-2.2 V1); every failure reason returns the same generic 401 as login itself.
-         */
-        post: operations["completeTotp"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/claims/redeem": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Redeem a one-time wallet claim code
-         * @description The single-use exchange that hands a freshly issued credential to a wallet: the code is consumed atomically (locked, validated, decrypted, marked claimed, and the platform's only copy of the disclosures zeroed — all in one transaction, before this response is built) so exactly one caller can ever redeem a given code. Authenticates by possession of the code alone — no session or API key, ever (spec FS-1.2.1 §9); public, rate-limited per source address instead.
-         *
-         *     **QR contract v1** (spec FS-1.2.1 D8, stable): the QR payload a console issue screen renders is the JSON text `{"v":1,"api":"<platform base URL>","code":"<claim code>"}`. A wallet decodes it and POSTs `code` here, against `{api}/api/v1/claims/redeem`. `v` exists so a future incompatible QR shape can be introduced without breaking wallets still reading `v:1`.
-         *
-         *     The wallet is contractually obligated to persist the full response immediately on receipt, before any display — the platform cannot hand it out a second time. A lost response after a successful redeem (e.g. the connection drops) is not recoverable by retrying; the issuer must create a new claim code from the console.
-         *
-         *     The response's `maxUses`/`expiresAt` are a redeem-time snapshot of the credential row, for display only. There is deliberately no live "uses remaining" channel: the holder is anonymous by design (P1 — no PII, no holder identity to authorize a lookup against), and a polling endpoint keyed by a credential reference would itself be new attack surface. Out of scope by design, not an oversight.
-         */
-        post: operations["redeem"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/credentials": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Search/list credentials
-         * @description Console-facing search over this tenant's credentials (KH-1.1.4) — proof/status metadata rows only, never claim content (P1 rule). Every filter is optional and AND-combined: ref (exact), pseudoRef (exact, resolved against the holder who was issued the credential), schemaId (exact), revoked (exact), status (repeatable — ACTIVE/EXHAUSTED/REVOKED/SUSPENDED/EXPIRED; multiple status values OR together, e.g. ?status=EXHAUSTED&status=REVOKED). status is the same explicit lifecycle value each row's own status field carries (spec FS-1.6 D1/D5) — filtered server-side against that identical derivation, so a row can never appear in a status filter's results while displaying a different status itself. Sorted by issuedAt descending; page/size are zero-based/1-100, defaulting to 0/20. Requires a console session — no API key of any kind works here (see rbac.security.SecurityConfig's Javadoc).
-         */
-        get: operations["list_2"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/credentials/bulk": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Issue a batch of credentials against one schema
-         * @description The C3 console wizard's CSV-per-schema flow (KH-1.1.3) — up to 200 items, one schema per batch, each issued independently through the same single-issue path (no parallel issuance logic, no bypass of any single-issue guard). One bad row never rolls back the batch: the response reports every item's outcome by index, ISSUED or FAILED with its own error. Setting mintClaimCodes:true mints a one-time wallet claim code for every successfully issued item (the existing POST /{id}/claim-code path) and returns it in that item's result — shown here exactly once. Requires the same scope as /issue: session or TENANT API key (a CONSUMING_PARTY key is always 403 here).
-         */
-        post: operations["bulkIssue"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/credentials/consume": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Consume one use of a credential
-         * @description The atomic double-spend guard: a single-transaction conditional UPDATE decrements the remaining uses only if the credential is still ACTIVE and unexpired, so exactly one caller wins under concurrency. Requires the consume scope and a CONSUMING_PARTY API key (a console session, or a TENANT key even with the consume scope, is always 403 here). The caller's consuming party must also be scoped to the credential's schema via consuming_party_schema (KH-1.4.3, deny-by-default — an unconfigured party can consume nothing). An optional idempotencyKey makes repeated calls with the same key return the first outcome without re-running the UPDATE.
-         */
-        post: operations["consume"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/credentials/holder-status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Check a credential's lifecycle status by proof of possession
-         * @description Public endpoint, like /verify — no session or API key (spec FS-1.6 D3, a deliberate, explicit reversal of PR #33's original 'no live uses-remaining channel' stance). The request body's jwt is the bare compact SD-JWT (no disclosures); proving possession of a validly signed token is the only authentication this endpoint needs — it never reads or returns claim content (P1 rule), only status/maxUses/usesRemaining/lastConsumedAt. An invalid signature or an unresolvable credential both collapse to the same 404 (KH-CRD-0404) so an external caller cannot distinguish 'not a real credential' from 'forged' (anti-enumeration).
-         */
-        post: operations["holderStatus"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/credentials/issue": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Issue a new SD-JWT verifiable credential
-         * @description Every claim becomes a salted, selectively-disclosable SD-JWT disclosure (spec FS-0.4 D1) — none of them appear as a plaintext value in the persisted, signed payload. The response's sdJwt is a one-time delivery of the full presentation (compact JWT plus every disclosure); the platform never stores it in that form.
-         */
-        post: operations["issue"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/credentials/verify": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Verify an SD-JWT credential presentation
-         * @description Accepts the standard tilde-separated SD-JWT presentation, or a bare compact JWT. Passing a bare JWT with no disclosures at all is a valid zero-disclosure presentation (spec FS-0.4 §5) — it will typically (and correctly) fail with reason 'withheld_mandatory_claim' unless the schema's sd_fields happens to cover every claims_def field. A verification failure is always HTTP 200 with valid:false (spec FS-0.6a D1) — it is a domain result, never an error envelope. Only a completely blank sdJwt is rejected as a 400.
-         */
-        post: operations["verify"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/credentials/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Fetch a credential's current status
-         * @description Proof/status metadata only (ref, schema, status, uses remaining, timestamps) — never the claim values themselves, which only ever leave the platform inside a one-time sdJwt presentation (P1 rule). Requires any valid session or API key.
-         */
-        get: operations["get_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/credentials/{id}/claim-code": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Mint a fresh wallet claim code for an already-issued credential
-         * @description The console-facing counterpart to POST /issue's one-time claim-code delivery — spec FS-1.2.1 D2's explicit recovery path: if a code never reached the wallet (lost response, expired unclaimed, or the issuer simply wants to hand the credential out again), the issuer mints a new one here rather than re-issuing the whole credential. Requires the exact sdJwt presentation string the original /issue call returned — the platform never stores disclosures outside a claim_code row (P1), so this endpoint cannot reconstruct them on its own; the caller is expected to have retained that one-time delivery for exactly this purpose.
-         *
-         *     Minting voids any prior still-live code for this credential (its disclosures_enc is zeroed, the same mechanism the redeem and expiry-sweep paths use) — at most one code is ever redeemable per credential at a time.
-         *
-         *     The response's code is a one-time delivery, exactly like /issue's sdJwt: it appears in this response and nowhere else, ever. It is what a console issue screen encodes into the QR v1 payload described on POST /api/v1/claims/redeem — {"v":1,"api":"<platform base URL>","code":"<this code>"} — for a wallet to scan and redeem at that endpoint.
-         */
-        post: operations["mintClaimCode"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/credentials/{id}/revoke": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Revoke a credential
-         * @description Immediately and permanently invalidates the credential — a subsequent /verify or /consume call reports it revoked. Requires the revoke scope and a console session (an API key is always 403 here). Irreversible.
-         */
-        post: operations["revoke"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/schemas": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List credential schemas
-         * @description Read-only tenant metadata (id, display name, version, status) — every authenticated actor kind may call this, no specific scope required (a deliberate, documented decision: see rbac.security.SecurityConfig's Javadoc). The optional status filter (KH-1.1.1) lets the console's schema management view show DRAFT rows too; the issue-form picker keeps filtering to PUBLISHED client-side, as before.
-         */
-        get: operations["list_1"];
-        put?: never;
-        /**
-         * Create a new DRAFT credential schema (version 1)
-         * @description Requires the schema:manage scope. Server-side validation rejects an empty claimsDef, a claim field with an unsupported type (text/number/date), a nameI18n or claim labelI18n missing en or ar, an sdFields entry not among the claim field names, or a code already registered at version 1 — all as KH-SCH-0400. The schema starts DRAFT and unavailable for issuance until POST /{id}/publish.
-         */
-        post: operations["create_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/schemas/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Fetch a credential schema's detail
-         * @description Adds the raw claims definition to the list view's fields, so a console issue screen can render the schema's claim fields. Same access rule as the list endpoint — authenticated, any scope.
-         */
-        get: operations["get"];
-        /**
-         * Rewrite a DRAFT schema's authoring fields in place
-         * @description Requires the schema:manage scope. DRAFT only — fixes mistakes before publish. Validated identically to POST /api/v1/schemas.
-         */
-        put: operations["update"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/schemas/{id}/archive": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Archive a PUBLISHED schema
-         * @description Requires the schema:manage scope. PUBLISHED -> ARCHIVED — stops NEW issuance against this schema (POST /api/v1/credentials/issue and the internal find-or-create path both reject it, KH-SCH-1409); every credential already issued against it, and its verification/consumption, is completely unaffected.
-         */
-        post: operations["archive"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/schemas/{id}/publish": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Publish a DRAFT schema
-         * @description Requires the schema:manage scope. DRAFT -> PUBLISHED — the immutability line: a published schema's claim fields can never be mutated again (no general update endpoint exists for a PUBLISHED schema); a mistake found later needs a new version (POST /{id}/versions) instead. A PUBLISHED schema becomes a valid issuance target for POST /api/v1/credentials/issue's schemaCode.
-         */
-        post: operations["publish"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/schemas/{id}/versions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Create a new DRAFT version of a PUBLISHED schema
-         * @description Requires the schema:manage scope. Same code, version + 1. The console is responsible for prefilling the request body from the source schema's current fields — this endpoint validates the submitted body exactly like POST /api/v1/schemas, with no server-side default-merging.
-         */
-        post: operations["createVersion"];
         delete?: never;
         options?: never;
         head?: never;
@@ -827,26 +890,6 @@ export interface paths {
          * @description A plain GROUP BY action aggregation over audit_log for the requested window — counters only, never claim content (P1). Defaults to the last 30 days when from/to are omitted. Requires a console session — no API key of any kind works here (see rbac.security.SecurityConfig's Javadoc).
          */
         get: operations["stats"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/stats/consuming-parties": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Fetch per-consuming-party call-volume stats
-         * @description Call volume (CREDENTIAL_CONSUMED) and denial count (CONSUME_SCHEMA_DENIED) per consuming party for the requested window, with a derived success rate. Defaults to the last 30 days when from/to are omitted. Same session-only gate as GET /api/v1/stats.
-         */
-        get: operations["consumingPartyStats"];
         put?: never;
         post?: never;
         delete?: never;
@@ -875,7 +918,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/users": {
+    "/api/v1/stats/consuming-parties": {
         parameters: {
             query?: never;
             header?: never;
@@ -883,214 +926,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List tenant users
-         * @description Every user of the caller's tenant, newest first. Requires the tenant:admin scope.
+         * Fetch per-consuming-party call-volume stats
+         * @description Call volume (CREDENTIAL_CONSUMED) and denial count (CONSUME_SCHEMA_DENIED) per consuming party for the requested window, with a derived success rate. Defaults to the last 30 days when from/to are omitted. Same session-only gate as GET /api/v1/stats.
          */
-        get: operations["list"];
-        put?: never;
-        /**
-         * Create a tenant user
-         * @description Creates a user with a generated temporary password (shown once) and forces a change at first login. Roles are chosen from the fixed seeded catalog. Requires the tenant:admin scope.
-         */
-        post: operations["create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/users/me/password": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Change own password
-         * @description The self-service password change — the one call a temporary-password user may make while must_change_password is set, and the call that clears it. Any authenticated console user may call it; the target user is taken from the session principal, never the body.
-         */
-        post: operations["changeMyPassword"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/users/me/totp/confirm": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Confirm TOTP enrollment
-         * @description Activates a pending enrollment with a live code from the authenticator app and returns 10 one-time recovery codes — shown exactly once. Refused with 409 if there is no pending enrollment, it is already active, or it has expired (re-enroll in any of those cases); refused with 400 if the code does not match.
-         */
-        post: operations["confirmTotp"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/users/me/totp/enroll": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Begin TOTP enrollment
-         * @description Generates a fresh secret (encrypted at rest) and returns it, Base32-encoded, plus an otpauth:// enrollment URI — shown exactly once. Any authenticated console session may enroll its own user. Refused with 409 if TOTP is already active (an administrator must reset it first); calling this again before confirming simply supersedes the previous, not-yet-confirmed secret.
-         */
-        post: operations["enrollTotp"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/users/{id}/disable": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Disable a user
-         * @description Sets the user DISABLED. Requires the tenant:admin scope. Refused with 409 (KH-USR-0423) if this is the tenant's last active administrator.
-         */
-        post: operations["disable"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/users/{id}/lock": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Lock a user
-         * @description Sets the user LOCKED. Requires the tenant:admin scope. Refused with 409 (KH-USR-0423) if this is the tenant's last active administrator.
-         */
-        post: operations["lock"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/users/{id}/reset-password": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Reset a user's password
-         * @description Generates a new temporary password (shown once) and forces a change at next login. Requires the tenant:admin scope.
-         */
-        post: operations["resetPassword"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/users/{id}/roles": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Replace a user's roles
-         * @description Replaces the user's entire role set. Requires the tenant:admin scope. Refused with 409 (KH-USR-0423) if it would remove the tenant's last active administrator.
-         */
-        post: operations["replaceRoles"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/users/{id}/totp/reset": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Reset a user's TOTP enrollment
-         * @description Clears the target user's TOTP enrollment and invalidates their remaining recovery codes — they re-enroll at next login if a mandatory scope requires it. Idempotent (a user with no TOTP enrolled is a no-op). Requires the tenant:admin scope.
-         */
-        post: operations["resetTotp"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/users/{id}/unlock": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Unlock a user
-         * @description Restores a LOCKED/DISABLED user to ACTIVE. Requires the tenant:admin scope.
-         */
-        post: operations["unlock"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/sl/{tenantSlug}/{listCode}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Fetch a signed status-list artifact
-         * @description The public, unauthenticated source of revocation truth for offline verifiers (spec FS-1.3 D2, SAD §6). Returns the list's signed bitstring as a compact JWS (application/jose) — a verifier validates its signature against the tenant's own JWKS, then base64url-decodes and gunzips the `bits` claim to read the per-credential revocation bit at the index named in the credential's `status` claim. The ETag is the list's `version`; a matching If-None-Match returns 304 with no body. Cached for 60s.
-         */
-        get: operations["getStatusList"];
+        get: operations["consumingPartyStats"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1099,7 +938,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/t/{tenantSlug}/.well-known/jwks.json": {
+    "/api/v1/credentials": {
         parameters: {
             query?: never;
             header?: never;
@@ -1107,13 +946,174 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Fetch a tenant's JWKS
-         * @description Public signing keys of every lifecycle state (ACTIVE/RETIRING/RETIRED) for the named tenant, no authentication required. Stays available regardless of the tenant's suspension status (spec V4).
+         * Search/list credentials
+         * @description Console-facing search over this tenant's credentials (KH-1.1.4) — proof/status metadata rows only, never claim content (P1 rule). Every filter is optional and AND-combined: ref (exact), pseudoRef (exact, resolved against the holder who was issued the credential), schemaId (exact), revoked (exact), status (repeatable — ACTIVE/EXHAUSTED/REVOKED/SUSPENDED/EXPIRED; multiple status values OR together, e.g. ?status=EXHAUSTED&status=REVOKED). status is the same explicit lifecycle value each row's own status field carries (spec FS-1.6 D1/D5) — filtered server-side against that identical derivation, so a row can never appear in a status filter's results while displaying a different status itself. Sorted by issuedAt descending; page/size are zero-based/1-100, defaulting to 0/20. Requires a console session — no API key of any kind works here (see rbac.security.SecurityConfig's Javadoc).
          */
-        get: operations["jwks"];
+        get: operations["list_2"];
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/credentials/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fetch a credential's current status
+         * @description Proof/status metadata only (ref, schema, status, uses remaining, timestamps) — never the claim values themselves, which only ever leave the platform inside a one-time sdJwt presentation (P1 rule). Requires any valid session or API key.
+         */
+        get: operations["get_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Current session's user
+         * @description Returns the authenticated user's username, display name, language, scopes, and mustChangePassword (spec FS-2.2 D5). This is the one endpoint exempt from the forced-password-change gate (rbac.security.PasswordChangeEnforcementFilter) — every other authenticated call returns 403 KH-USR-0403 while mustChangePassword is true, so a client should call this endpoint right after login to detect the state and route to the change screen before attempting anything else.
+         */
+        get: operations["me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attention": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fetch the needs-attention feed
+         * @description Itemized, actionable anomalies computed on read from the audit trail — never a bare count (see GET /api/v1/stats for those). Ships two item types this session: recent CONSUME_SCHEMA_DENIED events within a configurable window, and a verify-failure-rate alert when the current window's failure rate clears a configurable multiplier of the immediately preceding window's baseline (with a minimum-volume floor to avoid noise). A third starter type (signing key approaching rotation) is deliberately out of scope this session. Requires a console session — no API key of any kind works here (same gate as GET /api/v1/stats).
+         */
+        get: operations["attention"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/tenants/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fetch a tenant
+         * @description One tenant by id. Requires the platform:admin scope.
+         */
+        get: operations["get_2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/signing-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List every signing key's lifecycle status
+         * @description Every signing key for the tenant, newest first, every state including RETIRED — lifecycle fields only (kid/state/provider/validFrom/validTo), never the public JWK or any private material. Requires the key:manage scope (any actor kind).
+         */
+        get: operations["signingKeys"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fetch the recent-activity feed
+         * @description The most recent credential-lifecycle audit events (issued/consumed/revoked/schema-denied/claim-redeemed/verify-ok/verify-failed), newest first, resolved for display: entity_ref is always the credential's ref (never a bare id), and consuming-party attribution is resolved where the underlying event supports it. event, if present, is a comma-separated subset of AuditAction names to filter to (unknown values are ignored); omit it for every eligible action. Requires a console session — no API key of any kind works here (same gate as GET /api/v1/stats).
+         */
+        get: operations["activity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/.well-known/jwks.json": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fetch the JWKS
+         * @deprecated
+         * @description Public signing keys of every lifecycle state (ACTIVE/RETIRING/RETIRED), no authentication required. Deprecated (spec FS-2.1 V2): aliases the default tenant only — every other tenant's JWKS is at GET /t/{tenantSlug}/.well-known/jwks.json. Stays available through Phase 2.
+         */
+        get: operations["jwks_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/consuming-parties/{id}/allowed-schemas/{schemaId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a schema from a party's allowlist
+         * @description Idempotent — removing a pair that is not allowed (including for an unknown party) is a successful 204 no-op. Requires the consumer:manage scope.
+         */
+        delete: operations["disallowSchema"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1123,102 +1123,113 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @description One recent, display-ready audit event */
-        ActivityItem: {
-            action?: string;
-            actorType?: string;
-            consumingPartyCode?: string;
-            consumingPartyName?: components["schemas"]["LocalizedText"];
-            detail?: {
-                [key: string]: Record<string, never>;
-            };
-            entityRef?: string;
-            /** Format: date-time */
-            occurredAt?: string;
-        };
-        /** @description Recent, display-ready credential activity */
-        ActivityResponse: {
-            items?: components["schemas"]["ActivityItem"][];
-        };
-        AllowSchemaRequest: {
-            /** Format: uuid */
-            schemaId: string;
-        };
-        AllowedSchema: {
-            schemaCode?: string;
-            /** Format: uuid */
-            schemaId?: string;
-        };
-        /** @description One actionable needs-attention item */
-        AttentionEntry: {
-            detail?: {
-                [key: string]: Record<string, never>;
-            };
-            /** Format: date-time */
-            occurredAt?: string;
-            type?: string;
-        };
-        /** @description Itemized, actionable needs-attention feed */
-        AttentionResponse: {
-            items?: components["schemas"]["AttentionEntry"][];
-        };
-        /** @description Human attestation of a scanned document, required by schemas with requires_attestation=true */
-        AttestationRequest: {
-            note?: string;
-        };
-        /** @description Batch-wide defaults, overridable per item */
-        BulkIssueDefaults: {
-            /** Format: int32 */
-            maxUses?: number;
-            /** Format: int32 */
-            validMinutes?: number;
-        };
-        /** @description One credential to issue within a bulk batch */
-        BulkIssueItem: {
-            claims?: {
-                [key: string]: Record<string, never>;
-            };
-            /** Format: int32 */
-            maxUses?: number;
-            pseudoRef?: string;
-            /** Format: int32 */
-            validMinutes?: number;
-        };
-        /** @description Why one bulk-issue item failed */
-        BulkIssueItemError: {
-            code?: string;
+        /** @description One field-level validation failure */
+        ErrorDetail: {
+            field?: string;
+            messageKey?: string;
             message?: string;
         };
-        /** @description One bulk-issue row's outcome */
-        BulkIssueItemResult: {
-            claimCode?: string;
-            error?: components["schemas"]["BulkIssueItemError"];
+        /** @description Uniform error response for every non-2xx API response */
+        ErrorEnvelope: {
+            code?: string;
+            messageKey?: string;
+            message?: string;
+            traceId?: string;
+            /** Format: date-time */
+            timestamp?: string;
+            details?: components["schemas"]["ErrorDetail"][];
+        };
+        ClaimFieldRequest: {
+            name: string;
+            type: string;
+            labelI18n: {
+                [key: string]: string;
+            };
+            pattern?: string;
+        };
+        SchemaAuthoringRequest: {
+            nameI18n: {
+                [key: string]: string;
+            };
+            claimsDef: components["schemas"]["ClaimFieldRequest"][];
+            sdFields?: string[];
+            /** Format: int32 */
+            defaultMaxUses?: number;
+            defaultValidity?: string;
+            requiresAttestation?: boolean;
+        };
+        LocalizedText: {
+            en?: string;
+            ar?: string;
+        };
+        SchemaDetail: {
+            /** Format: uuid */
             id?: string;
+            code?: string;
+            nameI18n?: components["schemas"]["LocalizedText"];
             /** Format: int32 */
-            index?: number;
-            ref?: string;
+            version?: number;
             status?: string;
+            claimsDefJson?: string;
+            sdFields?: string[];
+            /** Format: int32 */
+            defaultMaxUses?: number;
+            defaultValidity?: string;
+            requiresAttestation?: boolean;
         };
-        /** @description Request to issue a batch of credentials against one schema */
-        BulkIssueRequest: {
-            defaults?: components["schemas"]["BulkIssueDefaults"];
-            items?: components["schemas"]["BulkIssueItem"][];
-            mintClaimCodes?: boolean;
-            schemaCode: string;
+        CreateUserRequest: {
+            username: string;
+            displayNameI18n: components["schemas"]["DisplayNameI18nRequest"];
+            roles?: string[];
         };
-        /** @description Full per-item report of a bulk issuance batch */
-        BulkIssueResponse: {
-            /** Format: int32 */
-            failed?: number;
-            results?: components["schemas"]["BulkIssueItemResult"][];
-            /** Format: int32 */
-            succeeded?: number;
-            /** Format: int32 */
-            total?: number;
+        DisplayNameI18nRequest: {
+            en: string;
+            ar: string;
+        };
+        CreateUserResponse: {
+            /** Format: uuid */
+            id?: string;
+            username?: string;
+            temporaryPassword?: string;
+        };
+        UserSummary: {
+            /** Format: uuid */
+            id?: string;
+            username?: string;
+            displayNameI18n?: components["schemas"]["LocalizedText"];
+            status?: string;
+            roles?: string[];
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        ReplaceRolesRequest: {
+            roles?: string[];
+        };
+        TotpEnrollResponse: {
+            secretBase32?: string;
+            otpAuthUri?: string;
+        };
+        TotpConfirmRequest: {
+            code: string;
+        };
+        TotpConfirmResponse: {
+            recoveryCodes?: string[];
         };
         ChangePasswordRequest: {
             currentPassword: string;
             newPassword: string;
+        };
+        SchemaCreateRequest: {
+            code: string;
+            nameI18n: {
+                [key: string]: string;
+            };
+            claimsDef: components["schemas"]["ClaimFieldRequest"][];
+            sdFields?: string[];
+            /** Format: int32 */
+            defaultMaxUses?: number;
+            defaultValidity?: string;
+            requiresAttestation?: boolean;
         };
         /** @description Request to mint a fresh wallet claim code for an already-issued credential */
         ClaimCodeMintRequest: {
@@ -1232,13 +1243,126 @@ export interface components {
             /** Format: date-time */
             expiresAt?: string;
         };
-        ClaimFieldRequest: {
-            labelI18n: {
-                [key: string]: string;
+        /** @description Request to verify an SD-JWT credential presentation */
+        VerifyRequest: {
+            sdJwt: string;
+        };
+        /** @description Result of an SD-JWT credential presentation verification */
+        VerifyResponse: {
+            valid?: boolean;
+            reason?: string;
+            reasonMessage?: string;
+            claims?: {
+                [key: string]: Record<string, never>;
             };
-            name: string;
-            pattern?: string;
-            type: string;
+            /** Format: int32 */
+            usesRemaining?: number;
+            revoked?: boolean;
+            statusListChecked?: boolean;
+            /** Format: int64 */
+            statusListVersion?: number;
+            statusListUri?: string;
+        };
+        /** @description Human attestation of a scanned document, required by schemas with requires_attestation=true */
+        AttestationRequest: {
+            note?: string;
+        };
+        /** @description Request to issue a new SD-JWT verifiable credential */
+        IssueRequest: {
+            schemaCode?: string;
+            holderRef: string;
+            /** Format: int32 */
+            maxUses?: number;
+            /** Format: int32 */
+            validMinutes?: number;
+            claims?: {
+                [key: string]: Record<string, never>;
+            };
+            sdFields?: string[];
+            attestation?: components["schemas"]["AttestationRequest"];
+            /** Format: uuid */
+            schemaId?: string;
+        };
+        /** @description Result of a successful SD-JWT credential issuance */
+        IssueResponse: {
+            id?: string;
+            ref?: string;
+            sdJwt?: string;
+        };
+        /** @description Request to check a credential's lifecycle status by proof of possession */
+        HolderStatusRequest: {
+            jwt: string;
+        };
+        /** @description A credential's current lifecycle status */
+        HolderStatusResponse: {
+            status?: string;
+            /** Format: int32 */
+            maxUses?: number;
+            /** Format: int32 */
+            usesRemaining?: number;
+            /** Format: date-time */
+            lastConsumedAt?: string;
+        };
+        ConsumeRequest: {
+            id?: string;
+            consumer?: string;
+            idempotencyKey?: string;
+        };
+        ConsumeResponse: {
+            consumed?: boolean;
+            reason?: string;
+            /** Format: int32 */
+            usesRemaining?: number;
+        };
+        /** @description Batch-wide defaults, overridable per item */
+        BulkIssueDefaults: {
+            /** Format: int32 */
+            validMinutes?: number;
+            /** Format: int32 */
+            maxUses?: number;
+        };
+        /** @description One credential to issue within a bulk batch */
+        BulkIssueItem: {
+            claims?: {
+                [key: string]: Record<string, never>;
+            };
+            pseudoRef?: string;
+            /** Format: int32 */
+            validMinutes?: number;
+            /** Format: int32 */
+            maxUses?: number;
+        };
+        /** @description Request to issue a batch of credentials against one schema */
+        BulkIssueRequest: {
+            schemaCode: string;
+            defaults?: components["schemas"]["BulkIssueDefaults"];
+            items?: components["schemas"]["BulkIssueItem"][];
+            mintClaimCodes?: boolean;
+        };
+        /** @description Why one bulk-issue item failed */
+        BulkIssueItemError: {
+            code?: string;
+            message?: string;
+        };
+        /** @description One bulk-issue row's outcome */
+        BulkIssueItemResult: {
+            /** Format: int32 */
+            index?: number;
+            status?: string;
+            id?: string;
+            ref?: string;
+            claimCode?: string;
+            error?: components["schemas"]["BulkIssueItemError"];
+        };
+        /** @description Full per-item report of a bulk issuance batch */
+        BulkIssueResponse: {
+            /** Format: int32 */
+            total?: number;
+            /** Format: int32 */
+            succeeded?: number;
+            /** Format: int32 */
+            failed?: number;
+            results?: components["schemas"]["BulkIssueItemResult"][];
         };
         /** @description Request to redeem a one-time wallet claim code */
         ClaimRedeemRequest: {
@@ -1246,17 +1370,17 @@ export interface components {
         };
         /** @description Full, one-time delivery of a credential to a wallet (spec FS-1.2.1 D4) */
         ClaimRedeemResponse: {
+            ref?: string;
             credential?: string;
             disclosures?: string[];
-            /** Format: date-time */
-            expiresAt?: string;
+            schema?: components["schemas"]["ClaimSchemaRef"];
+            statusListUri?: string;
             /** Format: date-time */
             issuedAt?: string;
             /** Format: int32 */
             maxUses?: number;
-            ref?: string;
-            schema?: components["schemas"]["ClaimSchemaRef"];
-            statusListUri?: string;
+            /** Format: date-time */
+            expiresAt?: string;
         };
         /** @description The redeemed credential's schema, display shape */
         ClaimSchemaRef: {
@@ -1266,242 +1390,61 @@ export interface components {
             /** Format: int32 */
             version?: number;
         };
-        ConsumeRequest: {
-            consumer?: string;
-            id?: string;
-            idempotencyKey?: string;
-        };
-        ConsumeResponse: {
-            consumed?: boolean;
-            reason?: string;
-            /** Format: int32 */
-            usesRemaining?: number;
-        };
-        /** @description One consuming party's call-volume stats */
-        ConsumingPartyStatsEntry: {
-            /** Format: int64 */
-            consumed?: number;
-            /** Format: int64 */
-            denied?: number;
-            partyCode?: string;
-            /** Format: uuid */
-            partyId?: string;
-            partyName?: components["schemas"]["LocalizedText"];
-            /** Format: double */
-            successRate?: number;
-        };
-        /** @description Per-consuming-party call-volume stats */
-        ConsumingPartyStatsResponse: {
-            parties?: components["schemas"]["ConsumingPartyStatsEntry"][];
-            window?: components["schemas"]["StatsWindow"];
-        };
-        ConsumingPartyView: {
-            allowedSchemas?: components["schemas"]["AllowedSchema"][];
+        TotpChallengeRequest: {
+            challengeId: string;
             code?: string;
-            /** Format: date-time */
-            createdAt?: string;
-            /** Format: uuid */
-            id?: string;
-            nameI18n?: components["schemas"]["LocalizedText"];
-            status?: string;
+            recoveryCode?: string;
         };
-        CreateApiKeyRequest: {
-            /** Format: uuid */
-            ownerId?: string;
-            /** @enum {string} */
-            ownerType: "TENANT" | "CONSUMING_PARTY";
-            scopes: string[];
-            /** Format: uuid */
-            tenantId?: string;
-        };
-        CreateApiKeyResponse: {
-            /** Format: uuid */
-            id?: string;
-            keyPrefix?: string;
-            rawKey?: string;
-        };
-        CreateConsumingPartyRequest: {
-            code?: string;
-            nameI18n: components["schemas"]["NameI18nRequest"];
-        };
-        CreateUserRequest: {
-            displayNameI18n: components["schemas"]["DisplayNameI18nRequest"];
-            roles?: string[];
+        LoginRequest: {
             username: string;
+            password: string;
+            tenantSlug?: string;
         };
-        CreateUserResponse: {
-            /** Format: uuid */
-            id?: string;
-            temporaryPassword?: string;
-            username?: string;
-        };
-        CredentialPage: {
-            items?: components["schemas"]["CredentialSummary"][];
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
-            /** Format: int64 */
-            totalElements?: number;
-            /** Format: int32 */
-            totalPages?: number;
-        };
-        CredentialSummary: {
-            id?: string;
-            /** Format: date-time */
-            issuedAt?: string;
-            /** Format: int32 */
-            maxUses?: number;
-            ref?: string;
-            revoked?: boolean;
-            schemaCode?: string;
-            schemaName?: components["schemas"]["LocalizedText"];
-            status?: string;
-            /** Format: int32 */
-            usesConsumed?: number;
-            /** Format: int32 */
-            usesRemaining?: number;
-            /** Format: date-time */
-            validTo?: string;
-        };
-        CredentialView: {
-            id?: string;
-            jwt?: string;
-            /** Format: int32 */
-            maxUses?: number;
-            ref?: string;
-            revoked?: boolean;
-            schemaCode?: string;
-            status?: string;
-            /** Format: int32 */
-            usesConsumed?: number;
-            /** Format: int32 */
-            usesRemaining?: number;
-            /** Format: date-time */
-            validTo?: string;
-        };
-        /** @description One UTC day's pilot-metrics counters */
-        DailyStatsEntry: {
-            counters?: components["schemas"]["StatsCounters"];
-            /** Format: date-time */
-            day?: string;
-        };
-        /** @description Pilot-metrics counters broken down by UTC day */
-        DailyStatsResponse: {
-            days?: components["schemas"]["DailyStatsEntry"][];
-            window?: components["schemas"]["StatsWindow"];
-        };
-        DisplayNameI18nRequest: {
-            ar: string;
-            en: string;
-        };
-        /** @description One field-level validation failure */
-        ErrorDetail: {
-            field?: string;
-            message?: string;
-            messageKey?: string;
-        };
-        /** @description Uniform error response for every non-2xx API response */
-        ErrorEnvelope: {
-            code?: string;
-            details?: components["schemas"]["ErrorDetail"][];
-            message?: string;
-            messageKey?: string;
-            /** Format: date-time */
-            timestamp?: string;
-            traceId?: string;
-        };
-        /** @description Request to check a credential's lifecycle status by proof of possession */
-        HolderStatusRequest: {
-            jwt: string;
-        };
-        /** @description A credential's current lifecycle status */
-        HolderStatusResponse: {
-            /** Format: date-time */
-            lastConsumedAt?: string;
-            /** Format: int32 */
-            maxUses?: number;
-            status?: string;
-            /** Format: int32 */
-            usesRemaining?: number;
+        LoginChallengeResponse: {
+            totpRequired?: boolean;
+            challengeId?: string;
         };
         /** @description The tenant's first administrator (optional) */
         InitialAdminRequest: {
+            username: string;
             displayNameI18n: components["schemas"]["DisplayNameI18nRequest"];
-            username: string;
-        };
-        /** @description The first administrator (null when none was requested) */
-        InitialAdminResponse: {
-            temporaryPassword?: string;
-            username?: string;
-        };
-        /** @description Request to issue a new SD-JWT verifiable credential */
-        IssueRequest: {
-            attestation?: components["schemas"]["AttestationRequest"];
-            claims?: {
-                [key: string]: Record<string, never>;
-            };
-            holderRef: string;
-            /** Format: int32 */
-            maxUses?: number;
-            schemaCode?: string;
-            sdFields?: string[];
-            /** Format: int32 */
-            validMinutes?: number;
-        };
-        /** @description Result of a successful SD-JWT credential issuance */
-        IssueResponse: {
-            id?: string;
-            ref?: string;
-            sdJwt?: string;
-        };
-        LocalizedText: {
-            ar?: string;
-            en?: string;
-        };
-        LoginChallengeResponse: {
-            challengeId?: string;
-            totpRequired?: boolean;
-        };
-        LoginRequest: {
-            password: string;
-            tenantSlug?: string;
-            username: string;
-        };
-        MeResponse: {
-            displayNameI18n?: components["schemas"]["LocalizedText"];
-            mustChangePassword?: boolean;
-            preferredLang?: string;
-            scopes?: string[];
-            username?: string;
-        };
-        NameI18nRequest: {
-            ar: string;
-            en: string;
         };
         /** @description Onboard a tenant, optionally with its first administrator */
         OnboardTenantRequest: {
+            slug: string;
+            nameI18n: components["schemas"]["DisplayNameI18nRequest"];
+            type: string;
             deployMode?: string;
             initialAdmin?: components["schemas"]["InitialAdminRequest"];
-            nameI18n: components["schemas"]["DisplayNameI18nRequest"];
-            slug: string;
-            type: string;
+        };
+        /** @description The first administrator (null when none was requested) */
+        InitialAdminResponse: {
+            username?: string;
+            temporaryPassword?: string;
         };
         /** @description An onboarded tenant, optionally with its first administrator's one-time password */
         OnboardTenantResponse: {
-            /** Format: date-time */
-            createdAt?: string;
-            deployMode?: string;
             /** Format: uuid */
             id?: string;
-            initialAdmin?: components["schemas"]["InitialAdminResponse"];
-            nameI18n?: components["schemas"]["LocalizedText"];
             slug?: string;
-            status?: string;
+            nameI18n?: components["schemas"]["LocalizedText"];
             type?: string;
+            deployMode?: string;
+            status?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            initialAdmin?: components["schemas"]["InitialAdminResponse"];
         };
-        ReplaceRolesRequest: {
-            roles?: string[];
+        TenantView: {
+            /** Format: uuid */
+            id?: string;
+            slug?: string;
+            nameI18n?: components["schemas"]["LocalizedText"];
+            type?: string;
+            deployMode?: string;
+            status?: string;
+            /** Format: date-time */
+            createdAt?: string;
         };
         /** @description Optional min-age bypass for retiring a key */
         RetireKeyRequest: {
@@ -1521,64 +1464,191 @@ export interface components {
         /** @description The newly created, now-ACTIVE signing key */
         RotateKeyResponse: {
             kid?: string;
-            provider?: string;
             state?: string;
+            provider?: string;
             /** Format: date-time */
             validFrom?: string;
         };
-        SchemaAuthoringRequest: {
-            claimsDef: components["schemas"]["ClaimFieldRequest"][];
-            /** Format: int32 */
-            defaultMaxUses?: number;
-            defaultValidity?: string;
-            nameI18n: {
-                [key: string]: string;
-            };
-            requiresAttestation?: boolean;
-            sdFields?: string[];
-        };
-        SchemaCreateRequest: {
-            claimsDef: components["schemas"]["ClaimFieldRequest"][];
-            code: string;
-            /** Format: int32 */
-            defaultMaxUses?: number;
-            defaultValidity?: string;
-            nameI18n: {
-                [key: string]: string;
-            };
-            requiresAttestation?: boolean;
-            sdFields?: string[];
-        };
-        SchemaDetail: {
-            claimsDefJson?: string;
+        CreateConsumingPartyRequest: {
             code?: string;
-            /** Format: int32 */
-            defaultMaxUses?: number;
-            defaultValidity?: string;
+            nameI18n: components["schemas"]["NameI18nRequest"];
+        };
+        NameI18nRequest: {
+            en: string;
+            ar: string;
+        };
+        AllowedSchema: {
+            /** Format: uuid */
+            schemaId?: string;
+            schemaCode?: string;
+        };
+        ConsumingPartyView: {
             /** Format: uuid */
             id?: string;
+            code?: string;
             nameI18n?: components["schemas"]["LocalizedText"];
-            requiresAttestation?: boolean;
-            sdFields?: string[];
             status?: string;
-            /** Format: int32 */
-            version?: number;
+            /** Format: date-time */
+            createdAt?: string;
+            allowedSchemas?: components["schemas"]["AllowedSchema"][];
+        };
+        CreateApiKeyResponse: {
+            /** Format: uuid */
+            id?: string;
+            keyPrefix?: string;
+            rawKey?: string;
+        };
+        AllowSchemaRequest: {
+            /** Format: uuid */
+            schemaId: string;
+        };
+        CreateApiKeyRequest: {
+            /** @enum {string} */
+            ownerType: "TENANT" | "CONSUMING_PARTY";
+            /** Format: uuid */
+            ownerId?: string;
+            scopes: string[];
+            /** Format: uuid */
+            tenantId?: string;
+        };
+        /** @description Pilot-metrics counters for the requested window */
+        StatsCounters: {
+            /** Format: int64 */
+            issued?: number;
+            /** Format: int64 */
+            revoked?: number;
+            /** Format: int64 */
+            consumed?: number;
+            /** Format: int64 */
+            consumeDenied?: number;
+            /** Format: int64 */
+            claimsRedeemed?: number;
+            /** Format: int64 */
+            verifyOk?: number;
+            /** Format: int64 */
+            verifyFailed?: number;
+        };
+        /** @description Pilot-metrics counters for a time window */
+        StatsResponse: {
+            window?: components["schemas"]["StatsWindow"];
+            counters?: components["schemas"]["StatsCounters"];
+        };
+        /** @description The time window counters were aggregated over */
+        StatsWindow: {
+            /** Format: date-time */
+            from?: string;
+            /** Format: date-time */
+            to?: string;
+        };
+        /** @description One UTC day's pilot-metrics counters */
+        DailyStatsEntry: {
+            /** Format: date-time */
+            day?: string;
+            counters?: components["schemas"]["StatsCounters"];
+        };
+        /** @description Pilot-metrics counters broken down by UTC day */
+        DailyStatsResponse: {
+            window?: components["schemas"]["StatsWindow"];
+            days?: components["schemas"]["DailyStatsEntry"][];
+        };
+        /** @description One consuming party's call-volume stats */
+        ConsumingPartyStatsEntry: {
+            /** Format: uuid */
+            partyId?: string;
+            partyCode?: string;
+            partyName?: components["schemas"]["LocalizedText"];
+            /** Format: int64 */
+            consumed?: number;
+            /** Format: int64 */
+            denied?: number;
+            /** Format: double */
+            successRate?: number;
+        };
+        /** @description Per-consuming-party call-volume stats */
+        ConsumingPartyStatsResponse: {
+            window?: components["schemas"]["StatsWindow"];
+            parties?: components["schemas"]["ConsumingPartyStatsEntry"][];
         };
         SchemaSummary: {
-            code?: string;
             /** Format: uuid */
             id?: string;
+            code?: string;
             nameI18n?: components["schemas"]["LocalizedText"];
-            requiresAttestation?: boolean;
-            status?: string;
             /** Format: int32 */
             version?: number;
+            status?: string;
+            requiresAttestation?: boolean;
+        };
+        CredentialPage: {
+            items?: components["schemas"]["CredentialSummary"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        CredentialSummary: {
+            id?: string;
+            ref?: string;
+            schemaCode?: string;
+            schemaName?: components["schemas"]["LocalizedText"];
+            /** Format: date-time */
+            issuedAt?: string;
+            /** Format: date-time */
+            validTo?: string;
+            /** Format: int32 */
+            maxUses?: number;
+            /** Format: int32 */
+            usesRemaining?: number;
+            revoked?: boolean;
+            status?: string;
+            /** Format: int32 */
+            usesConsumed?: number;
+        };
+        CredentialView: {
+            id?: string;
+            ref?: string;
+            schemaCode?: string;
+            /** Format: int32 */
+            usesRemaining?: number;
+            /** Format: int32 */
+            maxUses?: number;
+            revoked?: boolean;
+            /** Format: date-time */
+            validTo?: string;
+            jwt?: string;
+            status?: string;
+            /** Format: int32 */
+            usesConsumed?: number;
+        };
+        MeResponse: {
+            username?: string;
+            displayNameI18n?: components["schemas"]["LocalizedText"];
+            preferredLang?: string;
+            scopes?: string[];
+            mustChangePassword?: boolean;
+        };
+        /** @description One actionable needs-attention item */
+        AttentionEntry: {
+            type?: string;
+            /** Format: date-time */
+            occurredAt?: string;
+            detail?: {
+                [key: string]: Record<string, never>;
+            };
+        };
+        /** @description Itemized, actionable needs-attention feed */
+        AttentionResponse: {
+            items?: components["schemas"]["AttentionEntry"][];
         };
         /** @description A signing key's lifecycle status, no JWK material */
         SigningKeyView: {
             kid?: string;
-            provider?: string;
             state?: string;
+            provider?: string;
             /** Format: date-time */
             validFrom?: string;
             /** Format: date-time */
@@ -1588,90 +1658,22 @@ export interface components {
         SigningKeysResponse: {
             keys?: components["schemas"]["SigningKeyView"][];
         };
-        /** @description Pilot-metrics counters for the requested window */
-        StatsCounters: {
-            /** Format: int64 */
-            claimsRedeemed?: number;
-            /** Format: int64 */
-            consumeDenied?: number;
-            /** Format: int64 */
-            consumed?: number;
-            /** Format: int64 */
-            issued?: number;
-            /** Format: int64 */
-            revoked?: number;
-            /** Format: int64 */
-            verifyFailed?: number;
-            /** Format: int64 */
-            verifyOk?: number;
-        };
-        /** @description Pilot-metrics counters for a time window */
-        StatsResponse: {
-            counters?: components["schemas"]["StatsCounters"];
-            window?: components["schemas"]["StatsWindow"];
-        };
-        /** @description The time window counters were aggregated over */
-        StatsWindow: {
-            /** Format: date-time */
-            from?: string;
-            /** Format: date-time */
-            to?: string;
-        };
-        TenantView: {
-            /** Format: date-time */
-            createdAt?: string;
-            deployMode?: string;
-            /** Format: uuid */
-            id?: string;
-            nameI18n?: components["schemas"]["LocalizedText"];
-            slug?: string;
-            status?: string;
-            type?: string;
-        };
-        TotpChallengeRequest: {
-            challengeId: string;
-            code?: string;
-            recoveryCode?: string;
-        };
-        TotpConfirmRequest: {
-            code: string;
-        };
-        TotpConfirmResponse: {
-            recoveryCodes?: string[];
-        };
-        TotpEnrollResponse: {
-            otpAuthUri?: string;
-            secretBase32?: string;
-        };
-        UserSummary: {
-            /** Format: date-time */
-            createdAt?: string;
-            displayNameI18n?: components["schemas"]["LocalizedText"];
-            /** Format: uuid */
-            id?: string;
-            roles?: string[];
-            status?: string;
-            username?: string;
-        };
-        /** @description Request to verify an SD-JWT credential presentation */
-        VerifyRequest: {
-            sdJwt: string;
-        };
-        /** @description Result of an SD-JWT credential presentation verification */
-        VerifyResponse: {
-            claims?: {
+        /** @description One recent, display-ready audit event */
+        ActivityItem: {
+            action?: string;
+            actorType?: string;
+            entityRef?: string;
+            consumingPartyCode?: string;
+            consumingPartyName?: components["schemas"]["LocalizedText"];
+            detail?: {
                 [key: string]: Record<string, never>;
             };
-            reason?: string;
-            reasonMessage?: string;
-            revoked?: boolean;
-            statusListChecked?: boolean;
-            statusListUri?: string;
-            /** Format: int64 */
-            statusListVersion?: number;
-            /** Format: int32 */
-            usesRemaining?: number;
-            valid?: boolean;
+            /** Format: date-time */
+            occurredAt?: string;
+        };
+        /** @description Recent, display-ready credential activity */
+        ActivityResponse: {
+            items?: components["schemas"]["ActivityItem"][];
         };
     };
     responses: never;
@@ -1682,7 +1684,118 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    jwks_1: {
+    get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Schema detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SchemaDetail"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No schema with this id (KH-SCH-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchemaAuthoringRequest"];
+            };
+        };
+        responses: {
+            /** @description Schema updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SchemaDetail"];
+                };
+            };
+            /** @description Bean Validation failed, or a business-level check (KH-SCH-0400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the schema:manage scope */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No schema with this id (KH-SCH-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The schema is not DRAFT (KH-SCH-0409) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list: {
         parameters: {
             query?: never;
             header?: never;
@@ -1691,36 +1804,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description The tenant's users */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": string;
-                };
-            };
-        };
-    };
-    activity: {
-        parameters: {
-            query?: {
-                limit?: number;
-                event?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Recent activity, newest first */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ActivityResponse"];
+                    "*/*": components["schemas"]["UserSummary"][];
                 };
             };
             /** @description No valid session */
@@ -1732,7 +1822,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Authenticated with an API key instead of a console session */
+            /** @description Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1743,7 +1833,7 @@ export interface operations {
             };
         };
     };
-    createApiKey: {
+    create: {
         parameters: {
             query?: never;
             header?: never;
@@ -1752,20 +1842,29 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateApiKeyRequest"];
+                "application/json": components["schemas"]["CreateUserRequest"];
             };
         };
         responses: {
-            /** @description Key created */
+            /** @description User created; temporary password returned once */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["CreateApiKeyResponse"];
+                    "*/*": components["schemas"]["CreateUserResponse"];
                 };
             };
-            /** @description Missing the tenant:admin scope, or (when tenantId names another tenant) missing the platform:admin scope (KH-RBC-0403) */
+            /** @description Invalid username or role code (KH-USR-0400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1774,8 +1873,8 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description The named tenantId does not exist (KH-TNT-0404) */
-            404: {
+            /** @description Username already exists (KH-USR-0409) */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1785,7 +1884,7 @@ export interface operations {
             };
         };
     };
-    revokeApiKey: {
+    unlock: {
         parameters: {
             query?: never;
             header?: never;
@@ -1796,14 +1895,392 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Revoked (or already inactive) */
+            /** @description User unlocked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserSummary"];
+                };
+            };
+            /** @description Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description User not found (KH-USR-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    resetTotp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description TOTP reset (or already inactive) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Missing the tenant:admin scope (KH-RBC-0403) */
+            /** @description Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description User not found (KH-USR-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    replaceRoles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplaceRolesRequest"];
+            };
+        };
+        responses: {
+            /** @description Roles replaced */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserSummary"];
+                };
+            };
+            /** @description Unknown role code (KH-USR-0400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description User not found (KH-USR-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Would remove the last active administrator (KH-USR-0423) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    resetPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Password reset; temporary password returned once */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CreateUserResponse"];
+                };
+            };
+            /** @description Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description User not found (KH-USR-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    lock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description User locked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserSummary"];
+                };
+            };
+            /** @description Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description User not found (KH-USR-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Would remove the last active administrator (KH-USR-0423) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    disable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description User disabled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserSummary"];
+                };
+            };
+            /** @description Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description User not found (KH-USR-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Would remove the last active administrator (KH-USR-0423) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    enrollTotp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Enrollment secret and URI, shown once */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TotpEnrollResponse"];
+                };
+            };
+            /** @description No valid session */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description TOTP is already active for this user (KH-USR-1409) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    confirmTotp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TotpConfirmRequest"];
+            };
+        };
+        responses: {
+            /** @description TOTP activated; recovery codes shown once */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TotpConfirmResponse"];
+                };
+            };
+            /** @description The code does not match (KH-USR-0400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No valid session */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No pending enrollment, already active, or the pending enrollment expired (KH-USR-1409) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    changeMyPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Password changed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Current password incorrect (KH-USR-0400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No valid session */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1814,22 +2291,24 @@ export interface operations {
             };
         };
     };
-    list_4: {
+    list_1: {
         parameters: {
-            query?: never;
+            query?: {
+                status?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description The tenant's consuming parties */
+            /** @description Every matching schema registered for the tenant */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ConsumingPartyView"][];
+                    "*/*": components["schemas"]["SchemaSummary"][];
                 };
             };
             /** @description No valid session or API key */
@@ -1841,18 +2320,9 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Missing the consumer:manage scope (KH-RBC-0403) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
         };
     };
-    create_2: {
+    create_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -1861,20 +2331,20 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateConsumingPartyRequest"];
+                "application/json": components["schemas"]["SchemaCreateRequest"];
             };
         };
         responses: {
-            /** @description Party registered */
+            /** @description Schema created (DRAFT) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ConsumingPartyView"];
+                    "*/*": components["schemas"]["SchemaDetail"];
                 };
             };
-            /** @description Bean Validation failed, or an invalid code format (KH-CNS-0400) */
+            /** @description Bean Validation failed, or a business-level check (KH-SCH-0400) */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1892,17 +2362,8 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Missing the consumer:manage scope (KH-RBC-0403) */
+            /** @description Missing the schema:manage scope */
             403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description A party with this code already exists (KH-CNS-0409) */
-            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1912,56 +2373,7 @@ export interface operations {
             };
         };
     };
-    activate_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Party activated */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ConsumingPartyView"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the consumer:manage scope (KH-RBC-0403) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No party with this id (KH-CNS-0404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    allowSchema: {
+    createVersion: {
         parameters: {
             query?: never;
             header?: never;
@@ -1972,246 +2384,20 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AllowSchemaRequest"];
+                "application/json": components["schemas"]["SchemaAuthoringRequest"];
             };
         };
         responses: {
-            /** @description Schema allowed; updated party view */
+            /** @description New DRAFT version created */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ConsumingPartyView"];
+                    "*/*": components["schemas"]["SchemaDetail"];
                 };
             };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the consumer:manage scope (KH-RBC-0403) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No such party (KH-CNS-0404) or schema (KH-CNS-1404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    disallowSchema: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-                schemaId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Removed, or nothing to remove */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the consumer:manage scope (KH-RBC-0403) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    mintKey: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Key minted (rawKey shown once) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["CreateApiKeyResponse"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the consumer:manage scope (KH-RBC-0403) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No party with this id (KH-CNS-0404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    suspend_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Party suspended */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ConsumingPartyView"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the consumer:manage scope (KH-RBC-0403) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No party with this id (KH-CNS-0404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    signingKeys: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Every signing key's lifecycle status */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["SigningKeysResponse"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Authenticated without the key:manage scope */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    rotate: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["RotateKeyRequest"];
-            };
-        };
-        responses: {
-            /** @description The newly created, now-ACTIVE key */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["RotateKeyResponse"];
-                };
-            };
-            /** @description Unknown/unregistered provider named in the request body (KH-KEY-0400) */
+            /** @description Bean Validation failed, or a business-level check (KH-SCH-0400) */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2229,7 +2415,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Authenticated without the key:manage scope */
+            /** @description Missing the schema:manage scope */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2238,8 +2424,17 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description The target provider (e.g. Vault) is unreachable (KH-KEY-0503) */
-            503: {
+            /** @description No schema with this id (KH-SCH-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The source schema is not PUBLISHED (KH-SCH-1409) */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2249,28 +2444,24 @@ export interface operations {
             };
         };
     };
-    retire: {
+    publish: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                kid: string;
+                id: string;
             };
             cookie?: never;
         };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["RetireKeyRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
-            /** @description The now-RETIRED key */
+            /** @description Schema published */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RetireKeyResponse"];
+                    "*/*": components["schemas"]["SchemaDetail"];
                 };
             };
             /** @description No valid session or API key */
@@ -2282,7 +2473,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Authenticated without the key:manage scope */
+            /** @description Missing the schema:manage scope */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2291,7 +2482,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description No such key for the current tenant (KH-KEY-0404) */
+            /** @description No schema with this id (KH-SCH-0404) */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2300,7 +2491,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description The key is not currently RETIRING (KH-KEY-0409) */
+            /** @description The schema is not DRAFT (KH-SCH-1409) */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2309,8 +2500,527 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description The key has not yet reached khatm.keys.min-retiring-age; force=true to bypass (KH-KEY-0422) */
-            422: {
+        };
+    };
+    archive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Schema archived */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SchemaDetail"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the schema:manage scope */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No schema with this id (KH-SCH-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The schema is not PUBLISHED (KH-SCH-1409) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    revoke: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the revoke scope, or called with an API key instead of a console session */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No credential with this id (KH-CRD-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    mintClaimCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimCodeMintRequest"];
+            };
+        };
+        responses: {
+            /** @description Claim code minted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ClaimCodeMintResponse"];
+                };
+            };
+            /** @description Bean Validation failed (a blank sdJwt) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the issue scope, or called with a CONSUMING_PARTY API key instead of a console session or TENANT API key */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No credential with this id (KH-CRD-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The credential is revoked or has expired and can no longer accept a claim code (KH-CRD-0409) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    verify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Verification result (always 200 for a well-formed request) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VerifyResponse"];
+                };
+            };
+            /** @description sdJwt was blank or missing */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    issue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueRequest"];
+            };
+        };
+        responses: {
+            /** @description Credential issued */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["IssueResponse"];
+                };
+            };
+            /** @description Bean Validation failed (e.g. a missing holderRef) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Signing failed (KH-KEY-0500) or another unexpected error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    holderStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HolderStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description The credential's current status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["HolderStatusResponse"];
+                };
+            };
+            /** @description Bean Validation failed (a blank jwt) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The jwt is malformed, its signature does not verify, or it does not resolve to a known credential (KH-CRD-0404, unified for anti-enumeration) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    consume: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsumeRequest"];
+            };
+        };
+        responses: {
+            /** @description Consumption outcome (accepted, already-exhausted, expired, or revoked — always a domain result, never an error envelope for a normal denial) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConsumeResponse"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the consume scope, called with a console session or a TENANT API key instead of a CONSUMING_PARTY key (KH-RBC-0403), or the credential's schema is not in the calling party's allowlist (KH-CNS-0403, KH-1.4.3) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    bulkIssue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkIssueRequest"];
+            };
+        };
+        responses: {
+            /** @description Per-item report (always 200) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BulkIssueResponse"];
+                };
+            };
+            /** @description The batch itself is invalid — empty items, or more than 200 (KH-CRD-0400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the issue scope, or called with a CONSUMING_PARTY API key instead of a console session or TENANT API key */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    redeem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimRedeemRequest"];
+            };
+        };
+        responses: {
+            /** @description Credential delivered */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ClaimRedeemResponse"];
+                };
+            };
+            /** @description Bean Validation failed (a blank code) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The code is unknown, malformed, expired, already claimed, or expiry-zeroed — one generic outcome (KH-CLM-0404) for every flavor, so an external caller cannot distinguish 'never existed' from 'someone already claimed it' (spec D5) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Too many redeem attempts from this source address within the current window (KH-CLM-0429, spec D6) */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    completeTotp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TotpChallengeRequest"];
+            };
+        };
+        responses: {
+            /** @description Login completed; session cookie set */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Neither or both of code/recoveryCode were provided (KH-USR-0400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unknown/expired challenge, TOTP-attempt lockout, or a wrong code (KH-RBC-0401, generic message) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Logged out */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Login succeeded (session cookie set, empty body), or a TOTP challenge was issued (no cookie, body carries totpRequired:true + challengeId) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LoginChallengeResponse"];
+                };
+            };
+            /** @description Authentication failed (KH-RBC-0401, generic message) */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2409,153 +3119,6 @@ export interface operations {
             };
             /** @description A fully-onboarded tenant with this slug already exists (KH-TNT-0409) */
             409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    get_2: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The tenant */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["TenantView"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the platform:admin scope (KH-RBC-0403) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No tenant with this id (KH-TNT-0404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    activate: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Tenant activated */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["TenantView"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the platform:admin scope (KH-RBC-0403) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No tenant with this id (KH-TNT-0404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    suspend: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Tenant suspended */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["TenantView"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the platform:admin scope (KH-RBC-0403) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No tenant with this id (KH-TNT-0404) */
-            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2733,25 +3296,27 @@ export interface operations {
             };
         };
     };
-    attention: {
+    suspend: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Current needs-attention items */
+            /** @description Tenant suspended */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["AttentionResponse"];
+                    "*/*": components["schemas"]["TenantView"];
                 };
             };
-            /** @description No valid session */
+            /** @description No valid session or API key */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2760,7 +3325,234 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Authenticated with an API key instead of a console session */
+            /** @description Missing the platform:admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No tenant with this id (KH-TNT-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    activate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tenant activated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TenantView"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the platform:admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No tenant with this id (KH-TNT-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    retire: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RetireKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description The now-RETIRED key */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RetireKeyResponse"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Authenticated without the key:manage scope */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No such key for the current tenant (KH-KEY-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The key is not currently RETIRING (KH-KEY-0409) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The key has not yet reached khatm.keys.min-retiring-age; force=true to bypass (KH-KEY-0422) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    rotate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RotateKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description The newly created, now-ACTIVE key */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RotateKeyResponse"];
+                };
+            };
+            /** @description Unknown/unregistered provider named in the request body (KH-KEY-0400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Authenticated without the key:manage scope */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The target provider (e.g. Vault) is unreachable (KH-KEY-0503) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list_4: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The tenant's consuming parties */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConsumingPartyView"][];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the consumer:manage scope (KH-RBC-0403) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2771,7 +3563,7 @@ export interface operations {
             };
         };
     };
-    login: {
+    create_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -2780,21 +3572,48 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["LoginRequest"];
+                "application/json": components["schemas"]["CreateConsumingPartyRequest"];
             };
         };
         responses: {
-            /** @description Login succeeded (session cookie set, empty body), or a TOTP challenge was issued (no cookie, body carries totpRequired:true + challengeId) */
+            /** @description Party registered */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["LoginChallengeResponse"];
+                    "*/*": components["schemas"]["ConsumingPartyView"];
                 };
             };
-            /** @description Authentication failed (KH-RBC-0401, generic message) */
+            /** @description Bean Validation failed, or an invalid code format (KH-CNS-0400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No valid session or API key */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the consumer:manage scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description A party with this code already exists (KH-CNS-0409) */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2804,189 +3623,267 @@ export interface operations {
             };
         };
     };
-    logout: {
+    suspend_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Party suspended */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConsumingPartyView"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the consumer:manage scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No party with this id (KH-CNS-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    mintKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Key minted (rawKey shown once) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CreateApiKeyResponse"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the consumer:manage scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No party with this id (KH-CNS-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    allowSchema: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AllowSchemaRequest"];
+            };
+        };
+        responses: {
+            /** @description Schema allowed; updated party view */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConsumingPartyView"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the consumer:manage scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No such party (KH-CNS-0404) or schema (KH-CNS-1404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    activate_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Party activated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConsumingPartyView"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the consumer:manage scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No party with this id (KH-CNS-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    createApiKey: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateApiKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description Key created */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CreateApiKeyResponse"];
+                };
+            };
+            /** @description Missing the tenant:admin scope, or (when tenantId names another tenant) missing the platform:admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The named tenantId does not exist (KH-TNT-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    revokeApiKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
         requestBody?: never;
         responses: {
-            /** @description Logged out */
+            /** @description Revoked (or already inactive) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-        };
-    };
-    me: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Current user */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["MeResponse"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    completeTotp: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TotpChallengeRequest"];
-            };
-        };
-        responses: {
-            /** @description Login completed; session cookie set */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Neither or both of code/recoveryCode were provided (KH-USR-0400) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Unknown/expired challenge, TOTP-attempt lockout, or a wrong code (KH-RBC-0401, generic message) */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    redeem: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ClaimRedeemRequest"];
-            };
-        };
-        responses: {
-            /** @description Credential delivered */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ClaimRedeemResponse"];
-                };
-            };
-            /** @description Bean Validation failed (a blank code) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description The code is unknown, malformed, expired, already claimed, or expiry-zeroed — one generic outcome (KH-CLM-0404) for every flavor, so an external caller cannot distinguish 'never existed' from 'someone already claimed it' (spec D5) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Too many redeem attempts from this source address within the current window (KH-CLM-0429, spec D6) */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    list_2: {
-        parameters: {
-            query?: {
-                ref?: string;
-                pseudoRef?: string;
-                schemaId?: string;
-                revoked?: boolean;
-                status?: string[];
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Matching page of credential summaries */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["CredentialPage"];
-                };
-            };
-            /** @description A status value is not one of the recognized statuses (KH-SYS-0400) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No valid session */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Authenticated with an API key instead of a console session */
+            /** @description Missing the tenant:admin scope (KH-RBC-0403) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2997,750 +3894,83 @@ export interface operations {
             };
         };
     };
-    bulkIssue: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BulkIssueRequest"];
-            };
-        };
-        responses: {
-            /** @description Per-item report (always 200) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["BulkIssueResponse"];
-                };
-            };
-            /** @description The batch itself is invalid — empty items, or more than 200 (KH-CRD-0400) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the issue scope, or called with a CONSUMING_PARTY API key instead of a console session or TENANT API key */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    consume: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ConsumeRequest"];
-            };
-        };
-        responses: {
-            /** @description Consumption outcome (accepted, already-exhausted, expired, or revoked — always a domain result, never an error envelope for a normal denial) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ConsumeResponse"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the consume scope, called with a console session or a TENANT API key instead of a CONSUMING_PARTY key (KH-RBC-0403), or the credential's schema is not in the calling party's allowlist (KH-CNS-0403, KH-1.4.3) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    holderStatus: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["HolderStatusRequest"];
-            };
-        };
-        responses: {
-            /** @description The credential's current status */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["HolderStatusResponse"];
-                };
-            };
-            /** @description Bean Validation failed (a blank jwt) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description The jwt is malformed, its signature does not verify, or it does not resolve to a known credential (KH-CRD-0404, unified for anti-enumeration) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    issue: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["IssueRequest"];
-            };
-        };
-        responses: {
-            /** @description Credential issued */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["IssueResponse"];
-                };
-            };
-            /** @description Bean Validation failed (e.g. a missing holderRef) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Signing failed (KH-KEY-0500) or another unexpected error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    verify: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["VerifyRequest"];
-            };
-        };
-        responses: {
-            /** @description Verification result (always 200 for a well-formed request) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["VerifyResponse"];
-                };
-            };
-            /** @description sdJwt was blank or missing */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    get_1: {
+    jwks: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description the tenant's slug */
+                tenantSlug: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Credential status */
+            /** @description The tenant's JWKS */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["CredentialView"];
+                    "application/json": string;
                 };
             };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No credential with this id (KH-CRD-0404) */
+            /** @description No tenant with this slug (KH-TNT-0404) */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
     };
-    mintClaimCode: {
+    getStatusList: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "If-None-Match"?: string;
+            };
             path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ClaimCodeMintRequest"];
-            };
-        };
-        responses: {
-            /** @description Claim code minted */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ClaimCodeMintResponse"];
-                };
-            };
-            /** @description Bean Validation failed (a blank sdJwt) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the issue scope, or called with a CONSUMING_PARTY API key instead of a console session or TENANT API key */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No credential with this id (KH-CRD-0404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description The credential is revoked or has expired and can no longer accept a claim code (KH-CRD-0409) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    revoke: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
+                /** @description the tenant's slug */
+                tenantSlug: string;
+                /** @description the status list's code */
+                listCode: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Revoked */
+            /** @description The signed status-list artifact */
             200: {
                 headers: {
+                    /** @description max-age=60 */
+                    "Cache-Control"?: string;
+                    /** @description The list's version, quoted — weak entity tag for revalidation */
+                    ETag?: string;
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/jose": string;
+                };
             };
-            /** @description No valid session or API key */
-            401: {
+            /** @description The client's If-None-Match matched the current version — body omitted */
+            304: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
+                    "application/jose": string;
                 };
             };
-            /** @description Missing the revoke scope, or called with an API key instead of a console session */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No credential with this id (KH-CRD-0404) */
+            /** @description No status list at this tenantSlug/listCode, or the tenantSlug is unknown (KH-TNT-0404/KH-STS-0404) */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    list_1: {
-        parameters: {
-            query?: {
-                status?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Every matching schema registered for the tenant */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["SchemaSummary"][];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    create_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SchemaCreateRequest"];
-            };
-        };
-        responses: {
-            /** @description Schema created (DRAFT) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["SchemaDetail"];
-                };
-            };
-            /** @description Bean Validation failed, or a business-level check (KH-SCH-0400) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the schema:manage scope */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Schema detail */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["SchemaDetail"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No schema with this id (KH-SCH-0404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SchemaAuthoringRequest"];
-            };
-        };
-        responses: {
-            /** @description Schema updated */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["SchemaDetail"];
-                };
-            };
-            /** @description Bean Validation failed, or a business-level check (KH-SCH-0400) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the schema:manage scope */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No schema with this id (KH-SCH-0404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description The schema is not DRAFT (KH-SCH-0409) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    archive: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Schema archived */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["SchemaDetail"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the schema:manage scope */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No schema with this id (KH-SCH-0404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description The schema is not PUBLISHED (KH-SCH-1409) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    publish: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Schema published */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["SchemaDetail"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the schema:manage scope */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No schema with this id (KH-SCH-0404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description The schema is not DRAFT (KH-SCH-1409) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    createVersion: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SchemaAuthoringRequest"];
-            };
-        };
-        responses: {
-            /** @description New DRAFT version created */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["SchemaDetail"];
-                };
-            };
-            /** @description Bean Validation failed, or a business-level check (KH-SCH-0400) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No valid session or API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the schema:manage scope */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No schema with this id (KH-SCH-0404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description The source schema is not PUBLISHED (KH-SCH-1409) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
+                    "application/jose": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
@@ -3764,56 +3994,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["StatsResponse"];
-                };
-            };
-            /** @description from/to was present but not a valid ISO-8601 instant */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No valid session */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Authenticated with an API key instead of a console session */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    consumingPartyStats: {
-        parameters: {
-            query?: {
-                from?: string;
-                to?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Per-party stats for the resolved window */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ConsumingPartyStatsResponse"];
                 };
             };
             /** @description from/to was present but not a valid ISO-8601 instant */
@@ -3895,22 +4075,34 @@ export interface operations {
             };
         };
     };
-    list: {
+    consumingPartyStats: {
         parameters: {
-            query?: never;
+            query?: {
+                from?: string;
+                to?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description The tenant's users */
+            /** @description Per-party stats for the resolved window */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["UserSummary"][];
+                    "*/*": components["schemas"]["ConsumingPartyStatsResponse"];
+                };
+            };
+            /** @description from/to was present but not a valid ISO-8601 instant */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description No valid session */
@@ -3922,7 +4114,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me) */
+            /** @description Authenticated with an API key instead of a console session */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3933,78 +4125,33 @@ export interface operations {
             };
         };
     };
-    create: {
+    list_2: {
         parameters: {
-            query?: never;
+            query?: {
+                ref?: string;
+                pseudoRef?: string;
+                schemaId?: string;
+                revoked?: boolean;
+                status?: string[];
+                page?: number;
+                size?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateUserRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
-            /** @description User created; temporary password returned once */
+            /** @description Matching page of credential summaries */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["CreateUserResponse"];
+                    "*/*": components["schemas"]["CredentialPage"];
                 };
             };
-            /** @description Invalid username or role code (KH-USR-0400) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Username already exists (KH-USR-0409) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    changeMyPassword: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ChangePasswordRequest"];
-            };
-        };
-        responses: {
-            /** @description Password changed */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Current password incorrect (KH-USR-0400) */
+            /** @description A status value is not one of the recognized statuses (KH-SYS-0400) */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4014,6 +4161,15 @@ export interface operations {
                 };
             };
             /** @description No valid session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Authenticated with an API key instead of a console session */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4024,48 +4180,66 @@ export interface operations {
             };
         };
     };
-    confirmTotp: {
+    get_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Credential status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CredentialView"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No credential with this id (KH-CRD-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    me: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TotpConfirmRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
-            /** @description TOTP activated; recovery codes shown once */
+            /** @description Current user */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["TotpConfirmResponse"];
+                    "*/*": components["schemas"]["MeResponse"];
                 };
             };
-            /** @description The code does not match (KH-USR-0400) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No valid session */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No pending enrollment, already active, or the pending enrollment expired (KH-USR-1409) */
-            409: {
+            /** @description No valid session or API key */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4075,7 +4249,7 @@ export interface operations {
             };
         };
     };
-    enrollTotp: {
+    attention: {
         parameters: {
             query?: never;
             header?: never;
@@ -4084,17 +4258,17 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Enrollment secret and URI, shown once */
+            /** @description Current needs-attention items */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["TotpEnrollResponse"];
+                    "*/*": components["schemas"]["AttentionResponse"];
                 };
             };
             /** @description No valid session */
-            403: {
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4102,8 +4276,8 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description TOTP is already active for this user (KH-USR-1409) */
-            409: {
+            /** @description Authenticated with an API key instead of a console session */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4113,7 +4287,7 @@ export interface operations {
             };
         };
     };
-    disable: {
+    get_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -4124,16 +4298,25 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description User disabled */
+            /** @description The tenant */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["UserSummary"];
+                    "*/*": components["schemas"]["TenantView"];
                 };
             };
-            /** @description Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me) */
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the platform:admin scope (KH-RBC-0403) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4142,17 +4325,8 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description User not found (KH-USR-0404) */
+            /** @description No tenant with this id (KH-TNT-0404) */
             404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Would remove the last active administrator (KH-USR-0423) */
-            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4162,27 +4336,34 @@ export interface operations {
             };
         };
     };
-    lock: {
+    signingKeys: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description User locked */
+            /** @description Every signing key's lifecycle status */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["UserSummary"];
+                    "*/*": components["schemas"]["SigningKeysResponse"];
                 };
             };
-            /** @description Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me) */
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Authenticated without the key:manage scope */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4191,47 +4372,39 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description User not found (KH-USR-0404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Would remove the last active administrator (KH-USR-0423) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
         };
     };
-    resetPassword: {
+    activity: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
+            query?: {
+                limit?: number;
+                event?: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Password reset; temporary password returned once */
+            /** @description Recent activity, newest first */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["CreateUserResponse"];
+                    "*/*": components["schemas"]["ActivityResponse"];
                 };
             };
-            /** @description Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me) */
+            /** @description No valid session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Authenticated with an API key instead of a console session */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4240,219 +4413,18 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description User not found (KH-USR-0404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
         };
     };
-    replaceRoles: {
+    jwks_1: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReplaceRolesRequest"];
-            };
-        };
-        responses: {
-            /** @description Roles replaced */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["UserSummary"];
-                };
-            };
-            /** @description Unknown role code (KH-USR-0400) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description User not found (KH-USR-0404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Would remove the last active administrator (KH-USR-0423) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    resetTotp: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description TOTP reset (or already inactive) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description User not found (KH-USR-0404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    unlock: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description User unlocked */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["UserSummary"];
-                };
-            };
-            /** @description Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description User not found (KH-USR-0404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    getStatusList: {
-        parameters: {
-            query?: never;
-            header?: {
-                "If-None-Match"?: string;
-            };
-            path: {
-                /** @description the tenant's slug */
-                tenantSlug: string;
-                /** @description the status list's code */
-                listCode: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The signed status-list artifact */
-            200: {
-                headers: {
-                    /** @description max-age=60 */
-                    "Cache-Control"?: string;
-                    /** @description The list's version, quoted — weak entity tag for revalidation */
-                    ETag?: string;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/jose": string;
-                };
-            };
-            /** @description The client's If-None-Match matched the current version — body omitted */
-            304: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/jose": string;
-                };
-            };
-            /** @description No status list at this tenantSlug/listCode, or the tenantSlug is unknown (KH-TNT-0404/KH-STS-0404) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/jose": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    jwks: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description the tenant's slug */
-                tenantSlug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The tenant's JWKS */
+            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -4461,13 +4433,43 @@ export interface operations {
                     "application/json": string;
                 };
             };
-            /** @description No tenant with this slug (KH-TNT-0404) */
-            404: {
+        };
+    };
+    disallowSchema: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                schemaId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed, or nothing to remove */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No valid session or API key */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the consumer:manage scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };

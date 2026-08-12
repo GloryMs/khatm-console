@@ -65,6 +65,9 @@ function buildIssueRequest(detail: SchemaDetail, values: IssueFormValues): Issue
   return {
     holderRef: values.holderRef,
     schemaCode: requireText(detail.code, 'issue.missingSchemaCode'),
+    // Pins issuance to the exact schema version the operator picked, not whatever
+    // (schemaCode, version=1) the backend would otherwise resolve on its own.
+    schemaId: requireText(detail.id, 'issue.missingSchemaCode'),
     claims: buildClaims(values.claims),
     maxUses: toNumber(values.maxUses),
     validMinutes: toNumber(values.validMinutes),

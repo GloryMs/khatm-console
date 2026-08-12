@@ -6,8 +6,10 @@
 
 - C9-attested-issuance-ui (console side of FS-2.4's non-automated issuer portal, session
   `SESSION-C9-attested-issuance-ui.md`, prereq `khatm-platform` KH-2.4-BE PR #54 merged
-  2026-08-10) — **DELIVERED this session (2026-08-11), not yet a PR.** Full record below under
-  "Last completed" 2026-08-11. Veto answers actually used: **V1=(a)** verifier-side hash compare
+  2026-08-10) — **DONE.** Delivered 2026-08-11, live Docker Desktop walkthrough (EN/AR/RTL + every
+  new surface) by Majd 2026-08-12 — see "Last completed" both dates for the full record, including
+  the `schemaId`-pinning fix and two platform-side findings (nginx upstream-connection staleness,
+  a `createVersion` version-number collision) surfaced during that walkthrough. Veto answers actually used: **V1=(a)** verifier-side hash compare
   built into `/verify` (`HashCompare`, session-scoped to any disclosed claim shaped like a 64-hex
   digest, not just a literal `doc_sha256` name); **V2=(a)** the picked `File` is never retained in
   React state past the `hashFile` call — only its name/size and the digest string persist;
@@ -126,6 +128,66 @@ contract:update`) confirmed the contract was already current (no diff against wh
   manual EN/AR + RTL walkthrough of that specific banner was never explicitly logged as run.
 
 ## Last completed
+
+- 2026-08-12 (folded into `feat/KH-2.4.1-attested-issuance`, found live-testing the C9 delivery
+  against Docker Desktop): **`IssuePage`/`AttestedIssuePage` resolved the operator's exact schema
+  selection but never sent it.** Both pages already fetch a specific `SchemaDetail` (by `id`) from
+  the schema picker and display its exact version, but `buildIssueRequest`/
+  `buildAttestedIssueRequest` only ever put `schemaCode` on the outgoing `IssueRequest` — the
+  platform's `CredentialService#issue` had no way to know which version was meant and always
+  resolved `(schemaCode, version=1)`, so a schema published at version 2+ was silently unreachable
+  from issuance no matter what the operator picked in the UI (root-caused together with the
+  platform-side fix — see `khatm-platform` `docs/STATE.md`'s matching 2026-08-12 entry for the full
+  diagnostic). **Fix (this repo):** platform added an additive, nullable `IssueRequest.schemaId`;
+  `contracts/openapi.json` + `src/api/generated/schema.ts` regenerated via `npm run gen:api` against
+  the rebuilt platform's live `/v3/api-docs` (never hand-written, per this repo's CLAUDE.md); both
+  `buildIssueRequest` (`features/issuance/IssuePage.tsx`) and `buildAttestedIssueRequest`
+  (`features/attestedIssuance/request.ts`) now also send `schemaId: detail.id`. Two existing tests
+  (`IssuePage.test.tsx`, `AttestedIssuePage.test.tsx`) updated to expect `schemaId` in the mocked
+  `issueCredential` call. `npm run typecheck`/`lint`/`test` all green (253/253 tests; the one
+  ESLint warning in `FormField.tsx` and the pre-existing `format:check` failures under `.vscode/`,
+  `docs/sessions/`, and `docs/specs/` are pre-existing and untouched by this fix — not silently
+  worked around). Rebuilt/redeployed `khatm-console`'s own container and verified live. Committed
+  on `feat/KH-2.4.1-attested-issuance` alongside the rest of C9 rather than a separate `main`
+  hotfix — the bug was only reachable through this session's own new `AttestedIssuePage`/schema
+  builder work in the first place (nothing else in the console lets an operator pick a specific
+  non-latest schema version), so it ships in the same PR.
+
+- 2026-08-12 (same branch, live Docker Desktop walkthrough — two platform-side findings, not console
+  bugs, recorded here since they cost real debugging time and will recur for the next session that
+  hits them):
+  - **nginx caches its `khatm-api` upstream connection for the worker's lifetime** (`proxy_pass
+    http://khatm-api:8080` with no `resolver` directive) — when the local `khatm-api` container
+    restarts (observed happening every 1–10 minutes on this host, most likely IntelliJ's
+    continuous-build/DevTools live-reload bouncing it), the console's nginx keeps talking to the
+    dying old instance for a while, producing a genuine (correctly-shaped, uniquely-traced)
+    `KH-SYS-0500` from that instance's own `GlobalExceptionHandler` — reproducible for *any*
+    `/api/v1/credentials/verify` payload including garbage input, so it is not attestation-specific.
+    Confirmed via: direct calls to `khatm-api:8080` always succeeded; the same call via the
+    console's nginx failed consistently; `docker exec khatm-console nginx -s reload` (forcing
+    re-resolution) fixed it immediately, until the backend restarted again. Workaround documented
+    for whoever hits this next: reload nginx after any backend restart. Also surfaced, in passing,
+    a `logback-spring.xml` `TEMP-DIAGNOSTIC` comment on the platform side noting `docker logs`
+    itself gets stuck on this host — the `/tmp/khatm-diagnostic.log` file appender it adds was the
+    only way to read a given container instance's actual logs during this session.
+  - **`SchemaAuthoringService#createVersion` computes the new version as `source.version + 1`
+    unconditionally**, not "the next free version number for this `code`." Creating a second new
+    version from the same still-`PUBLISHED` source (e.g. after the first new version was archived)
+    recomputes the identical version number and hits `credential_schema_tenant_id_code_version_key`
+    — a raw `DataIntegrityViolationException` surfaced as `KH-SYS-0500`, not a clean `KH-SCH-*`
+    conflict code. Reproduced live via `psql` against the local dev DB (`ba_certificate_v1`: v1
+    PUBLISHED, v2 ARCHIVED, a third "New schema version" attempt from v1 collided on v2 again).
+    Not actioned this session (`khatm-platform` fix, out of scope for this repo) — recorded as a
+    platform ask below. Console-side, `SchemaBuilderPage`'s error path already renders whatever the
+    server returns via the standard `ApiErrorBanner`, so no console change is needed once the
+    platform maps this to a real conflict code instead of falling through to the generic handler.
+  - **Majd's live walkthrough (2026-08-12), the DoD's hard merge gate — passed.** Full EN/AR + RTL
+    pass across the new surfaces (attested-issuance wizard, hash-compare on `/verify`, schema
+    authoring's `requiresAttestation`/pattern fields), a real scanned-file run end-to-end including
+    the two platform-side snags above (both root-caused live, neither a console defect), and the
+    schema-builder claim-field row layout fix. Confirmed complete by Majd directly ("tested
+    everything including Arabic keys/content, and RTL, and the new features") — proceeding to PR
+    and merge on that basis.
 
 - 2026-08-11 (feat/KH-2.4.1-attested-issuance, spec FS-2.4, session
   `SESSION-C9-attested-issuance-ui.md` — delivered, not yet a PR): **Preamble.** `npm run
@@ -1861,6 +1923,14 @@ khatm-console-staging`.
 
 ## Open decisions / blockers
 
+- **Platform ask, new 2026-08-12 (live Docker Desktop walkthrough of feat/KH-2.4.1-attested-issuance)
+  — OPEN.** `SchemaAuthoringService#createVersion` computes the new version as `source.version + 1`
+  unconditionally rather than the next free version number for that `code` — a second "new version"
+  created from the same still-`PUBLISHED` source (after the first new version was archived) collides
+  with the existing row on `credential_schema_tenant_id_code_version_key`, surfacing as a raw
+  `KH-SYS-0500` instead of a clean conflict code. See "Last completed" 2026-08-12 for the full
+  reproduction (`ba_certificate_v1`, local dev DB). No console-side workaround exists — the fix
+  belongs in `createVersion`'s version-number computation.
 - **Platform ask, new 2026-08-11 (feat/KH-2.4.1-attested-issuance preamble) — OPEN.**
   `KH-ATT-0400`/`0401`/`0402` (attestation deny-by-default, bulk-attested rejection) are absent
   from the vendored `openapi.json` even though they're fully implemented server-side — the

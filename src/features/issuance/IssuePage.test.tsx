@@ -117,6 +117,7 @@ describe('IssuePage', () => {
     expect(issue).toHaveBeenCalledWith({
       holderRef: 'holder-001',
       schemaCode: 'CriminalRecord/v1',
+      schemaId: 'schema-1',
       claims: { result: 'NO_RECORD', caseNumber: '' },
       maxUses: 3,
       validMinutes: 120,

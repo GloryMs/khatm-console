@@ -135,6 +135,7 @@ describe('AttestedIssuePage full walkthrough', () => {
     expect(issue).toHaveBeenCalledWith({
       holderRef: 'holder-att-001',
       schemaCode: 'AttestedDocument/v1',
+      schemaId: 'schema-att-1',
       claims: {
         doc_type: 'IDENTITY_DOCUMENT',
         original_issue_date: '',
