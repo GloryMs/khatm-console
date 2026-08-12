@@ -446,7 +446,7 @@
       "fieldSelective": "Selective disclosure",
       "fieldPattern": "Pattern (optional)",
       "fieldPatternPlaceholder": "e.g. ^[0-9a-f]{64}$",
-      "fieldPatternHelp": "Regular expression a claim value must match. Applies at issuance, not here.",
+      "fieldPatternHelp": "Regular expression the entire claim value must match, not just contain — e.g. [0-9]+ for one-or-more digits ([0-9] alone only allows a single digit). Applies at issuance, not here.",
       "patternInvalid": "Not a valid regular expression",
       "atLeastOneField": "At least one claim field is required",
       "duplicateFieldName": "Field names must be unique",

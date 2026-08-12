@@ -128,7 +128,9 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: var(--space-3);
-  align-items: end;
+  /* Top-align, not bottom-align: a field whose help/error caption wraps to two lines (e.g.
+     Pattern) must not push its label+input out of line with its shorter neighbors. */
+  align-items: start;
 }
 
 .checkboxField {
