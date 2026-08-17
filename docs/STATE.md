@@ -15,9 +15,9 @@
   is byte-for-byte the pre-C10 request — no `provider` key at all, verified at the `apiFetch`
   call-site, not just the mutation layer. D4 (type-to-confirm keyed on the tenant slug instead of
   the active key's `kid`) stayed deferred — `MeResponse` still has no `tenantSlug` field, reconfirmed
-  against a fresh contract fetch this session, same as C8's original finding. **PR #25 opened, not
-  merged** — no live walkthrough or Arabic-copy review yet, both remain Majd's merge gate. See
-  "Last completed" 2026-08-17.
+  against a fresh contract fetch this session, same as C8's original finding. **PR #25 opened.
+  Majd's live walkthrough and the Arabic-copy/RTL gate both passed 2026-08-17** — see "Last
+  completed" for both entries.
 - C9-attested-issuance-ui (console side of FS-2.4's non-automated issuer portal, session
   `SESSION-C9-attested-issuance-ui.md`, prereq `khatm-platform` KH-2.4-BE PR #54 merged
   2026-08-10) — **DONE.** Delivered 2026-08-11, live Docker Desktop walkthrough (EN/AR/RTL + every
@@ -101,6 +101,29 @@ contract:update`) confirmed the contract was already current (no diff against wh
   walkthrough. See "Last completed" 2026-07-30 for the full record.
 
 ## Last completed
+
+- 2026-08-17 (feat/C10-provider-switch-rotation, PR #25 — rebuilt both containers and Majd's live
+  walkthrough, the DoD's two remaining hard gates): rebuilt `khatm-console` (`docker compose build
+--no-cache && up -d --force-recreate` against the already-running local backend stack, including
+  `khatm-vault` — healthy) and `staging-khatm-console` (recovered the existing container's baked-in
+  nginx config and `VITE_QR_API_BASE` via `docker exec .../cat` and a JS-bundle grep, since the
+  original scratchpad Dockerfile from the 2026-08-05/06 sessions doesn't persist across sessions;
+  rebuilt from the same recovered recipe rather than guessing at it). Verified both served the new
+  bundle (`grep`'d a literal string from the new `warningToVault` copy out of the built JS in each
+  container) and that each proxy still reached its backend correctly (401, not a broken-proxy
+  502/404) before handing off. Checked the local dev DB directly (`issuer_key` table, not
+  `signing_key` — corrects a guess) to give Majd exact expected values instead of vague steps: the
+  default tenant's ACTIVE key (`khatm-default:key-10`) was already on **VAULT**, not SOFT as the
+  brief's own DoD wording assumed — reordered the handed-off scenarios (VAULT→SOFT rollback warning
+  first, then SOFT→VAULT fail-closed warning) rather than have Majd hit a same-as-current no-op.
+  Handed off 9 numbered scenarios (inherited rotate stays on VAULT with no provider sent; both
+  warning directions; no warning re-picking the already-active provider; dialog resets to "inherit"
+  on cancel/reopen; Arabic + RTL re-run of the switch scenarios; retire and scope-gating regression
+  checks) plus a staging note (light EN/AR/render sanity only, explicitly did not recommend or
+  perform a real rotation against the deployed Bunny backend). **Majd confirmed all scenarios
+  passed, explicitly including Arabic and RTL** — both remaining DoD checklist items (`[MAJD]` live
+  walkthrough, `[MAJD]` Arabic-copy gate) are satisfied. PR #25 ready for Majd's merge decision;
+  not merged by this session without that explicit go-ahead.
 
 - 2026-08-17 (feat/C10-provider-switch-rotation, spec brief `SESSION-C10-provider-switch-rotation.md`
   — delivered, not yet a PR): **Preamble.** Baseline `npm run check` green on `main` first (per the
