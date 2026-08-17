@@ -15,8 +15,9 @@
   is byte-for-byte the pre-C10 request — no `provider` key at all, verified at the `apiFetch`
   call-site, not just the mutation layer. D4 (type-to-confirm keyed on the tenant slug instead of
   the active key's `kid`) stayed deferred — `MeResponse` still has no `tenantSlug` field, reconfirmed
-  against a fresh contract fetch this session, same as C8's original finding. No live walkthrough
-  or Arabic-copy review yet — both remain Majd's merge gate. See "Last completed" 2026-08-17.
+  against a fresh contract fetch this session, same as C8's original finding. **PR #25 opened, not
+  merged** — no live walkthrough or Arabic-copy review yet, both remain Majd's merge gate. See
+  "Last completed" 2026-08-17.
 - C9-attested-issuance-ui (console side of FS-2.4's non-automated issuer portal, session
   `SESSION-C9-attested-issuance-ui.md`, prereq `khatm-platform` KH-2.4-BE PR #54 merged
   2026-08-10) — **DONE.** Delivered 2026-08-11, live Docker Desktop walkthrough (EN/AR/RTL + every
@@ -189,8 +190,8 @@ test` (258/258), and `npm run build` all clean. `format:check` clean on every fi
     (Docker Desktop is where Majd's own walkthrough will run, not this session). Both the live
     walkthrough (inherited rotate, explicit SOFT→VAULT against a local Vault compose, warning
     appearing, then an inherited rotate landing on VAULT) and the Arabic-copy/RTL gate are Majd's
-    own steps per the brief's DoD and remain the merge gate. **PR not yet opened** — see next
-    session-start note for whether it was opened after this entry was written.
+    own steps per the brief's DoD and remain the merge gate. **PR #25 opened, not merged** —
+    awaiting Majd's walkthrough and the Arabic-copy gate.
 
 - 2026-08-12 (folded into `feat/KH-2.4.1-attested-issuance`, found live-testing the C9 delivery
   against Docker Desktop): **`IssuePage`/`AttestedIssuePage` resolved the operator's exact schema
