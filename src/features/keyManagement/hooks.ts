@@ -4,6 +4,7 @@ import {
   retireSigningKey,
   rotateSigningKey,
   type RetireKeyRequest,
+  type RotateKeyRequest,
 } from './api';
 
 export const keyManagementKeys = {
@@ -31,11 +32,16 @@ export function useSigningKeyStatuses(enabled: boolean) {
   });
 }
 
-/** Rotates the tenant's signing key; refetches the signing-keys list on success. */
+/**
+ * Rotates the tenant's signing key; refetches the signing-keys list on
+ * success. `provider` left `undefined` inherits the current provider (no
+ * `provider` sent at all) — the C10 provider-switch UI passes it explicitly
+ * only when the operator picks a provider other than "inherit".
+ */
 export function useRotateKey() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: rotateSigningKey,
+    mutationFn: (provider?: RotateKeyRequest['provider']) => rotateSigningKey(provider),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: keyManagementKeys.list() }),
   });
 }

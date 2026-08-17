@@ -7,6 +7,7 @@ import { useErrorMessage } from '@/api/useErrorMessage';
 import { RequireScope } from '@/features/auth/RequireScope';
 import { KeyList } from './components/KeyList';
 import { RetireKeyDialog } from './components/RetireKeyDialog';
+import { RotateProviderChoice } from './components/RotateProviderChoice';
 import { useRetireKey, useRotateKey, useSigningKeyStatuses } from './hooks';
 import type { SigningKeyView } from './api';
 import styles from './KeyManagementPage.module.css';
@@ -35,18 +36,26 @@ function KeyManagementPageBody() {
   const retireKey = useRetireKey();
 
   const [rotateOpen, setRotateOpen] = useState(false);
+  const [rotateProvider, setRotateProvider] = useState<string | null>(null);
   const [retireTarget, setRetireTarget] = useState<SigningKeyView | null>(null);
 
-  const activeKid = keys.data?.keys?.find((k) => k.state === 'ACTIVE')?.kid;
+  const activeKey = keys.data?.keys?.find((k) => k.state === 'ACTIVE');
+  const activeKid = activeKey?.kid;
+
+  const openRotate = () => {
+    setRotateProvider(null);
+    setRotateOpen(true);
+  };
 
   const closeRotate = () => {
     setRotateOpen(false);
+    setRotateProvider(null);
     rotateKey.reset();
   };
 
   const onConfirmRotate = async () => {
     try {
-      await rotateKey.mutateAsync();
+      await rotateKey.mutateAsync(rotateProvider ?? undefined);
       closeRotate();
     } catch {
       // surfaced via rotateKey.isError/error in TypeToConfirmDialog
@@ -80,7 +89,7 @@ function KeyManagementPageBody() {
           type="button"
           disabled={!activeKid}
           title={activeKid ? undefined : t('keyManagement.rotate.noActiveKey')}
-          onClick={() => setRotateOpen(true)}
+          onClick={openRotate}
         >
           {t('keyManagement.rotate.cta')}
         </Button>
@@ -105,7 +114,13 @@ function KeyManagementPageBody() {
           errorMessage={rotateKey.isError ? resolveError(rotateKey.error) : undefined}
           onConfirm={onConfirmRotate}
           onCancel={closeRotate}
-        />
+        >
+          <RotateProviderChoice
+            currentProvider={activeKey?.provider}
+            value={rotateProvider}
+            onChange={setRotateProvider}
+          />
+        </TypeToConfirmDialog>
       )}
 
       {retireTarget?.kid && (

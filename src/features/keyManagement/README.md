@@ -16,10 +16,18 @@ via `RequireScope` (matches `UsersPage`'s pattern) — no permission otherwise.
 - `useRotateKey()` → `POST /api/v1/admin/signing-keys/rotate` — gated behind
   a `TypeToConfirmDialog` keyed off the current ACTIVE key's `kid` (no
   tenant-slug field exists anywhere in the contract for the caller's own
-  session — see STATE.md for the substitution rationale).
+  session — see STATE.md for the substitution rationale). Since SESSION-C10,
+  the dialog also offers an explicit provider choice
+  (`RotateProviderChoice`) — inherit (default, sends no `provider`) or an
+  explicit `SOFT`/`VAULT` (`RotateKeyRequest.provider`, the SOFT->Vault
+  migration mechanism, spec FS-2.3 D6) — with a warning when the pick differs
+  from the ACTIVE key's current provider.
 - `useRetireKey()` → `POST /api/v1/admin/signing-keys/{kid}/retire` — staged
   through `RetireKeyDialog` for the `khatm.keys.min-retiring-age` guard
   (`KH-KEY-0422` explained inline; forcing needs a second, severe confirm).
 
-No `provider` column yet — the contract has no `provider` field until
-KH-2.3b-BE (Vault Transit) lands.
+The `provider` column (`KeyList.tsx`) has existed since KH-2.3b-BE landed
+(SESSION-C8b, 2026-08-04) — `SigningKeyView.provider`/`RotateKeyResponse.provider`
+are both in the contract, free-text (no server-side enum). `KNOWN_PROVIDERS`
+(`components/KeyList.tsx`) is this console's own list of providers it can
+offer explicitly, not a contract-derived enum.

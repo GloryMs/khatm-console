@@ -6,6 +6,17 @@
 
 ## Current phase / task
 
+- C10-provider-switch-rotation (explicit provider choice in the rotate dialog, session
+  `SESSION-C10-provider-switch-rotation.md`) — **DONE, D1–D3 delivered, D4 deferred.** Closes the
+  gap narrated in the 2026-08-04 C8b entry below ("noted for whoever eventually wires the 'rotate
+  onto a specific provider' UI"): `rotateSigningKey()` now accepts an optional `provider`, and the
+  rotate dialog gained a three-way choice (inherit/SOFT/VAULT) with a direction-aware warning when
+  an explicit pick differs from the ACTIVE key's current provider. Default behavior (no selection)
+  is byte-for-byte the pre-C10 request — no `provider` key at all, verified at the `apiFetch`
+  call-site, not just the mutation layer. D4 (type-to-confirm keyed on the tenant slug instead of
+  the active key's `kid`) stayed deferred — `MeResponse` still has no `tenantSlug` field, reconfirmed
+  against a fresh contract fetch this session, same as C8's original finding. No live walkthrough
+  or Arabic-copy review yet — both remain Majd's merge gate. See "Last completed" 2026-08-17.
 - C9-attested-issuance-ui (console side of FS-2.4's non-automated issuer portal, session
   `SESSION-C9-attested-issuance-ui.md`, prereq `khatm-platform` KH-2.4-BE PR #54 merged
   2026-08-10) — **DONE.** Delivered 2026-08-11, live Docker Desktop walkthrough (EN/AR/RTL + every
@@ -89,6 +100,97 @@ contract:update`) confirmed the contract was already current (no diff against wh
   walkthrough. See "Last completed" 2026-07-30 for the full record.
 
 ## Last completed
+
+- 2026-08-17 (feat/C10-provider-switch-rotation, spec brief `SESSION-C10-provider-switch-rotation.md`
+  — delivered, not yet a PR): **Preamble.** Baseline `npm run check` green on `main` first (per the
+  brief's own gate order), then branched. `npm run contract:update` against `origin/main` for
+  `khatm-platform`: `RotateKeyRequest.provider` was already present (vendored by the 2026-08-04
+  C8b session) — gate 1 cleared without any code change being needed for D1's premise. The raw
+  fetch this time came back **pretty-printed** where the committed file was minified — a
+  ~4,850-line raw diff that canonicalized (key-sorted) to **zero semantic difference except the
+  `servers` block** (same harmless drift as the 2026-07-26 Dashboard precedent). Reverted
+  `contracts/openapi.json` rather than commit a purely cosmetic reformat — `git checkout --
+contracts/openapi.json` before touching any source. **Gate 2 (optional, non-blocking):**
+  `MeResponse` still has exactly `displayNameI18n`/`mustChangePassword`/`preferredLang`/`scopes`/
+  `username` — no `tenantSlug` — confirmed directly in the freshly-fetched contract before
+  reverting it. Per the brief's own instruction this is not a self-stop: D4 deferred, D1–D3
+  proceeded. Baseline `npm run check` (typecheck/lint/test) was green before this session's own
+  edits began.
+  - **D1 — `api.ts#rotateSigningKey(provider?)`.** Now accepts `RotateKeyRequest['provider']`
+    optionally; `provider === undefined` sends `body: undefined` to `apiFetch` — literally the same
+    "no body at all" the pre-C10 caller produced (`apiFetch` only sets `Content-Type`/serializes
+    when `init.body !== undefined`), not an empty-object body. New `api.test.ts` (2 cases, following
+    `consumeSim/api.test.ts`'s precedent of spying on `@/api/client#apiFetch` directly rather than
+    mocking at the feature boundary) asserts the exact `init` object for both the omitted-provider
+    and `provider: 'VAULT'` calls — the most literal check available that the contract's own
+    nullability is respected. `hooks.ts#useRotateKey`'s `mutationFn` now threads the optional
+    `provider` through from `mutateAsync(provider)`.
+  - **D2 — the rotate dialog's provider choice.** New `components/RotateProviderChoice.tsx`: shows
+    the ACTIVE key's current provider (`.ltr-embed`, `providerUnknown` fallback — same convention as
+    the `KeyList` column badge), then a `<fieldset>` radio group — "inherit" (always the default
+    selection on open, per veto V1) plus one option per `KNOWN_PROVIDERS` (currently `SOFT`/`VAULT`).
+    A `Banner tone="warning"` appears only when the pick is explicit **and** differs from the
+    current provider (inheriting, or explicitly re-picking the same provider already in use, shows
+    nothing) — content depends on direction: switching to `VAULT` gets the fail-closed explanation,
+    switching away from it gets the migration-rollback caution, per the brief's own two-variant
+    wording. No extra confirm step beyond the existing type-to-confirm (veto V2 default). Extended
+    `components/ui/TypeToConfirmDialog.tsx` with an optional `children` slot (rendered between
+    `body` and the type-prompt) so this could be composed into the existing rotate dialog rather
+    than forking it — `ReviewStep.tsx` (attested issuance's other caller) passes none, unaffected.
+    `KeyManagementPage.tsx` holds the `rotateProvider: string | null` selection (reset to `null` —
+    inherit — both on open and on close/cancel) and passes `rotateProvider ?? undefined` into
+    `rotateKey.mutateAsync`.
+  - **Provider-name/bidi discipline (the brief's own Arabic-gate caution, addressed at the copy
+    level, not just left for Majd to catch):** `SOFT`/`VAULT` are never spliced into translated
+    prose — every appearance is its own `.ltr-embed` span next to a plain-language label (`Current
+provider: `, `Switching to: `), the identical shape `KeyList`'s existing provider badge already
+    uses. The warning copy itself describes the two behaviors in plain language without repeating
+    the provider name or citing the error code inline (`KH-KEY-0503` is surfaced live via the
+    standard `ApiErrorBanner` mechanism if it actually occurs, work rule 3 — not hand-authored into
+    proactive UI copy). `JWKS` appears inline in the Arabic fail-closed warning the same way it
+    already does in two existing, presumably-reviewed strings (`tenants.jwksTitle`/`jwksHelp`), so
+    this isn't a new precedent.
+  - **Lint hygiene, not itemized in the brief but needed to keep `npm run check` at its existing
+    baseline:** exporting `PROVIDER_TONE`/a new `KNOWN_PROVIDERS` straight out of `KeyList.tsx`
+    tripped `react-refresh/only-export-components` — the exact same warning category already noted
+    as pre-existing on `FormField.tsx`. Rather than add a second instance of it, extracted both
+    constants into a new `components/providers.ts` (no components in it); `KeyList.tsx` and the new
+    `RotateProviderChoice.tsx` both import from there. Net: still only the one pre-existing
+    `FormField.tsx` warning.
+  - **D3 — README correction.** `src/features/keyManagement/README.md:24–25` (not the top-level
+    repo `README.md` the brief's line numbers pointed at — that file never mentions `provider` at
+    all, grepped to confirm) said "No `provider` column yet — the contract has no `provider` field
+    until KH-2.3b-BE... lands," stale since the 2026-08-04 C8b session. Corrected, and folded in a
+    note about `rotateSigningKey`'s new optional argument and `KNOWN_PROVIDERS`'s new home.
+  - **D4 — deferred, recorded per the brief's own fallback wording** (see preamble gate 2 above);
+    no code changed for it. The rotate confirm stays keyed on the ACTIVE key's `kid`, exactly as C8
+    left it.
+  - **Tests: 258 total now (was 253)** — 2 new (`api.test.ts`, the exact-request-body pair above), 3
+    new in `KeyManagementPage.test.tsx` (default-inherit + current-provider display + warning
+    toggling on/off across inherit → same-as-current → genuinely-different → back to inherit;
+    switching away from `VAULT` shows the rollback warning and the confirmed call carries the exact
+    chosen provider; the current-provider label and the fail-closed warning both render correctly
+    once `i18n.changeLanguage('ar')`, following `IssuePage.test.tsx`'s existing Arabic-case
+    pattern including its `afterEach` language-reset), and the existing "type the active kid, then
+    rotate" test extended with a literal `expect(rotateSpy).toHaveBeenCalledWith(undefined)` so the
+    inherited-default path is checked at this level too, not only in `api.test.ts`.
+  - `npm run typecheck`, `npm run lint` (only the pre-existing `FormField.tsx` warning), `npm run
+test` (258/258), and `npm run build` all clean. `format:check` clean on every file this session
+    touched (`prettier --write` needed on 2 files mid-session, re-verified clean after); still fails
+    only on the same pre-existing untracked files as every prior session
+    (`.vscode/extensions.json`, `docs/sessions/*.md`, `docs/specs/*.md`) — `docs/STATE.md`/
+    `docs/STATE-archive-phase1.md` themselves needed a one-off `prettier --write` earlier the same
+    day (see the two hygiene commits ahead of this session on `main`) and are clean now. RTL grep
+    (`(margin|padding|border)-(left|right)`, bare `left:`/`right:`, physical `text-align`, `float:`)
+    across every new/changed file (`.tsx` and `.module.css`): zero matches.
+  - **No live walkthrough this session** — same standing limitation as every session since 2FA
+    landed (no browser-automation tool, no authenticator-app access). The brief's explicit
+    "no execution against staging" rule was also honored — build/test stayed entirely local
+    (Docker Desktop is where Majd's own walkthrough will run, not this session). Both the live
+    walkthrough (inherited rotate, explicit SOFT→VAULT against a local Vault compose, warning
+    appearing, then an inherited rotate landing on VAULT) and the Arabic-copy/RTL gate are Majd's
+    own steps per the brief's DoD and remain the merge gate. **PR not yet opened** — see next
+    session-start note for whether it was opened after this entry was written.
 
 - 2026-08-12 (folded into `feat/KH-2.4.1-attested-issuance`, found live-testing the C9 delivery
   against Docker Desktop): **`IssuePage`/`AttestedIssuePage` resolved the operator's exact schema

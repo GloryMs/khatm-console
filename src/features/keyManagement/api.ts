@@ -3,6 +3,7 @@ import type { components } from '@/api/generated/schema';
 
 export type SigningKeysResponse = components['schemas']['SigningKeysResponse'];
 export type SigningKeyView = components['schemas']['SigningKeyView'];
+export type RotateKeyRequest = components['schemas']['RotateKeyRequest'];
 export type RotateKeyResponse = components['schemas']['RotateKeyResponse'];
 export type RetireKeyRequest = components['schemas']['RetireKeyRequest'];
 export type RetireKeyResponse = components['schemas']['RetireKeyResponse'];
@@ -26,9 +27,20 @@ export function getSigningKeyStatuses(): Promise<SigningKeysResponse> {
  * partial unique index is the final arbiter under concurrent callers. Also
  * forces the tenant's status lists stale so the next sweep re-signs them
  * with the new key. Requires the `key:manage` scope.
+ *
+ * `provider` is the SOFT->Vault migration mechanism (spec FS-2.3 D6,
+ * `RotateKeyRequest.provider`): omitted (the default), the new key inherits
+ * the tenant's current provider and no request body is sent at all — the
+ * literal pre-C10 behavior. Passed explicitly, the new key is generated on
+ * that provider instead.
  */
-export function rotateSigningKey(): Promise<RotateKeyResponse> {
-  return apiFetch<RotateKeyResponse>('/api/v1/admin/signing-keys/rotate', { method: 'POST' });
+export function rotateSigningKey(
+  provider?: RotateKeyRequest['provider'],
+): Promise<RotateKeyResponse> {
+  return apiFetch<RotateKeyResponse>('/api/v1/admin/signing-keys/rotate', {
+    method: 'POST',
+    body: provider === undefined ? undefined : { provider },
+  });
 }
 
 /**

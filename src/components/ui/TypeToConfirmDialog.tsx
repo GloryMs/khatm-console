@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Button } from './Button';
 import { khatmInputClass } from './FormField';
 import styles from './TypeToConfirmDialog.module.css';
@@ -17,6 +17,8 @@ interface TypeToConfirmDialogProps {
   isBusy: boolean;
   /** A localized message to surface when the guarded call failed. */
   errorMessage?: string;
+  /** Extra content rendered between `body` and the type-to-confirm prompt (e.g. C10's provider choice). */
+  children?: ReactNode;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -40,6 +42,7 @@ export function TypeToConfirmDialog({
   cancelLabel,
   isBusy,
   errorMessage,
+  children,
   onConfirm,
   onCancel,
 }: TypeToConfirmDialogProps) {
@@ -61,6 +64,7 @@ export function TypeToConfirmDialog({
           {title}
         </h2>
         <p className={styles.body}>{body}</p>
+        {children}
         <div className={styles.prompt}>
           <label htmlFor={`${titleId}-typed`}>{typePromptLabel}</label>
           <span className={`${styles.expected} ltr-embed`}>{expectedText}</span>

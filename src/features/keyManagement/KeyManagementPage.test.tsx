@@ -47,6 +47,24 @@ const twoKeys: SigningKeysResponse = {
   ],
 };
 
+const twoKeysOnSoft: SigningKeysResponse = {
+  keys: [
+    {
+      kid: 'khatm-default:key-2',
+      state: 'ACTIVE',
+      provider: 'SOFT',
+      validFrom: '2026-06-01T00:00:00Z',
+    },
+    {
+      kid: 'khatm-default:key-1',
+      state: 'RETIRING',
+      provider: 'SOFT',
+      validFrom: '2026-01-01T00:00:00Z',
+      validTo: '2026-06-01T00:00:00Z',
+    },
+  ],
+};
+
 describe('KeyManagementPage — scope gate', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -117,6 +135,8 @@ describe('KeyManagementPage — rotate', () => {
 
     await user.click(confirm);
     await waitFor(() => expect(rotateSpy).toHaveBeenCalledTimes(1));
+    // Default "inherit" selection — literally no provider on the call (SESSION-C10 D1).
+    expect(rotateSpy).toHaveBeenCalledWith(undefined);
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
@@ -129,6 +149,123 @@ describe('KeyManagementPage — rotate', () => {
     expect(
       await screen.findByRole('button', { name: i18n.t('keyManagement.rotate.cta') }),
     ).toBeDisabled();
+  });
+});
+
+describe('KeyManagementPage — rotate provider switch (SESSION-C10)', () => {
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await i18n.changeLanguage('en');
+  });
+
+  it('defaults to "inherit", shows the current provider, and hides the warning until an explicit different provider is chosen', async () => {
+    vi.spyOn(api, 'getSigningKeyStatuses').mockResolvedValue(twoKeysOnSoft);
+    vi.spyOn(api, 'rotateSigningKey').mockResolvedValue({
+      kid: 'khatm-default:key-3',
+      state: 'ACTIVE',
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(
+      await screen.findByRole('button', { name: i18n.t('keyManagement.rotate.cta') }),
+    );
+    const dialog = screen.getByRole('dialog');
+
+    // Current provider shown, "inherit" is the default selection.
+    const currentRow = within(dialog)
+      .getByText(i18n.t('keyManagement.rotate.provider.currentLabel'))
+      .closest('p');
+    expect(currentRow).toHaveTextContent('SOFT');
+    expect(
+      within(dialog).getByRole('radio', {
+        name: i18n.t('keyManagement.rotate.provider.inheritOption'),
+      }),
+    ).toBeChecked();
+    expect(
+      screen.queryByText(i18n.t('keyManagement.rotate.provider.warningToVault')),
+    ).not.toBeInTheDocument();
+
+    // Explicitly picking the provider already in use is not a "switch" — no warning.
+    await user.click(within(dialog).getByRole('radio', { name: 'SOFT' }));
+    expect(
+      screen.queryByText(i18n.t('keyManagement.rotate.provider.warningToVault')),
+    ).not.toBeInTheDocument();
+
+    // Picking a genuinely different provider shows the fail-closed warning.
+    await user.click(within(dialog).getByRole('radio', { name: 'VAULT' }));
+    expect(
+      screen.getByText(i18n.t('keyManagement.rotate.provider.warningToVault')),
+    ).toBeInTheDocument();
+
+    // Back to inherit — warning clears again.
+    await user.click(
+      within(dialog).getByRole('radio', {
+        name: i18n.t('keyManagement.rotate.provider.inheritOption'),
+      }),
+    );
+    expect(
+      screen.queryByText(i18n.t('keyManagement.rotate.provider.warningToVault')),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows the rollback warning switching away from VAULT, and sends the exact chosen provider on confirm', async () => {
+    vi.spyOn(api, 'getSigningKeyStatuses').mockResolvedValue({
+      keys: [{ kid: 'khatm-default:key-2', state: 'ACTIVE', provider: 'VAULT' }],
+    });
+    const rotateSpy = vi.spyOn(api, 'rotateSigningKey').mockResolvedValue({
+      kid: 'khatm-default:key-3',
+      state: 'ACTIVE',
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(
+      await screen.findByRole('button', { name: i18n.t('keyManagement.rotate.cta') }),
+    );
+    const dialog = screen.getByRole('dialog');
+
+    await user.click(within(dialog).getByRole('radio', { name: 'SOFT' }));
+    expect(
+      screen.getByText(i18n.t('keyManagement.rotate.provider.warningFromVault')),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(i18n.t('keyManagement.rotate.provider.warningToVault')),
+    ).not.toBeInTheDocument();
+
+    await user.type(within(dialog).getByRole('textbox'), 'khatm-default:key-2');
+    await user.click(
+      within(dialog).getByRole('button', { name: i18n.t('keyManagement.rotate.confirm') }),
+    );
+
+    await waitFor(() => expect(rotateSpy).toHaveBeenCalledWith('SOFT'));
+  });
+
+  it('renders the current-provider label and switch warning in Arabic', async () => {
+    vi.spyOn(api, 'getSigningKeyStatuses').mockResolvedValue(twoKeysOnSoft);
+    vi.spyOn(api, 'rotateSigningKey').mockResolvedValue({
+      kid: 'khatm-default:key-3',
+      state: 'ACTIVE',
+    });
+    await i18n.changeLanguage('ar');
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: i18n.t('keyManagement.rotate.cta', { lng: 'ar' }),
+      }),
+    );
+    const dialog = screen.getByRole('dialog');
+
+    expect(
+      within(dialog).getByText(i18n.t('keyManagement.rotate.provider.currentLabel', { lng: 'ar' })),
+    ).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('radio', { name: 'VAULT' }));
+    expect(
+      screen.getByText(i18n.t('keyManagement.rotate.provider.warningToVault', { lng: 'ar' })),
+    ).toBeInTheDocument();
   });
 });
 
