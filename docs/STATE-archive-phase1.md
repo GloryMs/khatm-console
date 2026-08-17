@@ -21,10 +21,10 @@
   are absent from the vendored `openapi.json` — no `@ApiResponse` annotations were added to the
   affected endpoints, so springdoc never emitted them. Recorded as a platform ask below.
   **Print/label output (spec FS-2.4 D5, the parent spec's own session-split table's "التدفق كاملاً
-  + الطباعة" for C9) was NOT built** — the actual session brief's five numbered scope items and
-  DoD never mention a print screen at all, only the claim-code success path; treated the brief
-  (more specific, more current) as authoritative over the parent spec table rather than silently
-  expanding scope, and flagged this explicitly rather than quietly matching the older table.
+  - الطباعة" for C9) was NOT built** — the actual session brief's five numbered scope items and
+    DoD never mention a print screen at all, only the claim-code success path; treated the brief
+    (more specific, more current) as authoritative over the parent spec table rather than silently
+    expanding scope, and flagged this explicitly rather than quietly matching the older table.
 - C8b-provider-column (console side of FS-2.3's KMS provider column/badge, spec §2 C8 brief,
   `docs/sessions/SESSION-C8b.md`) — **DONE. PR #23 merged to `main` 2026-08-04T09:11:08Z**
   (squash, branch deleted), on Majd's go-ahead to merge. Self-stopped earlier the same day at the
@@ -155,11 +155,11 @@ contract:update`) confirmed the contract was already current (no diff against wh
   bugs, recorded here since they cost real debugging time and will recur for the next session that
   hits them):
   - **nginx caches its `khatm-api` upstream connection for the worker's lifetime** (`proxy_pass
-    http://khatm-api:8080` with no `resolver` directive) — when the local `khatm-api` container
+http://khatm-api:8080` with no `resolver` directive) — when the local `khatm-api` container
     restarts (observed happening every 1–10 minutes on this host, most likely IntelliJ's
     continuous-build/DevTools live-reload bouncing it), the console's nginx keeps talking to the
     dying old instance for a while, producing a genuine (correctly-shaped, uniquely-traced)
-    `KH-SYS-0500` from that instance's own `GlobalExceptionHandler` — reproducible for *any*
+    `KH-SYS-0500` from that instance's own `GlobalExceptionHandler` — reproducible for _any_
     `/api/v1/credentials/verify` payload including garbage input, so it is not attestation-specific.
     Confirmed via: direct calls to `khatm-api:8080` always succeeded; the same call via the
     console's nginx failed consistently; `docker exec khatm-console nginx -s reload` (forcing
@@ -202,7 +202,7 @@ contract:update` against `origin/main` (public raw fetch, no `gh api` fallback n
   as such"), cross-checked the local `khatm-platform` checkout directly (same precedent as every
   prior session's non-guess policy) rather than self-stopping: `ErrorCode.java` has all three,
   fully documented (`KH_ATT_0400`/`attestation.required`, `KH_ATT_0401`/`attestation.not-
-  applicable`, `KH_ATT_0402`/`attestation.bulk-not-supported`, all HTTP 400), wired into
+applicable`, `KH_ATT_0402`/`attestation.bulk-not-supported`, all HTTP 400), wired into
   `CredentialService#issue`'s `validateAttestation` (deny-by-default in both directions) and
   `BulkIssuanceService#bulkIssue` (wholesale reject on `requiresAttestation`). The affected
   endpoints simply have no `@ApiResponse` springdoc annotations for these paths, so they never
@@ -274,7 +274,7 @@ contract:update` against `origin/main` (public raw fetch, no `gh api` fallback n
     string, matching how `fromSchemaDetail` reads an absent `pattern` back). `SchemaBuilderForm.tsx`
     gained a schema-level `requiresAttestation` checkbox (helper text: "applies at issuance") and a
     per-row `pattern` text input with **client-side regex-compilability validation** (`new
-    RegExp(...)` in a zod `.refine`, mirroring `SchemaAuthoringService`'s own `KH-SCH-0400`
+RegExp(...)` in a zod `.refine`, mirroring `SchemaAuthoringService`'s own `KH-SCH-0400`
     server-side check) so an invalid pattern is caught before submit, not after. `SchemaBuilderPage.tsx`
     wires both into `buildAuthoringBody`/prefill.
   - **V1 — `features/verify/components/HashCompare.tsx`.** Not itemized in the brief's numbered
@@ -292,7 +292,7 @@ contract:update` against `origin/main` (public raw fetch, no `gh api` fallback n
     real WebCrypto hash → details → review → type-to-confirm → issue, asserting the exact
     `IssueRequest` body), 1 new (the D1 no-egress test). `npm run typecheck`, `npm run lint` (only
     the pre-existing `FormField.tsx` fast-refresh warning), `npm run test` (253/253), and `npm run
-    build` all clean. `format:check` clean on every file this session touched (prettier --write
+build` all clean. `format:check` clean on every file this session touched (prettier --write
     needed on 5 files mid-session, re-verified clean after) — still fails only on the same
     pre-existing untracked files as every prior session. `npm run gen:api` re-run twice back-to-back
     produces the identical diff both times (stable, additive-only) — will show zero diff once this
