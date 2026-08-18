@@ -4,6 +4,7 @@ import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/Button';
 import tableStyles from '@/components/ui/Table.module.css';
 import type { SigningKeyView } from '../api';
+import { PROVIDER_TONE } from './providers';
 
 const STATE_TONE: Record<string, StatusTone> = {
   ACTIVE: 'success',
@@ -17,14 +18,6 @@ const STATE_LABEL_KEY: Record<string, string> = {
   RETIRING: 'keyManagement.states.retiring',
   PENDING: 'keyManagement.states.pending',
   RETIRED: 'keyManagement.states.retired',
-};
-
-// SOFT (neutral/gray — transitional) vs VAULT (success/green — the migration target, FS-2.3 D5/D6).
-// An unrecognized future provider (AWS/GCP on the same SPI) falls through to 'neutral' and its raw
-// value, rather than breaking — see SESSION-C8b scope.
-const PROVIDER_TONE: Record<string, StatusTone> = {
-  SOFT: 'neutral',
-  VAULT: 'success',
 };
 
 interface KeyListProps {

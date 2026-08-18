@@ -745,7 +745,15 @@
       "mismatch": "Doesn't match the active key ID",
       "confirm": "Rotate",
       "rotating": "Rotating…",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "provider": {
+        "currentLabel": "Current provider:",
+        "legend": "Signing provider",
+        "inheritOption": "Inherit the current provider (default)",
+        "switchTargetLabel": "Switching to:",
+        "warningToVault": "If this provider becomes unreachable, issuing stops entirely rather than silently falling back to the previous one. Public reads (verify, JWKS, status) are unaffected.",
+        "warningFromVault": "This reverses an earlier provider migration for future keys. Make sure that's intentional."
+      }
     },
     "retire": {
       "title": "Retire this key?",
