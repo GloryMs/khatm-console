@@ -4,6 +4,10 @@ import { KNOWN_PROVIDERS } from './providers';
 import styles from './RotateProviderChoice.module.css';
 
 interface RotateProviderChoiceProps {
+  /** The ACTIVE key's own `kid`, shown informationally — the type-to-confirm
+   * target is the tenant slug (KH-2.3.C11 D4), not this value, but the
+   * operator still needs to see which key they're about to rotate. */
+  activeKid: string | undefined;
   /** The ACTIVE key's own provider, if the field is present. */
   currentProvider: string | undefined;
   /** `null` = inherit the current provider (default, sends no `provider`). */
@@ -26,6 +30,7 @@ interface RotateProviderChoiceProps {
  * avoid bidi surprises with Latin tokens inside RTL sentences.
  */
 export function RotateProviderChoice({
+  activeKid,
   currentProvider,
   value,
   onChange,
@@ -35,6 +40,10 @@ export function RotateProviderChoice({
 
   return (
     <div className={styles.section}>
+      <p className={styles.currentRow}>
+        <span>{t('keyManagement.rotate.activeKidLabel')}</span>{' '}
+        <span className="ltr-embed">{activeKid}</span>
+      </p>
       <p className={styles.currentRow}>
         <span>{t('keyManagement.rotate.provider.currentLabel')}</span>{' '}
         <span className="ltr-embed">{currentProvider ?? t('keyManagement.providerUnknown')}</span>

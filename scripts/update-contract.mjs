@@ -29,6 +29,27 @@ function fetchViaGhCli() {
   return Buffer.from(b64, 'base64').toString('utf8');
 }
 
+// Canonical committed form (decided KH-2.3.C11, veto V1): pretty-printed,
+// 2-space indent, object keys sorted alphabetically at every level. The raw
+// fetch has flip-flopped between minified and pretty-printed across sessions
+// depending on the platform's own serving path, producing multi-thousand-line
+// diffs that were 100% formatting noise (see C10's ~4,850-line example).
+// Sorting keys makes the committed file deterministic regardless of which
+// order springdoc happened to emit them in on a given day, so a re-vendor's
+// diff shows only real schema changes. Array order is left untouched — arrays
+// (paths, enum values, parameter lists, etc.) are semantically ordered.
+function canonicalize(value) {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value !== null && typeof value === 'object') {
+    const sorted = {};
+    for (const key of Object.keys(value).sort()) {
+      sorted[key] = canonicalize(value[key]);
+    }
+    return sorted;
+  }
+  return value;
+}
+
 async function main() {
   let contents;
   try {
@@ -39,8 +60,9 @@ async function main() {
     contents = fetchViaGhCli();
     console.log('Fetched contract via authenticated gh api.');
   }
-  JSON.parse(contents); // fail fast on a malformed download
-  writeFileSync(OUT_FILE, contents);
+  const parsed = JSON.parse(contents); // fail fast on a malformed download
+  const canonical = JSON.stringify(canonicalize(parsed), null, 2) + '\n';
+  writeFileSync(OUT_FILE, canonical);
   console.log(`Wrote ${OUT_FILE}. Run "npm run gen:api" next to regenerate types.`);
 }
 

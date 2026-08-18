@@ -6,6 +6,69 @@
 
 ## Current phase / task
 
+- C11-contract-revendor-closeouts (re-vendor the contract against the merged KH-2.4x/Boot-3.5
+  platform state and close two deferred tails — C10's D4 and C7c's TOTP-status gap — session
+  `SESSION-C11-contract-revendor-closeouts.md`) — **DONE, D1–D3 all delivered. PR not yet opened.**
+  Preamble confirmed `khatm-platform` `origin/main` (`a2ad428`) is past both prerequisite commits
+  (`39fd52f` Boot 3.5 merge, `9085965` KH-2.4x) before any code changed. **D1 — re-vendor + V1
+  (committed-contract format):** `scripts/update-contract.mjs` now canonicalizes every fetch to
+  pretty-printed, 2-space-indent, alphabetically-key-sorted JSON (documented in the top-level
+  `README.md`'s "Contract-update workflow" section) — picked over minified (V1 default (a)) because
+  a re-vendor's diff should show only real schema changes, not whichever format springdoc happened
+  to serve that day (the exact ~4,850-line noise C10 hit). Verified idempotent: re-running
+  `contract:update && gen:api` twice back-to-back after this session's own changes produced
+  byte-identical `sha256sum` on both `contracts/openapi.json` and `src/api/generated/schema.ts` —
+  the CI freshness gate will pass. The operationId reshuffle the brief flagged (`list_2`/`list_3`/
+  `list_4` renumbered) is confirmed purely cosmetic for this codebase: every feature `api.ts` keys
+  requests off literal path strings and `components['schemas'][...]` types, never
+  `paths[...]`/`operations[...]` — grepped, zero call-sites reference an operationId — so no source
+  change was needed for it. A **semantic diff against the previous committed contract** (old file
+  canonicalized the same way, then diffed) turned up three expected changes (`MeResponse.tenantSlug`/
+  `totpEnabled` + description text, `KH-ATT-0400`/`0401`/`0402` now documented on the issue/bulk
+  endpoints — closing the platform ask logged 2026-08-11, the operationId renumbering) plus two
+  **not called out in the brief but legitimate and harmless**: new `minLength: 1`/`minItems: 1`
+  Bean Validation constraints appearing on many existing string/array fields (most likely a
+  springdoc reflection improvement from the Boot 3.5 upgrade — `openapi-typescript` doesn't emit
+  runtime checks from these, confirmed by a clean `typecheck` after regen) and the `servers` block
+  dropping out entirely (same harmless drift as the 2026-07-26/2026-08-17 precedents). **D2 (closes
+  C10's deferred D4):** the rotate dialog's type-to-confirm target is now `useAuth().user.tenantSlug`
+  (`MeResponse.tenantSlug`) instead of the ACTIVE key's `kid` — the ACTIVE key's `kid` still renders
+  informationally at the top of `RotateProviderChoice` (new `activeKid` prop) so the operator can
+  still see which key they're about to rotate. Rotate is disabled, with a distinct title/reason, if
+  the session has no `tenantSlug` yet (new `keyManagement.rotate.noTenantSlug` key) — same
+  V2-style "don't guess a missing value" caution as everywhere else in this repo. **D3 (closes
+  C7c's original TOTP-status gap):** `SecuritySettingsPage` now reads `useAuth().user.totpEnabled`
+  and shows a real status badge (`StatusBadge`, status-only copy, no policy claims per the brief's
+  own caution that TOTP is mandatory for privileged-scope holders since KH-2.2c, not optional) —
+  `undefined` (should not normally happen since `RequireAuth` guarantees a session first, but the
+  field is optional in the contract) renders a checking state rather than assuming "disabled" (V2).
+  **The enroll CTA itself now only renders when `totpEnabled === false`**: read
+  `POST /users/me/totp/enroll`'s own contract description closely — it refuses with 409
+  (`KH-USR-1409`) once TOTP is already active ("an administrator must reset it first") — so the
+  pre-C11 unconditional "Enroll / re-enroll" button was always going to 409 for an already-enrolled
+  caller; this was untested, not actually working, before `totpEnabled` existed to check first. When
+  `true`, the page shows the Enabled badge plus copy pointing at admin-mediated reset instead (that
+  action already exists, unchanged, in `features/users`/`features/tenants` — self-service reset was
+  never contract-possible and still isn't). Also wired `useConfirmTotp`'s `onSuccess` to call
+  `useAuth().refresh()` (same pattern `ChangePasswordForm` already uses for `mustChangePassword`) so
+  the badge flips to Enabled right after enrollment completes, no page reload needed — this didn't
+  exist before and was necessary for the badge to ever leave its initial state within one session.
+  **Did not gate the admin-side per-user "Reset 2FA" button** (`features/users`/`features/tenants`,
+  rendered unconditionally per row today) on `totpEnabled` — checked and `UserSummary` has no such
+  field, only `MeResponse` does (grepped the whole vendored contract, one hit). Read D3's own wording
+  as scoped to the self-service Security Settings page given that constraint, not the admin list;
+  flagging here rather than silently reinterpreting the brief without saying so.
+  **Tests: 262 total now (was 258)** — `KeyManagementPage.test.tsx`'s rotate tests updated for the
+  slug-not-kid target plus one new case (rotate disabled + explained when no `tenantSlug`);
+  `SecuritySettingsPage.test.tsx` rewritten for the three `totpEnabled` states + an Arabic case;
+  `TotpEnrollDialog.test.tsx` extended to assert `refresh()` fires after a successful confirm.
+  `npm run typecheck`/`lint` (only the pre-existing `FormField.tsx` warning)/`test` (262/262)/`build`
+  all clean; `format:check` clean on every file this session touched (one file needed
+  `prettier --write` mid-session, reverified clean after) — same pre-existing untracked-file
+  failures as every prior session, untouched. RTL grep across every changed `.tsx` (no `.module.css`
+  touched — reused the existing `.currentRow` class): zero matches. **PR not yet opened** — the
+  DoD's two `[MAJD]` items (live walkthrough: slug-confirmed rotate, both TOTP badge states, gated
+  Reset-2FA behavior; the Arabic-copy/RTL gate) remain outstanding.
 - C10-provider-switch-rotation (explicit provider choice in the rotate dialog, session
   `SESSION-C10-provider-switch-rotation.md`) — **DONE, D1–D3 delivered, D4 deferred.** Closes the
   gap narrated in the 2026-08-04 C8b entry below ("noted for whoever eventually wires the 'rotate
@@ -101,6 +164,15 @@ contract:update`) confirmed the contract was already current (no diff against wh
   walkthrough. See "Last completed" 2026-07-30 for the full record.
 
 ## Last completed
+
+- 2026-08-18 (feat/C11-contract-revendor-closeouts, session
+  `SESSION-C11-contract-revendor-closeouts.md` — delivered, not yet a PR): full delivery record is
+  under "Current phase / task" above (D1 contract re-vendor + canonicalization, D2 closes C10's
+  deferred D4, D3 closes C7c's TOTP-status gap) rather than duplicated here. Baseline
+  `npm run check`/`test` (258/258) confirmed green on `main` before branching, per the session's own
+  preamble gate order. **No live walkthrough this session** — same standing limitation as every prior
+  console session (no browser-automation tool). Branch has all commits ready; opening the PR and
+  Majd's live walkthrough + Arabic-copy/RTL gate (both `[MAJD]` DoD items) are the next steps.
 
 - 2026-08-17 (feat/C10-provider-switch-rotation, PR #25 — rebuilt both containers and Majd's live
   walkthrough, the DoD's two remaining hard gates): rebuilt `khatm-console` (`docker compose build
@@ -867,15 +939,16 @@ khatm-console-staging`.
   `KH-SYS-0500` instead of a clean conflict code. See "Last completed" 2026-08-12 for the full
   reproduction (`ba_certificate_v1`, local dev DB). No console-side workaround exists — the fix
   belongs in `createVersion`'s version-number computation.
-- **Platform ask, new 2026-08-11 (feat/KH-2.4.1-attested-issuance preamble) — OPEN.**
-  `KH-ATT-0400`/`0401`/`0402` (attestation deny-by-default, bulk-attested rejection) are absent
-  from the vendored `openapi.json` even though they're fully implemented server-side — the
-  affected endpoints have no springdoc `@ApiResponse` annotations for these paths. Worked around by
-  reading `khatm-platform`'s `ErrorCode.java`/`CredentialService`/`BulkIssuanceService` directly
-  rather than self-stopping (the session brief itself predicted this exact gap and called it a
-  vendoring problem, not a missing feature). Fix would be adding the annotations so a future
-  contract refresh surfaces these codes the way most others already do. See "Last completed"
-  2026-08-11 for the full delivery this was built against.
+- **Platform ask, new 2026-08-11 (feat/KH-2.4.1-attested-issuance preamble) — CLOSED, confirmed
+  2026-08-18 (C11 preamble/D1).** `KH-ATT-0400`/`0401`/`0402` (attestation deny-by-default,
+  bulk-attested rejection) were absent from the vendored `openapi.json` even though fully
+  implemented server-side — worked around at the time by reading `khatm-platform`'s
+  `ErrorCode.java`/`CredentialService`/`BulkIssuanceService` directly rather than self-stopping.
+  The 2026-08-18 re-vendor (against `khatm-platform` `origin/main` `a2ad428`) now carries both codes
+  as `description` prose on the `issue`/`bulk` endpoints' relevant responses, the same convention
+  every other error code in this contract already uses — grepped directly in the fresh
+  `contracts/openapi.json`, not assumed. No console code needed to change for this; it was purely a
+  contract-vendoring gap, exactly as predicted at the time.
 - **Platform ask, new 2026-08-06 (staging container QR-base fix) — OPEN, no contract surface
   requested yet, just recorded.** The console has to be told its own publicly-reachable base URL
   by hand (`VITE_QR_API_BASE`, baked in at build time) because the platform contract exposes no

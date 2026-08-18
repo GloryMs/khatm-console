@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { TypeToConfirmDialog } from '@/components/ui/TypeToConfirmDialog';
 import { useErrorMessage } from '@/api/useErrorMessage';
 import { RequireScope } from '@/features/auth/RequireScope';
+import { useAuth } from '@/features/auth/useAuth';
 import { KeyList } from './components/KeyList';
 import { RetireKeyDialog } from './components/RetireKeyDialog';
 import { RotateProviderChoice } from './components/RotateProviderChoice';
@@ -31,6 +32,7 @@ export function KeyManagementPage() {
 function KeyManagementPageBody() {
   const { t } = useTranslation();
   const resolveError = useErrorMessage();
+  const { user } = useAuth();
   const keys = useSigningKeyStatuses(true);
   const rotateKey = useRotateKey();
   const retireKey = useRetireKey();
@@ -41,6 +43,12 @@ function KeyManagementPageBody() {
 
   const activeKey = keys.data?.keys?.find((k) => k.state === 'ACTIVE');
   const activeKid = activeKey?.kid;
+  const tenantSlug = user?.tenantSlug;
+  const rotateDisabledReason = !activeKid
+    ? t('keyManagement.rotate.noActiveKey')
+    : !tenantSlug
+      ? t('keyManagement.rotate.noTenantSlug')
+      : undefined;
 
   const openRotate = () => {
     setRotateProvider(null);
@@ -87,8 +95,8 @@ function KeyManagementPageBody() {
         <Button
           variant="danger"
           type="button"
-          disabled={!activeKid}
-          title={activeKid ? undefined : t('keyManagement.rotate.noActiveKey')}
+          disabled={!activeKid || !tenantSlug}
+          title={rotateDisabledReason}
           onClick={openRotate}
         >
           {t('keyManagement.rotate.cta')}
@@ -99,12 +107,12 @@ function KeyManagementPageBody() {
       {keys.isError && <ApiErrorBanner error={keys.error} />}
       {keys.isSuccess && <KeyList keys={keys.data.keys ?? []} onRetire={setRetireTarget} />}
 
-      {rotateOpen && activeKid && (
+      {rotateOpen && activeKid && tenantSlug && (
         <TypeToConfirmDialog
           titleId="rotate-key-confirm-title"
           title={t('keyManagement.rotate.title')}
           body={t('keyManagement.rotate.body')}
-          expectedText={activeKid}
+          expectedText={tenantSlug}
           typePromptLabel={t('keyManagement.rotate.typePrompt')}
           mismatchLabel={t('keyManagement.rotate.mismatch')}
           confirmLabel={t('keyManagement.rotate.confirm')}
@@ -116,6 +124,7 @@ function KeyManagementPageBody() {
           onCancel={closeRotate}
         >
           <RotateProviderChoice
+            activeKid={activeKid}
             currentProvider={activeKey?.provider}
             value={rotateProvider}
             onChange={setRotateProvider}

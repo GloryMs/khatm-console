@@ -14,9 +14,13 @@ via `RequireScope` (matches `UsersPage`'s pattern) — no permission otherwise.
   (`keyManagementKeys.list()`) as the dashboard's read-only
   `SigningKeysPanel` glance, so a rotate/retire here refreshes that panel too.
 - `useRotateKey()` → `POST /api/v1/admin/signing-keys/rotate` — gated behind
-  a `TypeToConfirmDialog` keyed off the current ACTIVE key's `kid` (no
-  tenant-slug field exists anywhere in the contract for the caller's own
-  session — see STATE.md for the substitution rationale). Since SESSION-C10,
+  a `TypeToConfirmDialog` keyed off the caller's own `tenantSlug`
+  (`MeResponse.tenantSlug`, from `useAuth()` — landed KH-2.4x, closing the
+  gap C8 opened when no tenant-slug field existed yet; see STATE.md's C11
+  entry). The ACTIVE key's `kid` still appears in the dialog, informationally
+  (`RotateProviderChoice`'s top row) — the operator needs to see which key
+  they're about to rotate even though it's no longer the confirm target.
+  Rotate is disabled if the session has no `tenantSlug` yet. Since SESSION-C10,
   the dialog also offers an explicit provider choice
   (`RotateProviderChoice`) — inherit (default, sends no `provider`) or an
   explicit `SOFT`/`VAULT` (`RotateKeyRequest.provider`, the SOFT->Vault
