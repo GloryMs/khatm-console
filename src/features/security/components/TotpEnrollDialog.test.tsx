@@ -4,6 +4,7 @@ import { I18nextProvider } from 'react-i18next';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import i18n from '@/i18n';
+import { AuthContext, type AuthContextValue } from '@/features/auth/AuthContext';
 import * as api from '../api';
 import { printRecoveryCodes } from '../printRecoveryCodes';
 import { TotpEnrollDialog } from './TotpEnrollDialog';
@@ -21,14 +22,26 @@ function renderDialog() {
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   const onClose = vi.fn();
+  const refresh = vi.fn(async () => undefined);
+  const auth: AuthContextValue = {
+    status: 'authenticated',
+    user: { username: 'op1', totpEnabled: false },
+    login: async () => undefined,
+    completeTotpLogin: async () => undefined,
+    logout: async () => undefined,
+    refresh,
+    hasScope: () => true,
+  };
   render(
     <I18nextProvider i18n={i18n}>
-      <QueryClientProvider client={queryClient}>
-        <TotpEnrollDialog onClose={onClose} />
-      </QueryClientProvider>
+      <AuthContext.Provider value={auth}>
+        <QueryClientProvider client={queryClient}>
+          <TotpEnrollDialog onClose={onClose} />
+        </QueryClientProvider>
+      </AuthContext.Provider>
     </I18nextProvider>,
   );
-  return { onClose };
+  return { onClose, refresh };
 }
 
 describe('TotpEnrollDialog', () => {
@@ -43,7 +56,7 @@ describe('TotpEnrollDialog', () => {
       recoveryCodes: ['code-1', 'code-2'],
     });
     const user = userEvent.setup();
-    renderDialog();
+    const { refresh } = renderDialog();
 
     await user.click(screen.getByRole('button', { name: i18n.t('security.totp.generateCta') }));
 
@@ -58,6 +71,9 @@ describe('TotpEnrollDialog', () => {
 
     await waitFor(() => expect(confirm).toHaveBeenCalledWith({ code: '654321' }));
     expect(await screen.findByText(i18n.t('security.totp.recoveryCodesIntro'))).toBeInTheDocument();
+    // The session refreshes on confirm so user.totpEnabled (KH-2.4x) reflects
+    // the new state without a page reload (KH-2.3.C11 D3).
+    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
   });
 
   it('prints the recovery codes once revealed', async () => {

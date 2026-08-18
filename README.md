@@ -52,3 +52,11 @@ stale `contracts/openapi.json` or generated client is always caught.
 public raw URL first and falls back to the GitHub API via the `gh` CLI (using
 the caller's existing repo-scoped credentials) — see
 `scripts/update-contract.mjs`.
+
+The committed `contracts/openapi.json` is always **pretty-printed, 2-space
+indent, with object keys sorted alphabetically at every level** (array order
+is left untouched — arrays are semantically ordered). `contract:update`
+canonicalizes to this form itself, regardless of whatever format the raw
+fetch happened to return that day (it has flip-flopped between minified and
+pretty-printed across sessions). This keeps a re-vendor's diff limited to
+real schema changes instead of incidental reformatting noise.

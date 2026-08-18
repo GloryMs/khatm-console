@@ -12,7 +12,7 @@ import type { SigningKeysResponse } from './api';
 
 const adminAuth: AuthContextValue = {
   status: 'authenticated',
-  user: null,
+  user: { username: 'admin', tenantSlug: 'khatm-default' },
   login: async () => undefined,
   completeTotpLogin: async () => undefined,
   logout: async () => undefined,
@@ -106,7 +106,7 @@ describe('KeyManagementPage — rotate', () => {
     vi.restoreAllMocks();
   });
 
-  it('requires typing the current active key id exactly before rotate is armed, then rotates', async () => {
+  it('requires typing the tenant slug exactly before rotate is armed, then rotates (kid shown informationally)', async () => {
     vi.spyOn(api, 'getSigningKeyStatuses').mockResolvedValue(twoKeys);
     const rotateSpy = vi.spyOn(api, 'rotateSigningKey').mockResolvedValue({
       kid: 'khatm-default:key-3',
@@ -125,12 +125,18 @@ describe('KeyManagementPage — rotate', () => {
     });
     expect(confirm).toBeDisabled();
 
-    await user.type(within(dialog).getByRole('textbox'), 'wrong-kid');
+    // The active kid is shown informationally, but no longer the confirm target.
+    expect(
+      within(dialog).getByText(i18n.t('keyManagement.rotate.activeKidLabel')).closest('p'),
+    ).toHaveTextContent('khatm-default:key-2');
+
+    // The pre-C11 confirm target (kid) is now a mismatch, not a match.
+    await user.type(within(dialog).getByRole('textbox'), 'khatm-default:key-2');
     expect(confirm).toBeDisabled();
     expect(within(dialog).getByText(i18n.t('keyManagement.rotate.mismatch'))).toBeInTheDocument();
 
     await user.clear(within(dialog).getByRole('textbox'));
-    await user.type(within(dialog).getByRole('textbox'), 'khatm-default:key-2');
+    await user.type(within(dialog).getByRole('textbox'), 'khatm-default');
     expect(confirm).toBeEnabled();
 
     await user.click(confirm);
@@ -149,6 +155,16 @@ describe('KeyManagementPage — rotate', () => {
     expect(
       await screen.findByRole('button', { name: i18n.t('keyManagement.rotate.cta') }),
     ).toBeDisabled();
+  });
+
+  it('disables the rotate button and explains why when the session has no tenant slug yet', async () => {
+    vi.spyOn(api, 'getSigningKeyStatuses').mockResolvedValue(twoKeys);
+    renderPage({ ...adminAuth, user: { username: 'admin' } });
+
+    await screen.findByText('khatm-default:key-2'); // wait for the keys query to resolve
+    const cta = screen.getByRole('button', { name: i18n.t('keyManagement.rotate.cta') });
+    expect(cta).toBeDisabled();
+    expect(cta).toHaveAttribute('title', i18n.t('keyManagement.rotate.noTenantSlug'));
   });
 });
 
@@ -233,7 +249,7 @@ describe('KeyManagementPage — rotate provider switch (SESSION-C10)', () => {
       screen.queryByText(i18n.t('keyManagement.rotate.provider.warningToVault')),
     ).not.toBeInTheDocument();
 
-    await user.type(within(dialog).getByRole('textbox'), 'khatm-default:key-2');
+    await user.type(within(dialog).getByRole('textbox'), 'khatm-default');
     await user.click(
       within(dialog).getByRole('button', { name: i18n.t('keyManagement.rotate.confirm') }),
     );
