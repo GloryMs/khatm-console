@@ -15,9 +15,9 @@
   is byte-for-byte the pre-C10 request — no `provider` key at all, verified at the `apiFetch`
   call-site, not just the mutation layer. D4 (type-to-confirm keyed on the tenant slug instead of
   the active key's `kid`) stayed deferred — `MeResponse` still has no `tenantSlug` field, reconfirmed
-  against a fresh contract fetch this session, same as C8's original finding. **PR #25 opened.
-  Majd's live walkthrough and the Arabic-copy/RTL gate both passed 2026-08-17** — see "Last
-  completed" for both entries.
+  against a fresh contract fetch this session, same as C8's original finding. **PR #25 merged to
+  `main` 2026-08-18T07:05:08Z** (squash, branch deleted), after Majd's live walkthrough and the
+  Arabic-copy/RTL gate both passed 2026-08-17 — see "Last completed" for the full record.
 - C9-attested-issuance-ui (console side of FS-2.4's non-automated issuer portal, session
   `SESSION-C9-attested-issuance-ui.md`, prereq `khatm-platform` KH-2.4-BE PR #54 merged
   2026-08-10) — **DONE.** Delivered 2026-08-11, live Docker Desktop walkthrough (EN/AR/RTL + every
@@ -122,8 +122,23 @@ contract:update`) confirmed the contract was already current (no diff against wh
   checks) plus a staging note (light EN/AR/render sanity only, explicitly did not recommend or
   perform a real rotation against the deployed Bunny backend). **Majd confirmed all scenarios
   passed, explicitly including Arabic and RTL** — both remaining DoD checklist items (`[MAJD]` live
-  walkthrough, `[MAJD]` Arabic-copy gate) are satisfied. PR #25 ready for Majd's merge decision;
-  not merged by this session without that explicit go-ahead.
+  walkthrough, `[MAJD]` Arabic-copy gate) are satisfied.
+
+- 2026-08-18 (PR #25 merge): **PR #25 merged to `main` 2026-08-18T07:05:08Z** (squash, branch
+  deleted), on Majd's explicit "merge" instruction after the above walkthrough/AR-gate pass.
+  `gh pr merge --squash --delete-branch` merged cleanly on GitHub but then failed to fast-forward
+  the local `main` checkout — local `main` had 2 STATE.md-hygiene commits from earlier the same
+  session (the archive-split + a `prettier --write` fix) that were never pushed, so it had
+  diverged from the newly-advanced `origin/main`. Diffed both: `origin/main`'s squashed merge
+  commit already carried the full content of those 2 local commits (the PR branch was itself
+  created from local `main` after they landed, so GitHub's squash diff included them) — confirmed
+  byte-identical on `docs/STATE-archive-phase1.md` and a pure superset on `docs/STATE.md` (the only
+  extra lines being this session's own C10 content) before resetting local `main` to `origin/main`
+  rather than attempting a merge/rebase of now-redundant commits. Stashed and restored the
+  unrelated pre-existing `Dockerfile`/`docker-compose.yml` edits (untouched by this session) across
+  the reset. Remote branch `feat/C10-provider-switch-rotation` deletion had actually already
+  succeeded as part of the original `gh pr merge` call (the fast-forward failure only affected the
+  local-sync step); pruned the resulting stale local tracking ref.
 
 - 2026-08-17 (feat/C10-provider-switch-rotation, spec brief `SESSION-C10-provider-switch-rotation.md`
   — delivered, not yet a PR): **Preamble.** Baseline `npm run check` green on `main` first (per the
