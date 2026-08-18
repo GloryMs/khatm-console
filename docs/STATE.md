@@ -66,9 +66,9 @@
   all clean; `format:check` clean on every file this session touched (one file needed
   `prettier --write` mid-session, reverified clean after) — same pre-existing untracked-file
   failures as every prior session, untouched. RTL grep across every changed `.tsx` (no `.module.css`
-  touched — reused the existing `.currentRow` class): zero matches. **PR not yet opened** — the
-  DoD's two `[MAJD]` items (live walkthrough: slug-confirmed rotate, both TOTP badge states, gated
-  Reset-2FA behavior; the Arabic-copy/RTL gate) remain outstanding.
+  touched — reused the existing `.currentRow` class): zero matches. **PR #26 opened, not merged** —
+  the DoD's two `[MAJD]` items (live walkthrough: slug-confirmed rotate, both TOTP badge states,
+  gated Reset-2FA behavior; the Arabic-copy/RTL gate) remain outstanding and are the merge gate.
 - C10-provider-switch-rotation (explicit provider choice in the rotate dialog, session
   `SESSION-C10-provider-switch-rotation.md`) — **DONE, D1–D3 delivered, D4 deferred.** Closes the
   gap narrated in the 2026-08-04 C8b entry below ("noted for whoever eventually wires the 'rotate
@@ -171,8 +171,8 @@ contract:update`) confirmed the contract was already current (no diff against wh
   deferred D4, D3 closes C7c's TOTP-status gap) rather than duplicated here. Baseline
   `npm run check`/`test` (258/258) confirmed green on `main` before branching, per the session's own
   preamble gate order. **No live walkthrough this session** — same standing limitation as every prior
-  console session (no browser-automation tool). Branch has all commits ready; opening the PR and
-  Majd's live walkthrough + Arabic-copy/RTL gate (both `[MAJD]` DoD items) are the next steps.
+  console session (no browser-automation tool). **PR #26 opened.** Majd's live walkthrough +
+  Arabic-copy/RTL gate (both `[MAJD]` DoD items) are the next steps and the merge gate.
 
 - 2026-08-17 (feat/C10-provider-switch-rotation, PR #25 — rebuilt both containers and Majd's live
   walkthrough, the DoD's two remaining hard gates): rebuilt `khatm-console` (`docker compose build
