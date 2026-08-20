@@ -7,8 +7,10 @@
 ## Current phase / task
 
 - C12-org-hierarchy-console (console side of FS-2.5's tenant hierarchy + org admin,
-  session `SESSION-C12-org-hierarchy-console.md`) — **DONE, D1–D4 all delivered.
-  PR not yet opened.** First pass **self-stopped at the preamble gate** the same
+  session `SESSION-C12-org-hierarchy-console.md`) — **DONE. PR #27 merged to
+  `main` 2026-08-20** (squash, branch deleted), after Majd's live walkthrough
+  and Arabic/RTL gate both passed. First pass **self-stopped at the preamble
+  gate** the same
   day (zero code changed) — `khatm-platform` KH-2.6a was merged (PR #64) but
   KH-2.6b (the `org:admin` plane + aggregated reports, everything D2/D3 depend
   on) was still open as PR #65; see the first 2026-08-19 "Last completed" entry
@@ -109,14 +111,44 @@ parentSlug)` → `POST .../tenants/{id}/parent` (blank string clears — the
     (`(margin|padding|border)-(left|right)`, bare `left:`/`right:`, physical
     `text-align`, `float:`) across every new/changed `.tsx`/`.module.css`:
     zero matches.
-  - **No live walkthrough this session** — same standing limitation as every
-    console session (no browser-automation tool). Majd's live walkthrough
-    (the full ministry scenario: `moi` + four children, granting `org:admin`,
-    managing a child's users via on-behalf-of, suspend/reactivate, the
-    aggregated report, verify with lineage) and the Arabic-copy/RTL gate are
-    both explicit `[MAJD]` DoD items and remain the merge gate — this session
-    is the heaviest Arabic-text surface since 2026-08-11's attested-issuance
-    work, per the brief's own caution. **PR not yet opened.**
+  - **Majd's live walkthrough (2026-08-19–20, the DoD's hard merge gate) —
+    passed**, run against the full ministry reference scenario (`moi` +
+    `moi-immigration`/`moi-civil`/`moi-security` and a third-level child under
+    one of them): onboarding + Set/Change parent both directions (including
+    hitting `KH-TNT-042x` cycle/self/depth/not-active live), granting
+    `org:admin` via the newly-added role checkbox, the `/org` panel's
+    children list + type-to-confirm suspend + reports panel, on-behalf-of
+    child user management, and verify lineage — confirmed complete by Majd
+    directly, explicitly including Arabic content and RTL. Live testing
+    surfaced and closed **two real console bugs found and fixed live, not
+    caught by the test suite**: (1) `OrgReportsPanel` called
+    `computeOrgReportWindow` unmemoized in the render body — its `to` bound
+    defaults to `new Date()`, so every render produced a new React Query
+    cache key, causing an infinite fetch loop the moment the panel mounted;
+    fixed with `useMemo` keyed on `windowOption`, plus a new regression test
+    asserting the report fetch happens exactly once per settled render. (2)
+    `TENANT_ROLES` (`features/users/roles.ts`) never included the new
+    `ORG_ADMIN` role — the Create User / Edit Roles UI had no way to actually
+    grant `org:admin` to anyone, which would have made D2/D3 entirely
+    unreachable through the console; added, matching `TENANT_ADMIN`/
+    `ISSUER_OPERATOR`'s existing treatment (unlike `PLATFORM_ADMIN`, which
+    stays deliberately excluded — cross-tenant, not one a tenant admin should
+    grant). Also surfaced a **platform-side bug, not a console bug**, closed
+    the same day: `CREDENTIAL_VERIFY_OK`/`FAILED` and `CLAIM_CODE_REDEEMED`
+    audit rows were being attributed to the platform default tenant instead
+    of the credential's real issuing tenant (root cause: a 2026-08-11
+    crash-avoidance hotfix in `TenantContext#runAsDefaultTenant` that fixed
+    the crash but not the misattribution), which silently zeroed out
+    `verifyOk`/`verifyFailed` in this session's own new aggregated report for
+    every non-default tenant — see `khatm-platform` PR #66 (merged
+    2026-08-20), which closed the identical gap in `GET /api/v1/stats`'s
+    per-tenant counters for free. **`staging-khatm-console` was found to be
+    running a stale `khatm-platform` build** missing the `setParent` endpoint
+    entirely (confirmed via the deployed container's own error log — a plain
+    `NoHandlerFoundException`, not a real bug) — flagged to Majd as a
+    redeploy-staging task, out of scope for this session; all verification
+    above was against the local Docker Desktop stack, not staging. **PR #27
+    merged to `main` 2026-08-20** (squash, branch deleted).
 - C11-contract-revendor-closeouts (re-vendor the contract against the merged KH-2.4x/Boot-3.5
   platform state and close two deferred tails — C10's D4 and C7c's TOTP-status gap — session
   `SESSION-C11-contract-revendor-closeouts.md`) — **DONE, D1–D3 all delivered. PR not yet opened.**
@@ -275,6 +307,20 @@ contract:update`) confirmed the contract was already current (no diff against wh
   walkthrough. See "Last completed" 2026-07-30 for the full record.
 
 ## Last completed
+
+- 2026-08-20 (PR #27 merge, following Majd's live walkthrough against the
+  local Docker Desktop stack — the full ministry reference scenario, EN/AR +
+  RTL, explicitly confirmed passing): full record of what was tested and the
+  two console bugs + one platform bug found and fixed live is under "Current
+  phase / task" above. `gh pr checks 27` green before merge. **PR #27 merged
+  to `main` 2026-08-20** (squash, branch deleted) — local `main` fast-forwarded
+  cleanly. Also merged the same session: `khatm-platform` PR #66 (the
+  verify/redeem audit tenant-attribution fix this walkthrough surfaced),
+  already `STATE.md`-recorded on that repo's own side by the PR itself.
+  `staging-khatm-console`'s stale-backend finding (missing `setParent`
+  endpoint, confirmed via the container's own error log) was left unresolved
+  as a redeploy task, not blocking this merge since local was the verified
+  environment throughout.
 
 - 2026-08-19 (feat/C12-org-hierarchy, session
   `SESSION-C12-org-hierarchy-console.md` — resumed and delivered the same day
