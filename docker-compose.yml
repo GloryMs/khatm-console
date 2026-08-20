@@ -5,7 +5,10 @@ name: khatm-console
 
 services:
   khatm-console:
-    build: .
+    build:
+      context: .
+      args:
+        - VITE_QR_API_BASE
     container_name: khatm-console
     ports: ['3000:80']
     networks: [khatm-net]
