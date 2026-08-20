@@ -1,0 +1,19 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.title {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.help {
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.sectionTitle {
+  margin: 0;
+}

@@ -8,6 +8,7 @@ export type InitialAdminRequest = components['schemas']['InitialAdminRequest'];
 export type CreateUserRequest = components['schemas']['CreateUserRequest'];
 export type CreateUserResponse = components['schemas']['CreateUserResponse'];
 export type UserSummary = components['schemas']['UserSummary'];
+export type SetParentRequest = components['schemas']['SetParentRequest'];
 
 export type TenantType = 'GOVERNMENT' | 'EDUCATION' | 'PRIVATE' | 'OTHER';
 export type TenantDeployMode = 'SAAS' | 'ONPREM' | 'FEDERATED';
@@ -82,4 +83,21 @@ export function suspendTenant(id: string): Promise<TenantView> {
 /** SUSPENDED -> ACTIVE; issuance and sign-ins resume. Idempotent. */
 export function activateTenant(id: string): Promise<TenantView> {
   return apiFetch<TenantView>(`${BASE}/${encodeURIComponent(id)}/activate`, { method: 'POST' });
+}
+
+/**
+ * Links, re-links, or unlinks a tenant's parent (spec FS-2.5 §2) — pure
+ * organisational metadata, never a security or cryptographic change. An
+ * omitted/blank `parentSlug` clears it, making the tenant a root again
+ * (the contract's `parentSlug` is a plain optional string, so "clear" is
+ * sent as `''` rather than `null`). Rejects a self-parent, a cycle,
+ * exceeding the maximum hierarchy depth (three levels), or a parent that
+ * is not ACTIVE (`KH-TNT-0422`/`1422`/`2422`/`3422`). Requires the
+ * `platform:admin` scope.
+ */
+export function setParentTenant(id: string, parentSlug: string | undefined): Promise<TenantView> {
+  return apiFetch<TenantView>(`${BASE}/${encodeURIComponent(id)}/parent`, {
+    method: 'POST',
+    body: { parentSlug: parentSlug ?? '' } satisfies SetParentRequest,
+  });
 }

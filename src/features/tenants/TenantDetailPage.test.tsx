@@ -129,6 +129,123 @@ describe('TenantDetailPage suspend / activate', () => {
   });
 });
 
+const candidateParent: tenantsApi.TenantView = {
+  id: 'tenant-3',
+  slug: 'candidate-parent',
+  nameI18n: { en: 'Candidate Parent', ar: 'أب مرشح' },
+  type: 'GOVERNMENT',
+  deployMode: 'SAAS',
+  status: 'ACTIVE',
+  createdAt: '2026-08-01T00:00:00Z',
+};
+
+const childTenant: tenantsApi.TenantView = {
+  id: 'tenant-2',
+  slug: 'demo-child',
+  nameI18n: { en: 'Demo Child', ar: 'ابن تجريبي' },
+  type: 'GOVERNMENT',
+  deployMode: 'SAAS',
+  status: 'ACTIVE',
+  createdAt: '2026-08-05T00:00:00Z',
+  parentSlug: 'demo-tenant',
+};
+
+describe('TenantDetailPage hierarchy', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('shows a root note and lists children derived from the full tenant list', async () => {
+    vi.spyOn(tenantsApi, 'getTenant').mockResolvedValue(activeTenant);
+    vi.spyOn(tenantsApi, 'listTenants').mockResolvedValue([activeTenant, childTenant]);
+    renderPage(adminAuth);
+
+    expect(await screen.findByText(i18n.t('tenants.detail.noParent'))).toBeInTheDocument();
+    expect(await screen.findByText('Demo Child')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: i18n.t('tenants.detail.actionSetParent') }),
+    ).toBeInTheDocument();
+  });
+
+  it('shows the parent badge and "change parent" wording for a tenant that already has a parent', async () => {
+    vi.spyOn(tenantsApi, 'getTenant').mockResolvedValue({
+      ...activeTenant,
+      parentSlug: 'candidate-parent',
+      parentNameI18n: { en: 'Candidate Parent', ar: 'أب مرشح' },
+    });
+    vi.spyOn(tenantsApi, 'listTenants').mockResolvedValue([activeTenant, candidateParent]);
+    renderPage(adminAuth);
+
+    expect(
+      await screen.findByText(i18n.t('tenants.detail.parentLabel', { parent: 'Candidate Parent' })),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: i18n.t('tenants.detail.actionChangeParent') }),
+    ).toBeInTheDocument();
+  });
+
+  it('sets a parent via the dialog', async () => {
+    vi.spyOn(tenantsApi, 'getTenant').mockResolvedValue(activeTenant);
+    vi.spyOn(tenantsApi, 'listTenants').mockResolvedValue([activeTenant, candidateParent]);
+    const setParent = vi.spyOn(tenantsApi, 'setParentTenant').mockResolvedValue({
+      ...activeTenant,
+      parentSlug: 'candidate-parent',
+    });
+    const user = userEvent.setup();
+    renderPage(adminAuth);
+
+    await user.click(
+      await screen.findByRole('button', { name: i18n.t('tenants.detail.actionSetParent') }),
+    );
+    await user.selectOptions(
+      screen.getByLabelText(i18n.t('tenants.setParent.parentSlug')),
+      'candidate-parent',
+    );
+    await user.click(screen.getByRole('button', { name: i18n.t('tenants.setParent.submit') }));
+
+    await waitFor(() => expect(setParent).toHaveBeenCalledWith('tenant-1', 'candidate-parent'));
+  });
+
+  it('clears a parent by submitting the blank option', async () => {
+    vi.spyOn(tenantsApi, 'getTenant').mockResolvedValue({
+      ...activeTenant,
+      parentSlug: 'candidate-parent',
+    });
+    vi.spyOn(tenantsApi, 'listTenants').mockResolvedValue([activeTenant, candidateParent]);
+    const setParent = vi.spyOn(tenantsApi, 'setParentTenant').mockResolvedValue(activeTenant);
+    const user = userEvent.setup();
+    renderPage(adminAuth);
+
+    await user.click(
+      await screen.findByRole('button', { name: i18n.t('tenants.detail.actionChangeParent') }),
+    );
+    await user.selectOptions(screen.getByLabelText(i18n.t('tenants.setParent.parentSlug')), '');
+    await user.click(screen.getByRole('button', { name: i18n.t('tenants.setParent.submit') }));
+
+    await waitFor(() => expect(setParent).toHaveBeenCalledWith('tenant-1', undefined));
+  });
+
+  it('shows the localized error inline when the server rejects the parent choice (e.g. a cycle)', async () => {
+    vi.spyOn(tenantsApi, 'getTenant').mockResolvedValue(activeTenant);
+    vi.spyOn(tenantsApi, 'listTenants').mockResolvedValue([activeTenant, candidateParent]);
+    const { ApiError } = await import('@/api/errors');
+    vi.spyOn(tenantsApi, 'setParentTenant').mockRejectedValue(
+      new ApiError(422, { code: 'KH-TNT-1422', messageKey: 'tenant.parent-cycle' }),
+    );
+    const user = userEvent.setup();
+    renderPage(adminAuth);
+
+    await user.click(
+      await screen.findByRole('button', { name: i18n.t('tenants.detail.actionSetParent') }),
+    );
+    await user.selectOptions(
+      screen.getByLabelText(i18n.t('tenants.setParent.parentSlug')),
+      'candidate-parent',
+    );
+    await user.click(screen.getByRole('button', { name: i18n.t('tenants.setParent.submit') }));
+
+    expect(await screen.findByText(i18n.t('errors.tenant.parent-cycle'))).toBeInTheDocument();
+  });
+});
+
 const onBehalfOfUser: tenantsApi.UserSummary = {
   id: 'obo-user-1',
   username: 'tenantadmin',

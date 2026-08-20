@@ -7,3 +7,7 @@
 .link:hover {
   text-decoration: underline;
 }
+
+.noParent {
+  color: var(--color-text-muted);
+}

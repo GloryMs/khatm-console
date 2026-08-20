@@ -25,6 +25,7 @@ export function TenantList({ tenants }: TenantListProps) {
           <th className={tableStyles.codeCell}>{t('tenants.columnSlug')}</th>
           <th>{t('tenants.columnName')}</th>
           <th>{t('tenants.columnType')}</th>
+          <th>{t('tenants.columnParent')}</th>
           <th>{t('tenants.columnStatus')}</th>
           <th>{t('tenants.columnCreatedAt')}</th>
         </tr>
@@ -49,6 +50,15 @@ export function TenantList({ tenants }: TenantListProps) {
               </td>
               <td>{localize(tenant.nameI18n) || tenant.slug}</td>
               <td>{tenant.type ? t(`tenants.type.${tenant.type}`) : ''}</td>
+              <td>
+                {tenant.parentSlug ? (
+                  localize(tenant.parentNameI18n) || (
+                    <span className="ltr-embed">{tenant.parentSlug}</span>
+                  )
+                ) : (
+                  <span className={styles.noParent}>{t('tenants.noParent')}</span>
+                )}
+              </td>
               <td>
                 <StatusBadge tone={tone}>
                   {isActive ? t('tenants.statusActive') : t('tenants.statusSuspended')}

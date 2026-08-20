@@ -3,6 +3,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+ARG VITE_QR_API_BASE
+ENV VITE_QR_API_BASE=$VITE_QR_API_BASE
 RUN npm run build
 
 FROM nginx:alpine
