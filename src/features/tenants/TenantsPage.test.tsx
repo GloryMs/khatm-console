@@ -72,6 +72,35 @@ describe('TenantsPage scope gating', () => {
   });
 });
 
+describe('TenantsPage parent column', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('shows a dash for a root tenant and the parent name for a child', async () => {
+    vi.spyOn(tenantsApi, 'listTenants').mockResolvedValue([
+      ...tenants,
+      {
+        id: 'tenant-2',
+        slug: 'demo-child',
+        nameI18n: { en: 'Demo Child', ar: 'ابن تجريبي' },
+        type: 'GOVERNMENT',
+        deployMode: 'SAAS',
+        status: 'ACTIVE',
+        createdAt: '2026-08-05T06:00:00Z',
+        parentSlug: 'demo-tenant',
+        parentNameI18n: { en: 'Demo Tenant', ar: 'مستأجر تجريبي' },
+      },
+    ]);
+    renderPage(adminAuth);
+
+    expect(await screen.findByText('Demo Child')).toBeInTheDocument();
+    const rows = screen.getAllByRole('row');
+    const rootRow = rows.find((row) => row.textContent?.includes('demo-tenant'));
+    const childRow = rows.find((row) => row.textContent?.includes('demo-child'));
+    expect(rootRow).toHaveTextContent(i18n.t('tenants.noParent'));
+    expect(childRow).toHaveTextContent('Demo Tenant');
+  });
+});
+
 describe('TenantsPage create dialog', () => {
   afterEach(() => vi.restoreAllMocks());
 

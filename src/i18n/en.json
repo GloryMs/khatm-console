@@ -18,6 +18,7 @@
     "consumeSim": "Consume Simulator",
     "users": "Users",
     "tenants": "Tenants",
+    "org": "Organization",
     "keyManagement": "Key Management",
     "security": "Security"
   },
@@ -214,7 +215,16 @@
     },
     "tenant": {
       "invalid-slug": "The tenant slug is invalid. Use a lowercase slug (letters, digits, hyphen, underscore), 2 to 63 characters, starting with a letter or digit.",
-      "duplicate-slug": "A tenant with this slug already exists."
+      "duplicate-slug": "A tenant with this slug already exists.",
+      "not-found": "No tenant with this id or slug was found.",
+      "parent-self": "A tenant can't be its own parent.",
+      "parent-cycle": "That would create a cycle in the tenant hierarchy.",
+      "parent-depth-exceeded": "That would exceed the maximum hierarchy depth (three levels).",
+      "parent-not-active": "The named parent tenant isn't active.",
+      "parent-has-active-children": "This tenant has an active child of its own and can't be suspended until that's resolved first."
+    },
+    "org": {
+      "child-not-found": "That id isn't one of your direct children."
     },
     "attestation": {
       "required": "This schema requires attestation. Pick a scanned file to hash and attest before issuing.",
@@ -329,6 +339,9 @@
     "statusChecked": "Status list checked",
     "statusVersion": "Status list version",
     "statusUri": "Status list URI",
+    "issuerLineage": {
+      "label": "Issuing tenant's lineage"
+    },
     "hashCompare": {
       "cta": "Compare against your own copy",
       "prompt": "Pick your own copy of the document. It's hashed in your browser and never sent anywhere.",
@@ -562,8 +575,10 @@
     "columnSlug": "Slug",
     "columnName": "Name",
     "columnType": "Type",
+    "columnParent": "Parent",
     "columnStatus": "Status",
     "columnCreatedAt": "Created",
+    "noParent": "—",
     "statusActive": "Active",
     "statusSuspended": "Suspended",
     "type": {
@@ -615,7 +630,23 @@
       "tabUsers": "Users",
       "onBehalfOfNotice": "You're acting on behalf of {{tenant}} — actions here are recorded as an on-behalf-of action.",
       "addUserCta": "Add user",
-      "addUserTitle": "Add a user to this tenant"
+      "addUserTitle": "Add a user to this tenant",
+      "hierarchyTitle": "Hierarchy",
+      "parentLabel": "Belongs to: {{parent}}",
+      "noParent": "This is a root tenant (no parent).",
+      "actionSetParent": "Set parent",
+      "actionChangeParent": "Change parent",
+      "childrenTitle": "Children",
+      "noChildren": "This tenant has no children."
+    },
+    "setParent": {
+      "title": "Set parent tenant",
+      "parentSlug": "Parent",
+      "parentSlugHelp": "An existing, active tenant. Leave blank to make this tenant a root again.",
+      "noneOption": "— None (root) —",
+      "cancel": "Cancel",
+      "submit": "Save",
+      "submitting": "Saving…"
     },
     "suspendConfirm": {
       "title": "Suspend this tenant?",
@@ -630,6 +661,67 @@
       "confirm": "Activate now",
       "activating": "Activating…",
       "cancel": "Cancel"
+    }
+  },
+  "org": {
+    "title": "Organization",
+    "subtitle": "Manage your direct children, their users and schemas, and see the aggregated report across your whole organization.",
+    "children": {
+      "title": "Children",
+      "empty": "You have no child tenants yet.",
+      "columnSlug": "Slug",
+      "columnName": "Name",
+      "columnStatus": "Status",
+      "columnActions": "Actions",
+      "statusActive": "Active",
+      "statusSuspended": "Suspended",
+      "actionManage": "Manage",
+      "actionSuspend": "Suspend",
+      "actionActivate": "Activate"
+    },
+    "suspendConfirm": {
+      "title": "Suspend {{child}}?",
+      "body": "This blocks new credential issuance and operator sign-ins for this child tenant only. Credentials already issued keep verifying and consuming normally. Type the child's slug to confirm.",
+      "typePrompt": "Type the child's slug to confirm",
+      "mismatch": "Doesn't match the child's slug.",
+      "confirm": "Suspend now",
+      "suspending": "Suspending…",
+      "cancel": "Cancel"
+    },
+    "activateConfirm": {
+      "title": "Reactivate {{child}}?",
+      "body": "New credential issuance and operator sign-ins resume for this child tenant.",
+      "confirm": "Activate now",
+      "activating": "Activating…",
+      "cancel": "Cancel"
+    },
+    "child": {
+      "backToOrg": "← Back to organization",
+      "onBehalfOfNotice": "You are acting on behalf of: {{child}} — actions here are recorded as an on-behalf-of action.",
+      "tabUsers": "Users",
+      "tabSchemas": "Schemas",
+      "addUserCta": "Add user",
+      "addUserTitle": "Add a user to this child tenant",
+      "schemasEmpty": "This child has no schemas yet.",
+      "schemasReadOnlyNote": "Read-only — schema management stays with the child's own tenant administrators."
+    },
+    "reports": {
+      "title": "Aggregated report",
+      "windowLabel": "Reporting window",
+      "window": {
+        "month": "This month",
+        "quarter": "This quarter",
+        "year": "This year"
+      },
+      "columnChild": "Child",
+      "column": {
+        "issued": "Issued",
+        "consumed": "Consumed",
+        "revoked": "Revoked",
+        "verifyOk": "Verify OK",
+        "verifyFailed": "Verify failed"
+      },
+      "emptyChildren": "No child tenants to report on yet."
     }
   },
   "users": {
@@ -649,7 +741,8 @@
     },
     "role": {
       "TENANT_ADMIN": "Tenant admin",
-      "ISSUER_OPERATOR": "Issuer operator"
+      "ISSUER_OPERATOR": "Issuer operator",
+      "ORG_ADMIN": "Organization admin"
     },
     "actionEditRoles": "Edit roles",
     "actionLock": "Lock",

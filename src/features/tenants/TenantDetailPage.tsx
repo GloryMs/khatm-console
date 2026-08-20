@@ -19,13 +19,17 @@ import {
 import { UserList } from '@/features/users/components/UserList';
 import type { CreateUserResponse, UserSummary } from './api';
 import { buildTenantJwksUrl } from './jwks';
+import { SetParentDialog, type SetParentFormValues } from './components/SetParentDialog';
+import { TenantList } from './components/TenantList';
 import {
   useActivateTenant,
   useCreateUserInTenant,
   useResetTotpInTenant,
+  useSetParentTenant,
   useSuspendTenant,
   useTenant,
   useTenantUsers,
+  useTenants,
 } from './hooks';
 import styles from './TenantDetailPage.module.css';
 
@@ -45,16 +49,19 @@ function TenantDetailPageBody() {
   const localize = useLocalizedText();
   const params = useParams<{ id: string }>();
   const tenant = useTenant(params.id);
+  const allTenants = useTenants();
   const suspend = useSuspendTenant();
   const activate = useActivateTenant();
   const createUserInTenant = useCreateUserInTenant();
   const resetTotpInTenant = useResetTotpInTenant();
+  const setParentTenant = useSetParentTenant();
   const [confirmAction, setConfirmAction] = useState<'suspend' | 'activate' | null>(null);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<DetailTab>('details');
   const [createUserOpen, setCreateUserOpen] = useState(false);
   const [createdUser, setCreatedUser] = useState<CreateUserResponse | null>(null);
   const [resetTotpTarget, setResetTotpTarget] = useState<UserSummary | null>(null);
+  const [setParentOpen, setSetParentOpen] = useState(false);
   const tenantUsers = useTenantUsers(activeTab === 'users' ? params.id : undefined);
 
   if (tenant.isPending) return <p>{t('common.loading')}</p>;
@@ -71,6 +78,18 @@ function TenantDetailPageBody() {
       )
     : '';
   const jwksUrl = data.slug ? buildTenantJwksUrl(data.slug) : '';
+  const children = allTenants.data?.filter((other) => other.parentSlug === data.slug) ?? [];
+  const parentCandidates = allTenants.data?.filter((other) => other.status === 'ACTIVE') ?? [];
+
+  const onSetParentSubmit = async (values: SetParentFormValues) => {
+    try {
+      await setParentTenant.mutateAsync({ id, parentSlug: values.parentSlug || undefined });
+      setSetParentOpen(false);
+      setParentTenant.reset();
+    } catch {
+      // surfaced via setParentTenant.isError/error in SetParentDialog
+    }
+  };
 
   const onConfirm = async () => {
     if (confirmAction === 'suspend') {
@@ -194,6 +213,33 @@ function TenantDetailPageBody() {
             {copied && <Toast tone="success">{t('common.copied')}</Toast>}
           </div>
 
+          <div className={styles.jwksCard}>
+            <h2 className={styles.fieldLabel}>{t('tenants.detail.hierarchyTitle')}</h2>
+            {data.parentSlug ? (
+              <p>
+                {t('tenants.detail.parentLabel', {
+                  parent: localize(data.parentNameI18n) || data.parentSlug,
+                })}
+              </p>
+            ) : (
+              <p>{t('tenants.detail.noParent')}</p>
+            )}
+            <div className={styles.actionsRow}>
+              <Button variant="secondary" onClick={() => setSetParentOpen(true)}>
+                {data.parentSlug
+                  ? t('tenants.detail.actionChangeParent')
+                  : t('tenants.detail.actionSetParent')}
+              </Button>
+            </div>
+
+            <h2 className={styles.fieldLabel}>{t('tenants.detail.childrenTitle')}</h2>
+            {children.length === 0 ? (
+              <p>{t('tenants.detail.noChildren')}</p>
+            ) : (
+              <TenantList tenants={children} />
+            )}
+          </div>
+
           <div className={styles.actionsRow}>
             {isActive ? (
               <Button variant="secondary" onClick={() => setConfirmAction('suspend')}>
@@ -273,6 +319,20 @@ function TenantDetailPageBody() {
           onCancel={() => {
             setResetTotpTarget(null);
             resetTotpInTenant.reset();
+          }}
+        />
+      )}
+
+      {setParentOpen && (
+        <SetParentDialog
+          tenant={data}
+          candidates={parentCandidates}
+          isSubmitting={setParentTenant.isPending}
+          error={setParentTenant.isError ? setParentTenant.error : undefined}
+          onSubmit={onSetParentSubmit}
+          onCancel={() => {
+            setSetParentOpen(false);
+            setParentTenant.reset();
           }}
         />
       )}

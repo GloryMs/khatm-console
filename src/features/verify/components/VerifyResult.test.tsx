@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import i18n from '@/i18n';
 import type { VerifyResponse } from '../api';
 import { VerifyResult } from './VerifyResult';
@@ -100,5 +100,63 @@ describe('VerifyResult', () => {
     await user.upload(fileInput, file);
 
     expect(await screen.findByText(i18n.t('verify.hashCompare.mismatch'))).toBeInTheDocument();
+  });
+});
+
+describe('VerifyResult issuer lineage (spec FS-2.5 D4)', () => {
+  afterEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
+  it('renders no lineage row for a root-issued credential (empty array)', () => {
+    renderResult(fixture({ valid: true, claims: {}, issuerLineage: [] }));
+    expect(screen.queryByText(i18n.t('verify.issuerLineage.label'))).not.toBeInTheDocument();
+  });
+
+  it('renders no lineage row when the ref was unresolvable (field absent)', () => {
+    renderResult(fixture({ valid: false, claims: {} }));
+    expect(screen.queryByText(i18n.t('verify.issuerLineage.label'))).not.toBeInTheDocument();
+  });
+
+  it('renders the full ancestor chain, nearest first, joined with an em dash', () => {
+    renderResult(
+      fixture({
+        valid: true,
+        claims: {},
+        issuerLineage: [
+          { slug: 'moi', nameI18n: { en: 'Ministry of Interior', ar: 'وزارة الداخلية' } },
+          { slug: 'gov', nameI18n: { en: 'Government', ar: 'الحكومة' } },
+        ],
+      }),
+    );
+    const label = screen.getByText(i18n.t('verify.issuerLineage.label'));
+    expect(label.parentElement).toHaveTextContent('Ministry of Interior — Government');
+  });
+
+  it('renders the Arabic ancestor names in Arabic UI', async () => {
+    await i18n.changeLanguage('ar');
+    renderResult(
+      fixture({
+        valid: true,
+        claims: {},
+        issuerLineage: [
+          { slug: 'moi', nameI18n: { en: 'Ministry of Interior', ar: 'وزارة الداخلية' } },
+        ],
+      }),
+    );
+    expect(screen.getByText('وزارة الداخلية')).toBeInTheDocument();
+  });
+
+  it('falls back to the slug, LTR-embedded, when an ancestor has no localized name (mixed bidi)', async () => {
+    await i18n.changeLanguage('ar');
+    renderResult(
+      fixture({
+        valid: true,
+        claims: {},
+        issuerLineage: [{ slug: 'moi-immigration', nameI18n: undefined }],
+      }),
+    );
+    const slugNode = screen.getByText('moi-immigration');
+    expect(slugNode).toHaveClass('ltr-embed');
   });
 });

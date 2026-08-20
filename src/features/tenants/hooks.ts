@@ -7,6 +7,7 @@ import {
   listTenants,
   listUsersInTenant,
   resetTotpInTenant,
+  setParentTenant,
   suspendTenant,
   type CreateUserRequest,
   type OnboardTenantRequest,
@@ -61,6 +62,20 @@ export function useActivateTenant() {
   const invalidate = useInvalidateAfterWrite();
   return useMutation({
     mutationFn: (id: string) => activateTenant(id),
+    onSuccess: invalidate,
+  });
+}
+
+/**
+ * Sets or clears a tenant's parent (spec FS-2.5 §2). Invalidates the whole
+ * `tenants` query family — both the list (parent badge, other tenants'
+ * children derivations) and this tenant's own detail change.
+ */
+export function useSetParentTenant() {
+  const invalidate = useInvalidateAfterWrite();
+  return useMutation({
+    mutationFn: ({ id, parentSlug }: { id: string; parentSlug: string | undefined }) =>
+      setParentTenant(id, parentSlug),
     onSuccess: invalidate,
   });
 }

@@ -30,3 +30,16 @@ Onboarding is server-resumable (a retried create for a half-onboarded slug
 succeeds rather than 409ing) — the UI has no special retry handling, by
 design. `KH-TNT-0400`/`KH-TNT-0409` are mapped onto the slug field inline,
 in addition to the generic error banner every other mutation gets.
+
+**Hierarchy (spec FS-2.5, KH-2.6a):** `useSetParentTenant` →
+`POST .../tenants/{id}/parent` (`SetParentDialog`, a `<select>` of other
+ACTIVE tenants — cycle/depth/self/parent-not-active checks
+(`KH-TNT-0422`/`1422`/`2422`/`3422`) stay entirely server-side, surfaced via
+the standard `ApiErrorBanner`). There's no dedicated "list this tenant's
+children" endpoint for `platform:admin`, so `TenantDetailPage` derives both
+its parent badge and its children section from `TenantView.parentSlug`/
+`parentNameI18n` on the already-fetched full `useTenants()` list, filtered
+client-side — the children section reuses `TenantList` as-is. The org:admin
+on-behalf-of plane for a _parent tenant's own_ children (suspend/reactivate,
+child user management, aggregated reports) is a separate feature,
+`features/org`, not this one.

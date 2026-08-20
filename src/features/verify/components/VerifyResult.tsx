@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { useLocalizedText } from '@/hooks/useLocalizedText';
 import { HashCompare } from './HashCompare';
 import type { VerifyResponse } from '../api';
 import styles from './VerifyResult.module.css';
@@ -27,6 +28,7 @@ function renderClaimValue(value: unknown): string {
 
 export function VerifyResult({ result }: { result: VerifyResponse }) {
   const { t } = useTranslation();
+  const localize = useLocalizedText();
 
   const claims = (result.claims ?? {}) as Record<string, unknown>;
   const claimEntries = Object.entries(claims).filter(([, v]) => v !== undefined);
@@ -82,6 +84,20 @@ export function VerifyResult({ result }: { result: VerifyResponse }) {
           </ul>
         )}
       </div>
+
+      {(result.issuerLineage ?? []).length > 0 && (
+        <div className={styles.row}>
+          <span className={styles.rowLabel}>{t('verify.issuerLineage.label')}</span>
+          <span className={styles.value}>
+            {(result.issuerLineage ?? []).map((entry, index) => (
+              <span key={entry.slug ?? index}>
+                {index > 0 && ' — '}
+                {localize(entry.nameI18n) || <span className="ltr-embed">{entry.slug}</span>}
+              </span>
+            ))}
+          </span>
+        </div>
+      )}
 
       {(extras.statusListChecked !== undefined ||
         extras.statusListVersion !== undefined ||

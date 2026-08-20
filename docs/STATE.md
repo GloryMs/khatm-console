@@ -6,6 +6,117 @@
 
 ## Current phase / task
 
+- C12-org-hierarchy-console (console side of FS-2.5's tenant hierarchy + org admin,
+  session `SESSION-C12-org-hierarchy-console.md`) — **DONE, D1–D4 all delivered.
+  PR not yet opened.** First pass **self-stopped at the preamble gate** the same
+  day (zero code changed) — `khatm-platform` KH-2.6a was merged (PR #64) but
+  KH-2.6b (the `org:admin` plane + aggregated reports, everything D2/D3 depend
+  on) was still open as PR #65; see the first 2026-08-19 "Last completed" entry
+  for the full preamble/self-stop record, including the brief's gate text saying
+  "KH-TEN-042x" where the vendored prefix is actually `KH-TNT` (read as
+  shorthand, not a second gap). **Resumed the same day once Majd confirmed PR
+  #65 merged** (`mergedAt: 2026-08-19T07:37:12Z`, reconfirmed directly via
+  `gh pr view`) — re-ran the preamble clean this time: `/org/children`,
+  `/org/children/{id}/{activate,suspend,schemas,users,users/{userId}/{disable,
+reset-password}}`, `/org/reports`, and the `org:admin`/`org-admin` tag all
+  present (882 insertions/47 deletions over the earlier KH-2.6a-only fetch).
+  - **D1 (tenant admin hierarchy).** `tenants/api.ts#setParentTenant(id,
+parentSlug)` → `POST .../tenants/{id}/parent` (blank string clears — the
+    contract's `parentSlug` is a plain optional string, not nullable, so
+    "clear" is sent as `''`, not `null`, to stay `satisfies`-clean under
+    strict mode). New `SetParentDialog` (a `<select>` of other ACTIVE tenants,
+    not free-text — cuts slug-typo 404s; cycle/depth/self/parent-not-active
+    stay entirely server-side). `TenantList` gained a Parent column
+    (`parentNameI18n`, falling back to the `.ltr-embed` slug, then an em dash
+    for roots). `TenantDetailPage` gained a Hierarchy card (parent badge +
+    set/change action) and a Children section — **there's no dedicated
+    "list this tenant's children" endpoint for `platform:admin`**, so both are
+    derived client-side by filtering the already-fetched full `useTenants()`
+    list on `parentSlug`, and the children section reuses `TenantList` as-is
+    rather than a bespoke sub-list.
+  - **D2 (org panel).** New feature `features/org`. `/org` (`OrgPage`,
+    self-gated `RequireScope('org:admin')`): direct-children list
+    (`GET /org/children`) with suspend (`TypeToConfirmDialog` keyed on the
+    child's own slug, per the brief's explicit test 3) and reactivate (a plain
+    `ConfirmDialog`, mirroring `TenantDetailPage`'s own suspend/activate
+    asymmetry). `/org/children/:id` (`OrgChildPage`): an always-visible,
+    non-dismissible `OnBehalfOfBanner` at the top of every render path (the
+    brief's own words: parent/child context confusion is "the single most
+    dangerous usage error" here) + Users/Schemas tabs. Users tab reuses
+    `UserList`/`CreateUserDialog` verbatim, wired to only the four actions the
+    contract actually exposes for a child (list/create/disable/reset-password
+    — **no lock/unlock/edit-roles/TOTP-reset**, unlike the tenant on-behalf-of
+    plane; `KH-USR-0423` last-admin guard reuses `UsersPage`'s own inline-
+    explanation pattern). Schemas tab is read-only (new `ChildSchemaList`,
+    same status-tone mapping as `SchemaList.tsx`, deliberately duplicated
+    rather than cross-imported per the 2026-08-04 C8b precedent). No single
+    "get one child" endpoint exists, so `OrgChildPage` resolves the child's
+    display name from the already-fetched `useChildren()` list by id, not a
+    dedicated fetch.
+  - **D3 (aggregated reports).** New `OrgReportsPanel`: three fixed calendar
+    presets (month/quarter/year, veto V2 default (a) — no free date-picker),
+    `windows.ts#computeOrgReportWindow` computed **in UTC explicitly**
+    (`Date.UTC`, not the browser's local timezone) so "start of period" is
+    deterministic regardless of where the console runs — flagged in the code
+    since this is the first calendar-aligned (not pure day-count) window
+    computation in this codebase, unlike `dashboard/windows.ts`'s existing
+    7/30-day windows which have no timezone dependency to begin with. Rollup
+    row + per-child `DataTable`, both rendering server counters as-is (no
+    local derivation, P1). Two distinct empty states per the brief's own
+    callout: `ChildList`'s "no children" (D2) is independent of
+    `OrgReportsPanel`'s own "no children to report on" (its `children` comes
+    from the report response, not `useChildren()`) — real zero counters
+    otherwise render as literal `0`, not a synthesized empty state.
+  - **D4 (verify lineage).** `VerifyResult` renders `issuerLineage` (ancestor
+    slugs nearest-first, joined " — ") only when non-empty — clean absence for
+    both roots (`[]`) and unresolvable refs (`null`/absent). **Load-bearing
+    discovery while reading `VerifyResponse.java`'s own Javadoc**: the
+    field is the ancestor chain _only_ — the issuing tenant's own name/slug
+    has never been part of `VerifyResponse` and still isn't, so the brief's
+    illustrative sentence ("الجهة المُصدِرة: {child} — التابعة لـ {parent}")
+    can't be built literally; the spec's own qualifying clause ("من
+    `name_i18n` للأب") confirms this — only ancestor names are real,
+    buildable data. Rendered as a plain "issuing tenant's lineage" line
+    instead of naming a child the contract never names. Each entry's
+    `nameI18n` localizes normally; a missing name falls back to the raw
+    slug, `.ltr-embed`-wrapped (the mixed-bidi case the brief calls out).
+  - **Veto answers used:** V1 = (a) dedicated `/org` page in the nav
+    (`org:admin`-gated), not a tenant-admin tab. V2 = (a) three fixed presets.
+  - **Tests: 293 total now (was 267)** — 6 new in `TenantDetailPage.test.tsx`
+    (root note + children list, parent badge + "change parent" wording, set,
+    clear, and the `KH-TNT-1422` cycle error surfacing inline via the
+    standard `ApiErrorBanner`), 1 new in `TenantsPage.test.tsx` (parent column:
+    dash for a root, name for a child), `org/windows.test.ts` (5, including
+    the UTC-quarter-boundary case), `org/OrgPage.test.tsx` (7: scope gate,
+    children list + empty state, type-to-confirm suspend including the
+    wrong-slug-stays-disabled case, plain-confirm reactivate, reports default-
+    window + rollup, reports empty state), `org/OrgChildPage.test.tsx` (8:
+    scope gate, on-behalf-of banner text, users list action-set, create +
+    reveal-then-assert temporary password, disable + last-admin-guard
+    explanation, reset-password + reveal, schemas read-only + note, schemas
+    empty state), 5 new in `VerifyResult.test.tsx` (empty-array root, absent-
+    field unresolved, multi-ancestor em-dash join, Arabic name, LTR-embedded
+    slug fallback for mixed bidi). One real bug caught and fixed while writing
+    the cycle-error test: `TenantDetailPage`'s `onSetParentSubmit` didn't
+    catch `setParentTenant.mutateAsync`'s rejection, unlike every sibling
+    handler in that file (`onConfirmResetTotp`, etc.) — would have surfaced as
+    an unhandled promise rejection the first time a real KH-TNT-042x fired;
+    now wrapped in the same try/catch idiom. `npm run typecheck`/`lint` (only
+    the pre-existing `FormField.tsx` warning)/`test` (293/293)/`build` all
+    clean. `format:check` clean on every file this session touched — same 12
+    pre-existing untracked-file failures as every prior session (`.vscode/`,
+    `docs/sessions/`, `docs/specs/`), untouched. RTL grep
+    (`(margin|padding|border)-(left|right)`, bare `left:`/`right:`, physical
+    `text-align`, `float:`) across every new/changed `.tsx`/`.module.css`:
+    zero matches.
+  - **No live walkthrough this session** — same standing limitation as every
+    console session (no browser-automation tool). Majd's live walkthrough
+    (the full ministry scenario: `moi` + four children, granting `org:admin`,
+    managing a child's users via on-behalf-of, suspend/reactivate, the
+    aggregated report, verify with lineage) and the Arabic-copy/RTL gate are
+    both explicit `[MAJD]` DoD items and remain the merge gate — this session
+    is the heaviest Arabic-text surface since 2026-08-11's attested-issuance
+    work, per the brief's own caution. **PR not yet opened.**
 - C11-contract-revendor-closeouts (re-vendor the contract against the merged KH-2.4x/Boot-3.5
   platform state and close two deferred tails — C10's D4 and C7c's TOTP-status gap — session
   `SESSION-C11-contract-revendor-closeouts.md`) — **DONE, D1–D3 all delivered. PR not yet opened.**
@@ -164,6 +275,21 @@ contract:update`) confirmed the contract was already current (no diff against wh
   walkthrough. See "Last completed" 2026-07-30 for the full record.
 
 ## Last completed
+
+- 2026-08-19 (feat/C12-org-hierarchy, session
+  `SESSION-C12-org-hierarchy-console.md` — resumed and delivered the same day
+  Majd confirmed `khatm-platform` PR #65 merged): full delivery record (D1–D4,
+  veto answers, test counts) is under "Current phase / task" above rather than
+  duplicated here. **No live walkthrough this session** — same standing
+  limitation as every prior console session. Majd's live walkthrough (full
+  ministry scenario) and the Arabic-copy/RTL gate remain the merge gate.
+  **PR not yet opened.**
+
+- 2026-08-19 (feat/C12-org-hierarchy, session
+  `SESSION-C12-org-hierarchy-console.md` — self-stopped, zero code changed): full
+  record under "Current phase / task" above. Summary: KH-2.6a merged
+  (`khatm-platform` PR #64), KH-2.6b not (`khatm-platform` PR #65, open). Branch
+  deleted, contract fetch reverted, nothing to keep.
 
 - 2026-08-18 (feat/C11-contract-revendor-closeouts, session
   `SESSION-C11-contract-revendor-closeouts.md` — delivered, not yet a PR): full delivery record is

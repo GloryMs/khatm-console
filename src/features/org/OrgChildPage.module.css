@@ -1,0 +1,70 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-inline-size: 720px;
+}
+
+.back {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.back:hover {
+  text-decoration: underline;
+}
+
+.headRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.title {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-2);
+  border-block-end: 1px solid var(--color-border);
+}
+
+.tab,
+.tabActive {
+  padding: var(--space-2) var(--space-4);
+  background: none;
+  border: none;
+  border-block-end: 2px solid transparent;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab {
+  color: var(--color-text-muted);
+}
+
+.tabActive {
+  color: var(--color-primary);
+  border-block-end-color: var(--color-primary);
+}
+
+.tabPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.actionsRow {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.schemaNote {
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+}

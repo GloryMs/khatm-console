@@ -333,6 +333,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/tenants/{id}/parent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Link, re-link, or unlink a tenant's parent
+         * @description Sets the tenant's immediate parent, or clears it (parentSlug null/blank makes it a root again) — spec FS-2.5 §2, pure organisational metadata (§1), never a security or cryptographic change. Rejects a self-parent, a cycle, exceeding the maximum hierarchy depth (three levels, §7), or a parent that is not ACTIVE. Requires the platform:admin scope.
+         */
+        post: operations["setParent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/tenants/{id}/suspend": {
         parameters: {
             query?: never;
@@ -701,6 +721,170 @@ export interface paths {
          * @description Immediately and permanently invalidates the credential — a subsequent /verify or /consume call reports it revoked. Requires the revoke scope and a console session (an API key is always 403 here). Irreversible.
          */
         post: operations["revoke"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/org/children": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the caller's direct children
+         * @description Every direct child of the caller's own tenant and its status — never grandchildren (spec §7). Requires the org:admin scope.
+         */
+        get: operations["listChildren"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/org/children/{id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reactivate a direct child tenant
+         * @description Flips a SUSPENDED direct child back to ACTIVE. Audited ORG_ON_BEHALF_OF (parent) + TENANT_ACTIVATED (child). Requires the org:admin scope.
+         */
+        post: operations["activateChild"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/org/children/{id}/schemas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a direct child's schemas (read-only)
+         * @description Read-only — org:admin never manages a child's schemas, only views them (spec §3). Audited ORG_ON_BEHALF_OF (parent) only, matching the platform-wide convention that reads are not separately audited. Requires the org:admin scope.
+         */
+        get: operations["listChildSchemas"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/org/children/{id}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suspend a direct child tenant
+         * @description Flips a direct child to SUSPENDED — tenant:admin degree, never a delete (spec §3). Reuses TenantAdmin#suspend's existing no-cascade guard unchanged. Audited ORG_ON_BEHALF_OF (parent) + TENANT_SUSPENDED (child). Requires the org:admin scope.
+         */
+        post: operations["suspendChild"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/org/children/{id}/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a direct child's users
+         * @description The same row shape GET /api/v1/users returns for a tenant admin's own tenant, run on behalf of a direct child (audited ORG_ON_BEHALF_OF). Requires the org:admin scope.
+         */
+        get: operations["listChildUsers"];
+        put?: never;
+        /**
+         * Create a user in a direct child
+         * @description Creates a user in a direct child with a generated temporary password (shown once) — the same creation shape and constraints as a local tenant:admin's own-tenant create, no additional privilege (spec §3). Audited ORG_ON_BEHALF_OF (parent) + USER_CREATED (child). Requires the org:admin scope.
+         */
+        post: operations["createChildUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/org/children/{id}/users/{userId}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Disable a user in a direct child
+         * @description Sets the child's user DISABLED — audited ORG_ON_BEHALF_OF (parent) + USER_DISABLED (child). Requires the org:admin scope. Refused with 409 (KH-USR-0423) if this is the child's last active administrator.
+         */
+        post: operations["disableChildUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/org/children/{id}/users/{userId}/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset a user's password in a direct child
+         * @description Generates a new temporary password (shown once) for a user in a direct child — audited ORG_ON_BEHALF_OF (parent) + USER_PASSWORD_RESET (child). Requires the org:admin scope.
+         */
+        post: operations["resetChildUserPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/org/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fetch the aggregated proofs-not-content report
+         * @description Issue/verify/consume/revoke counters per descendant tenant (any depth, transitive over the full subtree — spec §7) plus a whole-subtree rollup, for the requested window. Numbers only — never a row, a claim, or any other content (P1). Defaults to the last 30 days when from/to are omitted. Audited ORG_REPORT_VIEWED. Requires the org:admin scope.
+         */
+        get: operations["reports"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1457,6 +1641,11 @@ export interface components {
             ref?: string;
             sdJwt?: string;
         };
+        /** @description One ancestor of the credential's issuing tenant */
+        IssuerLineageEntry: {
+            nameI18n?: components["schemas"]["LocalizedText"];
+            slug?: string;
+        };
         LocalizedText: {
             ar?: string;
             en?: string;
@@ -1503,6 +1692,30 @@ export interface components {
             slug?: string;
             status?: string;
             type?: string;
+        };
+        OrgReportCounters: {
+            /** Format: int64 */
+            consumed?: number;
+            /** Format: int64 */
+            issued?: number;
+            /** Format: int64 */
+            revoked?: number;
+            /** Format: int64 */
+            verifyFailed?: number;
+            /** Format: int64 */
+            verifyOk?: number;
+        };
+        OrgReportEntry: {
+            counters?: components["schemas"]["OrgReportCounters"];
+            nameI18n?: components["schemas"]["LocalizedText"];
+            /** Format: uuid */
+            tenantId?: string;
+            tenantSlug?: string;
+        };
+        OrgReportView: {
+            children?: components["schemas"]["OrgReportEntry"][];
+            rollup?: components["schemas"]["OrgReportCounters"];
+            window?: components["schemas"]["StatsWindow"];
         };
         ReplaceRolesRequest: {
             roles?: string[];
@@ -1578,6 +1791,9 @@ export interface components {
             /** Format: int32 */
             version?: number;
         };
+        SetParentRequest: {
+            parentSlug?: string;
+        };
         /** @description A signing key's lifecycle status, no JWK material */
         SigningKeyView: {
             kid?: string;
@@ -1621,6 +1837,14 @@ export interface components {
             /** Format: date-time */
             to?: string;
         };
+        TenantRef: {
+            active?: boolean;
+            /** Format: uuid */
+            id?: string;
+            nameI18n?: components["schemas"]["LocalizedText"];
+            slug?: string;
+            status?: string;
+        };
         TenantView: {
             /** Format: date-time */
             createdAt?: string;
@@ -1628,6 +1852,8 @@ export interface components {
             /** Format: uuid */
             id?: string;
             nameI18n?: components["schemas"]["LocalizedText"];
+            parentNameI18n?: components["schemas"]["LocalizedText"];
+            parentSlug?: string;
             slug?: string;
             status?: string;
             type?: string;
@@ -1666,6 +1892,7 @@ export interface components {
             claims?: {
                 [key: string]: Record<string, never>;
             };
+            issuerLineage?: components["schemas"]["IssuerLineageEntry"][];
             reason?: string;
             reasonMessage?: string;
             revoked?: boolean;
@@ -2520,6 +2747,68 @@ export interface operations {
             };
         };
     };
+    setParent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetParentRequest"];
+            };
+        };
+        responses: {
+            /** @description Parent linked/unlinked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TenantView"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the platform:admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The tenant or the named parent does not exist (KH-TNT-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Self-parent (KH-TNT-0422), a cycle (KH-TNT-1422), depth exceeded (KH-TNT-2422), or the parent is not ACTIVE (KH-TNT-3422) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     suspend: {
         parameters: {
             query?: never;
@@ -3360,6 +3649,481 @@ export interface operations {
             };
             /** @description No credential with this id (KH-CRD-0404) */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    listChildren: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's direct children */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TenantRef"][];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the org:admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    activateChild: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Child activated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TenantView"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the org:admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description id is not a direct child of the caller's own tenant (KH-ORG-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    listChildSchemas: {
+        parameters: {
+            query?: {
+                status?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The child's schemas */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SchemaSummary"][];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the org:admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description id is not a direct child of the caller's own tenant (KH-ORG-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    suspendChild: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Child suspended */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TenantView"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the org:admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description id is not a direct child of the caller's own tenant (KH-ORG-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The child itself has an active child of its own (KH-TNT-1409) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    listChildUsers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The child's users */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserSummary"][];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the org:admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description id is not a direct child of the caller's own tenant (KH-ORG-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    createChildUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateUserRequest"];
+            };
+        };
+        responses: {
+            /** @description User created; temporary password returned once */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CreateUserResponse"];
+                };
+            };
+            /** @description Invalid username or role code (KH-USR-0400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the org:admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description id is not a direct child of the caller's own tenant (KH-ORG-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Username already exists in that child (KH-USR-0409) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    disableChildUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description User disabled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserSummary"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the org:admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description id is not a direct child of the caller's own tenant (KH-ORG-0404), or the user does not exist in it (KH-USR-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Would remove the child's last active administrator (KH-USR-0423) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    resetChildUserPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Password reset; temporary password returned once */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CreateUserResponse"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the org:admin scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description id is not a direct child of the caller's own tenant (KH-ORG-0404), or the user does not exist in it (KH-USR-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    reports: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The aggregated report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrgReportView"];
+                };
+            };
+            /** @description from/to was present but not a valid ISO-8601 instant */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No valid session or API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the org:admin scope (KH-RBC-0403) */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
