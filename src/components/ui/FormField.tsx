@@ -29,6 +29,14 @@ interface FormFieldProps {
   valid?: ReactNode;
   /** e.g. a selective-disclosure or required pill, placed next to the label. */
   badge?: ReactNode;
+  /**
+   * Reserve the caption line's height even when this field has no
+   * help/error/valid content — so it stays the same total height as a
+   * sibling that does. Only matters when fields sit side by side in a row
+   * whose cross-axis alignment depends on equal heights (e.g. a filter bar
+   * with `align-items: end`); a normal stacked form doesn't need it.
+   */
+  reserveCaptionRow?: boolean;
   /** The input/select/textarea itself — give it `khatmInputClass(state)`. */
   children: ReactNode;
 }
@@ -40,7 +48,16 @@ interface FormFieldProps {
  * full control over `register()`/`onChange` wiring; see {@link khatmInputClass}
  * for matching the control's visual state to this shell's.
  */
-export function FormField({ label, htmlFor, help, error, valid, badge, children }: FormFieldProps) {
+export function FormField({
+  label,
+  htmlFor,
+  help,
+  error,
+  valid,
+  badge,
+  children,
+  reserveCaptionRow,
+}: FormFieldProps) {
   const state: FieldState = error ? 'error' : valid ? 'valid' : 'default';
   return (
     <div className={styles.field} data-state={state}>
@@ -57,6 +74,10 @@ export function FormField({ label, htmlFor, help, error, valid, badge, children 
         <span className={styles.valid}>{valid}</span>
       ) : help ? (
         <span className={styles.help}>{help}</span>
+      ) : reserveCaptionRow ? (
+        <span className={styles.help} aria-hidden="true">
+          &nbsp;
+        </span>
       ) : null}
     </div>
   );

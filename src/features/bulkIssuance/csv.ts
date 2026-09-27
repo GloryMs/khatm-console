@@ -46,26 +46,28 @@ export function generateTemplateCsv(fields: ClaimField[]): string {
 
 export interface ReportRow {
   index: number;
-  status: string;
   ref?: string;
-  id?: string;
-  claimCode?: string;
-  errorCode?: string;
-  errorMessage?: string;
+  holderRef?: string;
+  status: string;
+  /** Resolved, localized error text (never a raw code/message pair) — empty for a non-failed row. */
+  error?: string;
 }
 
-/** Serialize the full bulk-issue report — the only way to carry claim codes out of the page. */
+/**
+ * Serialize the full bulk-issue report for the tenant's own record-keeping.
+ * Deliberately excludes the one-time claim code (P1-adjacent: a CSV file is a
+ * permanent artifact, unlike the report screen's single, revocable render) —
+ * `holderRef` is the only per-row reference this export exists to preserve.
+ */
 export function generateReportCsv(rows: ReportRow[]): string {
   return Papa.unparse({
-    fields: ['index', 'status', 'ref', 'id', 'claimCode', 'errorCode', 'errorMessage'],
+    fields: ['index', 'ref', 'holderRef', 'status', 'error'],
     data: rows.map((row) => [
       row.index,
-      row.status,
       row.ref ?? '',
-      row.id ?? '',
-      row.claimCode ?? '',
-      row.errorCode ?? '',
-      row.errorMessage ?? '',
+      row.holderRef ?? '',
+      row.status,
+      row.error ?? '',
     ]),
   });
 }

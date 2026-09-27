@@ -6,6 +6,8 @@ import i18n from '@/i18n';
 import { parseClaimsDef, type ClaimField } from '../claimsDef';
 import { IssueForm, type IssueFormValues } from './IssueForm';
 
+const VALID_HOLDER_REF = '0123456789abcdef'.repeat(4);
+
 const FIXTURE = JSON.stringify({
   result: { type: 'string', required: true, label_i18n: { en: 'Result', ar: 'النتيجة' } },
   caseNumber: {
@@ -74,19 +76,19 @@ describe('IssueForm (dynamic generation from claims_def)', () => {
     expect(screen.getByLabelText(i18n.t('issue.validMinutes'))).toHaveValue(60);
   });
 
-  it('blocks submit and shows required errors when mandatory fields are empty', async () => {
+  it('blocks submit and shows required errors when mandatory fields are empty, but not for the now-optional holder reference', async () => {
     const onSubmit = renderForm();
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: i18n.t('issue.submit') }));
 
-    expect(await screen.findByText(i18n.t('issue.holderRefRequired'))).toBeInTheDocument();
     expect(
       screen.getByText(i18n.t('issue.fieldRequired', { field: 'Result' })),
     ).toBeInTheDocument();
+    expect(screen.queryByText(i18n.t('issue.holderRefInvalid'))).not.toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it('submits the holder ref and the claims map keyed by field name on a valid form', async () => {
+  it('blocks submit and shows a shape error when the holder reference is free text, not 64 hex', async () => {
     const onSubmit = renderForm();
     const user = userEvent.setup();
 
@@ -95,9 +97,21 @@ describe('IssueForm (dynamic generation from claims_def)', () => {
     await user.type(screen.getByLabelText('Score'), '88');
     await user.click(screen.getByRole('button', { name: i18n.t('issue.submit') }));
 
+    expect(await screen.findByText(i18n.t('issue.holderRefInvalid'))).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('submits with a blank holder reference and the claims map keyed by field name on a valid form', async () => {
+    const onSubmit = renderForm();
+    const user = userEvent.setup();
+
+    await user.type(screen.getByLabelText('Result'), 'NO_RECORD');
+    await user.type(screen.getByLabelText('Score'), '88');
+    await user.click(screen.getByRole('button', { name: i18n.t('issue.submit') }));
+
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
     const values = (onSubmit as ReturnType<typeof vi.fn>).mock.calls[0][0] as IssueFormValues;
-    expect(values.holderRef).toBe('holder-001');
+    expect(values.holderRef).toBe('');
     expect(values.claims).toEqual({
       result: 'NO_RECORD',
       caseNumber: '',
@@ -105,5 +119,22 @@ describe('IssueForm (dynamic generation from claims_def)', () => {
       score: '88',
       location: '',
     });
+  });
+
+  it('submits a valid 64-hex holder reference as typed (normalization happens at request-build time)', async () => {
+    const onSubmit = renderForm();
+    const user = userEvent.setup();
+
+    await user.type(
+      screen.getByLabelText(i18n.t('issue.holderRef')),
+      VALID_HOLDER_REF.toUpperCase(),
+    );
+    await user.type(screen.getByLabelText('Result'), 'NO_RECORD');
+    await user.type(screen.getByLabelText('Score'), '88');
+    await user.click(screen.getByRole('button', { name: i18n.t('issue.submit') }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const values = (onSubmit as ReturnType<typeof vi.fn>).mock.calls[0][0] as IssueFormValues;
+    expect(values.holderRef).toBe(VALID_HOLDER_REF.toUpperCase());
   });
 });

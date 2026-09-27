@@ -36,7 +36,7 @@ export function FilterBar({ schemas, onSearch }: FilterBarProps) {
 
   return (
     <form className={styles.bar} onSubmit={handleSubmit(onSearch)} noValidate>
-      <FormField label={t('credentials.filters.ref')} htmlFor="cred-ref">
+      <FormField label={t('credentials.filters.ref')} htmlFor="cred-ref" reserveCaptionRow>
         <input
           id="cred-ref"
           type="text"
@@ -45,16 +45,22 @@ export function FilterBar({ schemas, onSearch }: FilterBarProps) {
           {...register('ref')}
         />
       </FormField>
-      <FormField label={t('credentials.filters.pseudoRef')} htmlFor="cred-pseudoRef">
+      <FormField
+        label={t('credentials.filters.pseudoRef')}
+        htmlFor="cred-pseudoRef"
+        help={t('credentials.filters.pseudoRefHint')}
+      >
         <input
           id="cred-pseudoRef"
           type="text"
+          dir="ltr"
           autoComplete="off"
-          className={khatmInputClass()}
+          spellCheck={false}
+          className={`${khatmInputClass()} ltr-embed`}
           {...register('pseudoRef')}
         />
       </FormField>
-      <FormField label={t('credentials.filters.schema')} htmlFor="cred-schema">
+      <FormField label={t('credentials.filters.schema')} htmlFor="cred-schema" reserveCaptionRow>
         <select id="cred-schema" className={khatmInputClass()} {...register('schemaId')}>
           <option value="">{t('credentials.filters.schemaAny')}</option>
           {schemas.map((schema) => (
@@ -64,7 +70,7 @@ export function FilterBar({ schemas, onSearch }: FilterBarProps) {
           ))}
         </select>
       </FormField>
-      <FormField label={t('credentials.filters.revoked')} htmlFor="cred-revoked">
+      <FormField label={t('credentials.filters.revoked')} htmlFor="cred-revoked" reserveCaptionRow>
         <select id="cred-revoked" className={khatmInputClass()} {...register('revoked')}>
           <option value="any">{t('credentials.filters.revokedAny')}</option>
           <option value="yes">{t('credentials.filters.revokedYes')}</option>

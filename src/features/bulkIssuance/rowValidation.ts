@@ -1,3 +1,4 @@
+import { isValidHolderRef } from '@/lib/holderRef';
 import type { ClaimField } from '@/features/issuance/claimsDef';
 import { readMappedValue, type ColumnMapping } from './columnMapping';
 import type { ParsedCsv } from './csv';
@@ -5,7 +6,7 @@ import type { ParsedCsv } from './csv';
 const NUMBER_PATTERN = /^-?\d+(\.\d+)?$/;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
-export type RowErrorKind = 'required' | 'number' | 'date';
+export type RowErrorKind = 'required' | 'number' | 'date' | 'pseudoRef';
 
 export interface RowFieldError {
   fieldName: string;
@@ -15,6 +16,7 @@ export interface RowFieldError {
 export interface ValidatedRow {
   /** 0-based index into the original CSV data rows (header row excluded). */
   rowIndex: number;
+  /** Raw (untrimmed-of-case) mapped value, or `undefined` when blank/unmapped — absence, not an error. */
   pseudoRef?: string;
   claims: Record<string, string>;
   errors: RowFieldError[];
@@ -57,7 +59,13 @@ export function validateRows(
       }
     }
 
-    const pseudoRef = readMappedValue(parsed.headers, row, mapping.pseudoRef);
+    // Blank/unmapped is absence, not an error — only a non-blank value gets
+    // shape-checked (KH-2.8.2 veto V1-b applies here too: pseudoRef is the
+    // bulk-row name for the same holderRef field).
+    const pseudoRef = readMappedValue(parsed.headers, row, mapping.pseudoRef) || undefined;
+    if (pseudoRef !== undefined && !isValidHolderRef(pseudoRef)) {
+      errors.push({ fieldName: 'pseudoRef', kind: 'pseudoRef' });
+    }
     return { rowIndex, pseudoRef, claims, errors };
   });
 }

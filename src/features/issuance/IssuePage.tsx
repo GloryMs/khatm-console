@@ -8,6 +8,7 @@ import { SecretReveal } from '@/components/ui/SecretReveal';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { copyToClipboard } from '@/components/ui/clipboard';
 import { useLocalizedText } from '@/hooks/useLocalizedText';
+import { normalizeHolderRef } from '@/lib/holderRef';
 import { parseClaimsDef } from './claimsDef';
 import { IssueForm, type IssueFormValues } from './components/IssueForm';
 import { SchemaPicker } from './components/SchemaPicker';
@@ -19,6 +20,7 @@ import styles from './IssuePage.module.css';
 
 interface SuccessState {
   ref: string;
+  holderRef: string;
   code: string;
   expiresAt: string;
   qrApiBase: string;
@@ -62,8 +64,11 @@ function formatCountdown(value: string, locale: string): string {
 }
 
 function buildIssueRequest(detail: SchemaDetail, values: IssueFormValues): IssueRequest {
+  const holderRef = normalizeHolderRef(values.holderRef);
   return {
-    holderRef: values.holderRef,
+    // Omitted entirely when blank (not "", not null) — a human session may
+    // leave it out and the platform generates one (KH-2.8.2 veto V1-b).
+    ...(holderRef ? { holderRef } : {}),
     schemaCode: requireText(detail.code, 'issue.missingSchemaCode'),
     // Pins issuance to the exact schema version the operator picked, not whatever
     // (schemaCode, version=1) the backend would otherwise resolve on its own.
@@ -98,6 +103,19 @@ function SuccessView({
         </Button>
       </div>
       <p className={styles.help}>{t('issue.refHelp')}</p>
+
+      <div className={styles.valueRow}>
+        <span className={styles.valueLabel}>{t('issue.holderRef')}</span>
+        <span className={`${styles.codeValue} ltr-embed`}>{success.holderRef}</span>
+        <Button
+          variant="ghost"
+          type="button"
+          onClick={() => void copyToClipboard(success.holderRef)}
+        >
+          {t('common.copy')}
+        </Button>
+      </div>
+      <p className={styles.help}>{t('issue.holderRefGenerated')}</p>
 
       <SecretReveal
         label={t('issue.claimCodeLabel')}
@@ -171,6 +189,7 @@ export function IssuePage() {
     const qrApiBase = getQrApiBase();
     setSuccess({
       ref: response.issued.ref ?? requireText(response.issued.id, 'issue.missingCredentialId'),
+      holderRef: requireText(response.issued.holderRef, 'issue.missingHolderRef'),
       code,
       expiresAt,
       qrApiBase,

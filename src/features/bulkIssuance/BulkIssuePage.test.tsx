@@ -47,6 +47,10 @@ const detail: issuanceApi.SchemaDetail = {
   }),
 };
 
+const HOLDER_REF_1 = '11111111'.repeat(8);
+const HOLDER_REF_2 = '22222222'.repeat(8);
+const HOLDER_REF_3 = '33333333'.repeat(8);
+
 function makeCsvFile(content: string) {
   return new File([content], 'batch.csv', { type: 'text/csv' });
 }
@@ -100,8 +104,22 @@ describe('BulkIssuePage wizard', () => {
       succeeded: 2,
       failed: 0,
       results: [
-        { index: 0, status: 'ISSUED', ref: 'CRD-1', id: 'id-1', claimCode: 'CLAIM-1' },
-        { index: 1, status: 'ISSUED', ref: 'CRD-3', id: 'id-3', claimCode: 'CLAIM-3' },
+        {
+          index: 0,
+          status: 'ISSUED',
+          ref: 'CRD-1',
+          id: 'id-1',
+          holderRef: HOLDER_REF_1,
+          claimCode: 'CLAIM-1',
+        },
+        {
+          index: 1,
+          status: 'ISSUED',
+          ref: 'CRD-3',
+          id: 'id-3',
+          holderRef: HOLDER_REF_3,
+          claimCode: 'CLAIM-3',
+        },
       ],
     });
     const downloadCsvSpy = vi.spyOn(csv, 'downloadCsv').mockImplementation(() => undefined);
@@ -117,9 +135,10 @@ describe('BulkIssuePage wizard', () => {
 
     const csvContent = [
       'fullName,caseNumber,pseudoRef',
-      'Ali,CASE-1,holder-1',
-      ',CASE-2,holder-2',
-      'ليلى,CASE-3,holder-3',
+      // Uppercase — validated and normalized to lowercase before submission.
+      `Ali,CASE-1,${HOLDER_REF_1.toUpperCase()}`,
+      `,CASE-2,${HOLDER_REF_2}`,
+      `ليلى,CASE-3,${HOLDER_REF_3}`,
       '',
     ].join('\n');
     const fileInput = screen.getByLabelText(i18n.t('issueBulk.upload.fileLabel'));
@@ -150,8 +169,9 @@ describe('BulkIssuePage wizard', () => {
       mintClaimCodes: true,
       defaults: { maxUses: 5, validMinutes: 60 },
       items: [
-        { claims: { fullName: 'Ali', caseNumber: 'CASE-1' }, pseudoRef: 'holder-1' },
-        { claims: { fullName: 'ليلى', caseNumber: 'CASE-3' }, pseudoRef: 'holder-3' },
+        // Row 1 was typed uppercase — normalized to lowercase before submission.
+        { claims: { fullName: 'Ali', caseNumber: 'CASE-1' }, pseudoRef: HOLDER_REF_1 },
+        { claims: { fullName: 'ليلى', caseNumber: 'CASE-3' }, pseudoRef: HOLDER_REF_3 },
       ],
     });
 
@@ -160,13 +180,21 @@ describe('BulkIssuePage wizard', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('CLAIM-1')).toBeInTheDocument();
     expect(screen.getByText('CLAIM-3')).toBeInTheDocument();
+    // Appears twice per row: the submitted pseudoRef column and the server's
+    // reported holderRef column (same value here, since the mock echoes it back).
+    expect(screen.getAllByText(HOLDER_REF_1).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(HOLDER_REF_3).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(i18n.t('issueBulk.report.statusExcluded'))).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: i18n.t('issueBulk.report.exportCsv') }));
     expect(downloadCsvSpy).toHaveBeenLastCalledWith(
       expect.stringMatching(/^bulk-issue-CriminalRecord\/v1-.*\.csv$/),
-      expect.stringContaining('CLAIM-1'),
+      expect.stringContaining(HOLDER_REF_1),
     );
+    // The one-time claim code is never carried into the permanent CSV export.
+    const [, exportedCsv] = downloadCsvSpy.mock.calls[downloadCsvSpy.mock.calls.length - 1];
+    expect(exportedCsv).not.toContain('CLAIM-1');
+    expect(exportedCsv).not.toContain('CLAIM-3');
   });
 
   it('rejects a file with more than 200 data rows', async () => {

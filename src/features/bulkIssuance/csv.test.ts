@@ -43,14 +43,29 @@ describe('generateTemplateCsv', () => {
 });
 
 describe('generateReportCsv', () => {
-  it('serializes report rows with all columns', () => {
+  const HOLDER_REF = '11111111'.repeat(8);
+
+  it('serializes report rows with exactly index, ref, holderRef, status, error', () => {
     const csv = generateReportCsv([
-      { index: 1, status: 'ISSUED', ref: 'CRD-1', claimCode: 'CLAIM-1' },
-      { index: 2, status: 'FAILED', errorCode: 'KH-SCH-0400', errorMessage: 'bad row' },
+      { index: 1, ref: 'CRD-1', holderRef: HOLDER_REF, status: 'ISSUED' },
+      { index: 2, status: 'FAILED', error: 'bad row' },
     ]);
     const lines = csv.trim().split('\r\n');
-    expect(lines[0]).toBe('index,status,ref,id,claimCode,errorCode,errorMessage');
-    expect(lines[1]).toBe('1,ISSUED,CRD-1,,CLAIM-1,,');
-    expect(lines[2]).toBe('2,FAILED,,,,KH-SCH-0400,bad row');
+    expect(lines[0]).toBe('index,ref,holderRef,status,error');
+    expect(lines[1]).toBe(`1,CRD-1,${HOLDER_REF},ISSUED,`);
+    expect(lines[2]).toBe('2,,,FAILED,bad row');
+  });
+
+  it('never includes a claim code, even if one were mistakenly passed through', () => {
+    const csv = generateReportCsv([{ index: 1, ref: 'CRD-1', status: 'ISSUED' }]);
+    expect(csv).not.toContain('claimCode');
+  });
+
+  it('escapes commas in error text', () => {
+    const csv = generateReportCsv([
+      { index: 1, status: 'FAILED', error: 'invalid, missing field' },
+    ]);
+    const lines = csv.trim().split('\r\n');
+    expect(lines[1]).toBe('1,,,FAILED,"invalid, missing field"');
   });
 });

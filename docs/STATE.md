@@ -6,6 +6,181 @@
 
 ## Current phase / task
 
+- C13a-holderref-contract (console side of the KH-2.8.2 `holderRef` veto V1-b —
+  optional for human sessions, platform-generated when absent, 64-hex when
+  present — session `docs/sessions/SESSION-C13a-holderref-contract-FINAL.md`,
+  branch `feat/C13a-holderref-contract`) — **DONE.**
+  **Preamble:** `khatm-platform` `main` confirmed past KH-2.8.2 (PR #70,
+  `025b4b4`) before branching; `npm run contract:update` pulled
+  `IssueResponse.holderRef`/`claimCode`/`claimCodeExpiresAt`,
+  `IssueRequest.mintClaimCode`, `BulkIssueItemResult.holderRef`, and the
+  `/api/v1/issuer-clients` routes (957 insertions) — gate cleared, all named
+  fields present. Baseline `npm run check`/`test` (293/293) green on `main`
+  first.
+  - **Scope-gap self-stop, resolved by Majd before any code changed:** the
+    brief's own "why" says the console sends free-text holderRef in "two
+    places" and scopes D2 to `features/attestedIssuance` only, but a third,
+    unscoped surface has the identical bug — the plain (non-attested)
+    `/issue` form (`features/issuance/components/IssueForm.tsx`), posting to
+    the same `POST /api/v1/credentials/issue`. Flagged before writing any
+    code; Majd's call: **extend D2 to cover it too**, in this same session/PR
+    — not a separate follow-up. Everything below reflects that extended
+    scope.
+  - **D1 — `src/lib/holderRef.ts`** (new, shared, no feature owns it):
+    `HOLDER_REF_PATTERN`, `normalizeHolderRef` (trim + lowercase, veto V1),
+    `isValidHolderRef`. TSDoc records that the console only ever checks shape
+    — it never interprets or generates a holder reference itself (P1).
+  - **D2 (extended) — all three single-issue holderRef sites**
+    (`features/issuance/components/IssueForm.tsx` +
+    `features/attestedIssuance/components/DetailsForm.tsx`): the field is now
+    optional in both zod schemas — `.refine` only shape-checks a non-blank
+    value (`issue.holderRefInvalid`); `holderRefRequired` deleted from both
+    schemas and both i18n files (grepped clean, zero remaining references).
+    Both `buildIssueRequest`/`buildAttestedIssueRequest` normalize and **omit
+    the key entirely** via conditional spread when blank — never `""`, never
+    an explicit `undefined` in the object literal (not just relying on
+    `JSON.stringify` to drop it). Field styling: `dir="ltr"`,
+    `font-family: var(--font-mono)` (new `.holderRefInput` class per module),
+    `spellCheck={false}`, `.ltr-embed`, a non-real placeholder example.
+    **Both** `IssuePage` and `AttestedIssuePage` success screens now always
+    render `IssueResponse.holderRef` (generated or supplied) — LTR monospace,
+    copy button, `issue.holderRefGenerated` help text (veto V3: always, not
+    only when generated). `AttestedIssuePage`'s `ReviewStep` shows the typed
+    value or `issue.holderRefNotProvided` when blank, pre-submit.
+  - **D4, folded into the same D2 fix — a real work-rule-3 gap found while
+    wiring `KH-ISS-0400`:** `AttestedIssuePage`'s `ReviewStep` was passing
+    `issueAndMint.error` through `useErrorMessage()` into
+    `TypeToConfirmDialog`'s plain-string `errorMessage` prop — no `code`,
+    no `traceId`, for _any_ error on that confirm dialog, not just this one.
+    Every other issuance error surface (`IssueForm`'s `ApiErrorBanner`,
+    `PreviewStep`'s `ApiErrorBanner`) already showed both. Fixed by changing
+    `ReviewStep` to accept the raw `error: unknown` and render
+    `<ApiErrorBanner error={error} />` via `TypeToConfirmDialog`'s existing
+    `children` slot (the same extension point C10's `RotateProviderChoice`
+    already uses for different content) — `code`/`traceId` now show there
+    too. `errors.issuance.validation-failed` (EN/AR) added for
+    `KH-ISS-0400`/`issuance.validation-failed`; resolves through the existing
+    `errors.<messageKey>` mechanism with zero code changes needed for that
+    part (confirms the C9-era generalization holds for a second new module
+    tag).
+  - **D3 — `features/bulkIssuance`.** `rowValidation.ts`: a blank/unmapped
+    `pseudoRef` cell is absence (no error, `pseudoRef: undefined`); a
+    non-blank value is shape-checked, a new `'pseudoRef'` `RowErrorKind`
+    excludes the row like any other validation failure
+    (`issueBulk.row.pseudoRefInvalid`). `request.ts`: normalize + conditional-
+    spread omission, same pattern as D2, replacing the old `pseudoRef: row.pseudoRef
+|| undefined` idiom the brief explicitly flagged. `UploadMapStep`: the
+    pseudoRef mapping label was a raw, untranslated literal
+    (`PSEUDO_REF_FIELD`, `'pseudoRef'`) — fixed to use the (existing)
+    `issueBulk.upload.pseudoRefColumn` key, plus a new
+    `issueBulk.upload.pseudoRefHint` line (64-hex shape, blank generates one);
+    column was already non-blocking for continue, no gating logic existed to
+    remove. **Report + export, found already partially built (not itemized as
+    existing in the brief):** `ReportStep`'s "Export report (CSV)" button
+    already existed from an earlier session — but its `generateReportCsv`
+    included `claimCode`, the one-time secret, in a permanent CSV artifact,
+    and had no `holderRef` column at all. Rather than add a second,
+    differently-named export button (the brief's suggested
+    `issueBulk.results.export` key), **redesigned the existing one**:
+    `ReportRow`/`generateReportCsv` now emit exactly `index, ref, holderRef,
+status, error` — `claimCode`/`id`/`errorCode`+`errorMessage` all dropped,
+    `error` is one resolved localized string. New shared
+    `report.ts#resolveItemErrorText` (pure function, `translate`/`keyExists`
+    passed in) deduplicates what `ReportStep` and `BulkIssuePage`'s CSV
+    builder both need — used to be inlined only in `ReportStep`. `ReportStep`
+    also gained an on-screen `holderRef` column from
+    `BulkIssueItemResult.holderRef`.
+  - **D6.** Search filter hint added: `credentials.filters.pseudoRefHint`
+    (EN/AR) under the existing `pseudoRef` filter field in `FilterBar.tsx`,
+    which also picked up `dir="ltr"`/`.ltr-embed`/`spellCheck={false}` to
+    match every other code-like input this session touched. **The brief's
+    other D6 item — `README.md:24-25` "no `provider`" text — is stale in the
+    brief itself, not in the repo**: that exact gap was already closed by the
+    2026-08-17 C10 session (see that entry below); checked
+    `keyManagement/README.md:24-25` directly, it already documents `provider`
+    correctly. No action taken, recorded here rather than silently matching
+    a brief instruction that no longer applies.
+  - **D5 — re-vendor.** Done as part of the preamble fetch above; only
+    `holderRef`/`claimCode`/`claimCodeExpiresAt` consumed from the new fields,
+    confirmed by grep — nothing from `mintClaimCode`/`issuer-clients` used
+    anywhere (those are explicitly C13's, out of scope here).
+  - **Veto answers used:** V1 = trim + lowercase (default). V2 = kept the
+    _existing_ CSV export button/key rather than adding a second one — not
+    literally the brief's suggested key name, but the same outcome the veto
+    asks for, and avoids a duplicate i18n key for one action. V3 = holderRef
+    always shown on both success screens, not only when generated.
+  - **Tests: 313 total now (was 293)** — 9 new in `src/lib/holderRef.test.ts`
+    (shape edge cases + the blank-is-absence-not-error case), `IssueForm.test.tsx`
+    (holder ref now optional-with-shape-check, not required),
+    `IssuePage.test.tsx` (normalization-on-submit, omission-when-blank,
+    success-screen holderRef display), `AttestedIssuePage.test.tsx` (new test:
+    blank omits the key, free text blocks with `holderRefInvalid`, blank
+    shows `holderRefNotProvided` in review), `attestation.no-file-egress.test.tsx`
+    (updated fixture + a normalization assertion on the intercepted request
+    body), and in `bulkIssuance`: `rowValidation.test.ts` (4 new pseudoRef
+    cases), `request.test.ts` (normalization + omission), `csv.test.ts`
+    (rewritten for the 5-column export, a dedicated "never contains
+    claimCode" case, comma-escaping), `BulkIssuePage.test.tsx` (uppercase
+    input normalized end-to-end, export asserted to exclude both claim codes
+    and include the holder refs). `npm run typecheck`/`lint` (only the
+    pre-existing `FormField.tsx` warning)/`test` (313/313) all green;
+    `format:check` clean on every file this session touched (5 files needed
+    one `prettier --write` pass, reverified clean) — same 15 pre-existing
+    untracked-file failures as every prior session (`.vscode/`,
+    `docs/sessions/`, `docs/specs/`), untouched — meaning `npm run check`
+    itself still exits non-zero on those, exactly as every prior session's
+    entry has also recorded; `typecheck`+`lint`+`test` were each additionally
+    run standalone and are individually clean. RTL grep
+    (`(margin|padding|border)-(left|right)`, bare `left:`/`right:`, physical
+    `text-align`, `float:`) across every changed `.tsx`/`.module.css`: zero
+    matches.
+  - **Local stack rebuilt for the live walkthrough.** Both `khatm-console`
+    and `khatm-platform`'s `khatm-api`/`khatm-worker` were rebuilt from
+    current `main`/this branch and recreated — the running backend containers
+    predated the KH-2.8.2 merge by ~16 minutes (built 08:38 UTC, PR #70 merged
+    08:54 UTC), so this was a real gap, not a precaution. A `--no-cache`
+    rebuild attempt hit a transient DNS failure reaching Maven Central and
+    wasted ~36 minutes before failing; a normal (cached-layer) rebuild
+    succeeded once retried, confirming the dependency layer didn't actually
+    need invalidating — worth remembering before reaching for `--no-cache` on
+    this repo's Docker build next time. Vault already had both `transit/` and
+    `khatm/` (KV v2) mounted from a prior boot, so `khatm-vault-init` didn't
+    need re-running.
+  - **Majd's live walkthrough (2026-09-27, local Docker Desktop) — passed.**
+    Covered: plain `/issue` and attested `/issue/attested` (blank → generated
+    ref shown; valid uppercase hex → normalized lowercase on success; invalid
+    free text → blocked inline, nothing sent), bulk issuance (mixed
+    blank/valid/invalid `pseudoRef` rows, report `holderRef` column, CSV
+    export columns and the no-claim-code check), the credentials search
+    filter (including a real DB-sourced `holderRef` — the `holder` table is
+    RLS-forced, queried via `SET app.khatm_system = 'on'`), and an
+    EN/AR + RTL pass. **One false alarm, no code change**: a typed "64-char
+    hex" value was rejected — turned out to be 63 characters with 6 non-hex
+    letters (`o`,`l`,`k`,`j`,`i`,`r`), so the validator was correct; confirmed
+    with a quick regex check before answering. **One real bug found and fixed
+    live**: adding `credentials.filters.pseudoRefHint` under only the
+    `pseudoRef` filter field made that column taller than its
+    `Reference`/`Schema`/`Revoked` siblings, and `FilterBar.module.css`'s
+    `.bar { align-items: end }` (bottom-anchored row, sound when every field
+    was the same height) then pushed the now-shorter siblings down to keep
+    bottoms level — misaligning their labels/inputs upward relative to the
+    Holder-reference column. Fixed with a new opt-in `FormField`
+    `reserveCaptionRow` prop (renders an `aria-hidden` blank caption line so a
+    field without help/error text still reserves the same height as one that
+    has it; defaults to `false`, so every other screen using `FormField` is
+    unaffected) applied to `FilterBar`'s three plain fields, plus a matching
+    `padding-block-end` nudge on the Search/Reset button group so it stays
+    level with the inputs rather than the reserved caption lines. No
+    dedicated regression test added — this was a pure CSS/layout bug jsdom
+    can't render or catch; re-verified only by rebuilding the console image
+    and Majd's second look. `npm run typecheck`/`lint`/full `test` (313/313,
+    unchanged) re-run clean after the fix; `format:check` clean on the two
+    touched files. Test count stays 313 (see above) — no logic changed, only
+    a shared shell component's optional prop and one feature's CSS/markup.
+  - **PR opened and merged** (squash, branch deleted) on Majd's go-ahead
+    after the walkthrough above — see "Last completed" for the PR number and
+    merge timestamp.
+
 - C12-org-hierarchy-console (console side of FS-2.5's tenant hierarchy + org admin,
   session `SESSION-C12-org-hierarchy-console.md`) — **DONE. PR #27 merged to
   `main` 2026-08-20** (squash, branch deleted), after Majd's live walkthrough
@@ -307,6 +482,19 @@ contract:update`) confirmed the contract was already current (no diff against wh
   walkthrough. See "Last completed" 2026-07-30 for the full record.
 
 ## Last completed
+
+- 2026-09-27 (feat/C13a-holderref-contract, session
+  `SESSION-C13a-holderref-contract-FINAL.md` — delivered, walkthrough passed,
+  merged): full delivery record (D1–D6 plus the extended plain-`/issue`
+  scope, the work-rule-3 `ReviewStep` fix, the live-walkthrough `FilterBar`
+  alignment bug, veto answers, test counts) is under "Current phase / task"
+  above rather than duplicated here. Preamble gate against `khatm-platform`
+  PR #70 (KH-2.8.2) confirmed clean before branching. Local Docker Desktop
+  stack (console + `khatm-api`/`khatm-worker`) rebuilt from current source
+  for the walkthrough. Majd's live walkthrough (EN/AR + RTL, local Docker
+  Desktop) passed 2026-09-27 — see "Current phase / task" for what was
+  covered and the one bug found and fixed live. **PR merged to `main`
+  2026-09-27** (squash, branch deleted) on Majd's explicit go-ahead.
 
 - 2026-08-20 (PR #27 merge, following Majd's live walkthrough against the
   local Docker Desktop stack — the full ministry reference scenario, EN/AR +

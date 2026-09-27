@@ -1,3 +1,4 @@
+import { normalizeHolderRef } from '@/lib/holderRef';
 import type { IssueRequest, SchemaDetail } from '@/features/issuance/api';
 import { DOC_SHA256_FIELD_NAME } from './claimFields';
 
@@ -43,9 +44,12 @@ export function buildAttestedIssueRequest(
   claims[DOC_SHA256_FIELD_NAME] = digestHex as unknown as Record<string, never>;
 
   const note = values.attestationNote.trim();
+  const holderRef = normalizeHolderRef(values.holderRef);
 
   return {
-    holderRef: values.holderRef,
+    // Omitted entirely when blank (not "", not null) — a human session may
+    // leave it out and the platform generates one (KH-2.8.2 veto V1-b).
+    ...(holderRef ? { holderRef } : {}),
     schemaCode: requireText(detail.code, 'issueAttested.missingSchemaCode'),
     // Pins issuance to the exact schema version the operator picked, not whatever
     // (schemaCode, version=1) the backend would otherwise resolve on its own.

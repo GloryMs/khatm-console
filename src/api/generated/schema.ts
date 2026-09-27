@@ -727,6 +727,110 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/issuer-clients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List issuer clients
+         * @description The tenant's issuer clients, newest first: prefix, status, scopes, allowed schemas, last use. Never returns the key, its secret, or its hash. Requires key:manage.
+         */
+        get: operations["listIssuerClients"];
+        put?: never;
+        /**
+         * Create an issuer client
+         * @description Creates a client and returns its khi_ API key ONCE — it cannot be retrieved again. For the first client of a root tenant the response also carries the tenant's holder HMAC secret (holderHmacSecret), also shown once; later clients and child-tenant clients never carry one. Requires key:manage.
+         */
+        post: operations["createIssuerClient"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/issuer-clients/{id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resume an issuer client
+         * @description SUSPENDED → ACTIVE. Requires key:manage.
+         */
+        post: operations["resumeIssuerClient"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/issuer-clients/{id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke an issuer client
+         * @description Permanent. Requires key:manage.
+         */
+        post: operations["revokeIssuerClient"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/issuer-clients/{id}/rotate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rotate an issuer client's key
+         * @description Mints a replacement client (new key, same schemas and expiry) and puts this one into a grace window: it keeps authenticating for retireAfterHours (0-72, default 24), then is revoked by the worker. Only an ACTIVE client can be rotated. Requires key:manage.
+         */
+        post: operations["rotateIssuerClient"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/issuer-clients/{id}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suspend an issuer client
+         * @description ACTIVE → SUSPENDED; its key is rejected until resumed. Requires key:manage.
+         */
+        post: operations["suspendIssuerClient"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/org/children": {
         parameters: {
             query?: never;
@@ -741,6 +845,98 @@ export interface paths {
         get: operations["listChildren"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/org/children/{childId}/issuer-clients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a child tenant's issuer clients
+         * @description Requires org:admin on the parent tenant; the child must be a direct child.
+         */
+        get: operations["listChildIssuerClients"];
+        put?: never;
+        /**
+         * Create an issuer client in a child tenant
+         * @description As POST /api/v1/issuer-clients, in the child. The child inherits the root tenant's holder secret, so no holderHmacSecret is ever returned here.
+         */
+        post: operations["createChildIssuerClient"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/org/children/{childId}/issuer-clients/{clientId}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume a child's issuer client */
+        post: operations["resumeChildIssuerClient"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/org/children/{childId}/issuer-clients/{clientId}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke a child's issuer client */
+        post: operations["revokeChildIssuerClient"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/org/children/{childId}/issuer-clients/{clientId}/rotate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rotate a child's issuer client */
+        post: operations["rotateChildIssuerClient"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/org/children/{childId}/issuer-clients/{clientId}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Suspend a child's issuer client */
+        post: operations["suspendChildIssuerClient"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1376,7 +1572,9 @@ export interface components {
         /** @description One bulk-issue row's outcome */
         BulkIssueItemResult: {
             claimCode?: string;
+            claimed?: boolean;
             error?: components["schemas"]["BulkIssueItemError"];
+            holderRef?: string;
             id?: string;
             /** Format: int32 */
             index?: number;
@@ -1508,6 +1706,12 @@ export interface components {
             code?: string;
             nameI18n: components["schemas"]["NameI18nRequest"];
         };
+        CreateIssuerClientRequest: {
+            allowedSchemaIds?: string[];
+            /** Format: date-time */
+            expiresAt?: string;
+            name: components["schemas"]["NameI18nRequest"];
+        };
         CreateUserRequest: {
             displayNameI18n: components["schemas"]["DisplayNameI18nRequest"];
             roles?: string[];
@@ -1518,6 +1722,16 @@ export interface components {
             id?: string;
             temporaryPassword?: string;
             username?: string;
+        };
+        CreatedIssuerClientResponse: {
+            apiKey?: string;
+            client?: components["schemas"]["IssuerClientResponse"];
+            holderHmacSecret?: string;
+            /** Format: uuid */
+            id?: string;
+            keyPrefix?: string;
+            /** Format: uuid */
+            retiringClientId?: string;
         };
         CredentialPage: {
             items?: components["schemas"]["CredentialSummary"][];
@@ -1625,9 +1839,12 @@ export interface components {
             claims?: {
                 [key: string]: Record<string, never>;
             };
-            holderRef: string;
+            /** @description 64 lowercase hex characters (the connector's holder HMAC). Required for machine callers; a human console session may omit it and the platform generates a random one, returned in the response's holderRef. */
+            holderRef?: string;
             /** Format: int32 */
             maxUses?: number;
+            /** @description Mint a one-time wallet claim code in the same transaction and return it as claimCode. Machine connectors SHOULD set this: an idempotent replay can reissue a claim code, never an sdJwt. */
+            mintClaimCode?: boolean;
             schemaCode?: string;
             /** Format: uuid */
             schemaId?: string;
@@ -1637,9 +1854,38 @@ export interface components {
         };
         /** @description Result of a successful SD-JWT credential issuance */
         IssueResponse: {
+            claimCode?: string | null;
+            /** Format: date-time */
+            claimCodeExpiresAt?: string | null;
+            claimCodeReissued?: boolean;
+            claimed?: boolean;
+            deliveryLost?: boolean;
+            holderRef?: string;
             id?: string;
+            issuerClientId?: string;
             ref?: string;
             sdJwt?: string;
+        };
+        IssuerClientResponse: {
+            allowedSchemaIds?: string[];
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            expiresAt?: string;
+            /** Format: uuid */
+            id?: string;
+            keyPrefix?: string;
+            /** Format: date-time */
+            lastUsedAt?: string;
+            name?: components["schemas"]["LocalizedText"];
+            /** Format: date-time */
+            retireAfter?: string;
+            /** Format: uuid */
+            rotatedFrom?: string;
+            scopes?: string[];
+            status?: string;
+            /** Format: uuid */
+            tenantId?: string;
         };
         /** @description One ancestor of the credential's issuing tenant */
         IssuerLineageEntry: {
@@ -1730,6 +1976,10 @@ export interface components {
             state?: string;
             /** Format: date-time */
             validTo?: string;
+        };
+        RotateIssuerClientRequest: {
+            /** Format: int32 */
+            retireAfterHours?: number;
         };
         /** @description Optional provider override — the SOFT->Vault migration mechanism (spec D6) */
         RotateKeyRequest: {
@@ -3293,7 +3543,10 @@ export interface operations {
     bulkIssue: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description 1-128 printable ASCII characters naming this request (KH-2.8.2, spec FS-2.7a D5). REQUIRED for machine issuer clients (Bearer khi_...; KH-IDEM-0400 without it), optional and honored for console sessions and tenant API keys. Retrying the identical request with the same key never issues twice: it replays the original result with Idempotent-Replayed: true. A replay cannot resend an sdJwt (never stored), so machine connectors SHOULD request mintClaimCode(s): a replay then reissues the claim code while it is unclaimed (the previous code stops working), reports claimed:true once the wallet has claimed it, or deliveryLost:true when nothing is left to deliver. The same key with a different body is KH-IDEM-0422; a twin still in progress is KH-IDEM-0409. Keys are kept for 30 days. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -3306,6 +3559,8 @@ export interface operations {
             /** @description Per-item report (always 200) */
             200: {
                 headers: {
+                    /** @description Present with value true when this response was replayed from the Idempotency-Key record and nothing new was issued */
+                    "Idempotent-Replayed"?: boolean;
                     [name: string]: unknown;
                 };
                 content: {
@@ -3332,6 +3587,26 @@ export interface operations {
             };
             /** @description Missing the issue scope, or called with a CONSUMING_PARTY API key instead of a console session or TENANT API key */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description A request with the same Idempotency-Key is still in progress (KH-IDEM-0409); retry after the Retry-After seconds */
+            409: {
+                headers: {
+                    /** @description Seconds to wait before retrying (always 2) */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The Idempotency-Key was already used with a different request body (KH-IDEM-0422); nothing was issued */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3428,7 +3703,10 @@ export interface operations {
     issue: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description 1-128 printable ASCII characters naming this request (KH-2.8.2, spec FS-2.7a D5). REQUIRED for machine issuer clients (Bearer khi_...; KH-IDEM-0400 without it), optional and honored for console sessions and tenant API keys. Retrying the identical request with the same key never issues twice: it replays the original result with Idempotent-Replayed: true. A replay cannot resend an sdJwt (never stored), so machine connectors SHOULD request mintClaimCode(s): a replay then reissues the claim code while it is unclaimed (the previous code stops working), reports claimed:true once the wallet has claimed it, or deliveryLost:true when nothing is left to deliver. The same key with a different body is KH-IDEM-0422; a twin still in progress is KH-IDEM-0409. Keys are kept for 30 days. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -3441,6 +3719,8 @@ export interface operations {
             /** @description Credential issued */
             200: {
                 headers: {
+                    /** @description Present with value true when this response was replayed from the Idempotency-Key record and nothing new was issued */
+                    "Idempotent-Replayed"?: boolean;
                     [name: string]: unknown;
                 };
                 content: {
@@ -3449,6 +3729,26 @@ export interface operations {
             };
             /** @description Bean Validation failed (e.g. a missing holderRef); the schema requires attestation and none was submitted (KH-ATT-0400); or attestation was submitted for a schema that does not require it (KH-ATT-0401, spec FS-2.4 item 2) */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description A request with the same Idempotency-Key is still in progress (KH-IDEM-0409); retry after the Retry-After seconds */
+            409: {
+                headers: {
+                    /** @description Seconds to wait before retrying (always 2) */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The Idempotency-Key was already used with a different request body (KH-IDEM-0422); nothing was issued */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3658,6 +3958,295 @@ export interface operations {
             };
         };
     };
+    listIssuerClients: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The tenant's issuer clients */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["IssuerClientResponse"][];
+                };
+            };
+            /** @description No valid console session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the key:manage scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    createIssuerClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateIssuerClientRequest"];
+            };
+        };
+        responses: {
+            /** @description Created; the one-time key is in the body */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CreatedIssuerClientResponse"];
+                };
+            };
+            /** @description Bean Validation failed, or an unknown schema id (KH-ICL-0400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No valid console session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the key:manage scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The holder secret could not be stored in Vault (KH-ICL-0503) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    resumeIssuerClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resumed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["IssuerClientResponse"];
+                };
+            };
+            /** @description No such client (KH-ICL-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The client is not SUSPENDED (KH-ICL-1409) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    revokeIssuerClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["IssuerClientResponse"];
+                };
+            };
+            /** @description No such client (KH-ICL-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Already revoked (KH-ICL-1409) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    rotateIssuerClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RotateIssuerClientRequest"];
+            };
+        };
+        responses: {
+            /** @description Replacement created; new key in the body */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CreatedIssuerClientResponse"];
+                };
+            };
+            /** @description retireAfterHours outside 0-72 (KH-ICL-0400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No valid console session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing the key:manage scope (KH-RBC-0403) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description No such client in this tenant (KH-ICL-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The client is not ACTIVE (KH-ICL-1409) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    suspendIssuerClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Suspended */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["IssuerClientResponse"];
+                };
+            };
+            /** @description No such client (KH-ICL-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The client is not ACTIVE (KH-ICL-1409) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     listChildren: {
         parameters: {
             query?: never;
@@ -3687,6 +4276,204 @@ export interface operations {
             };
             /** @description Missing the org:admin scope (KH-RBC-0403) */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    listChildIssuerClients: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                childId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The child's issuer clients */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["IssuerClientResponse"][];
+                };
+            };
+            /** @description No such direct child (KH-ORG-0404, unified) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    createChildIssuerClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                childId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateIssuerClientRequest"];
+            };
+        };
+        responses: {
+            /** @description Created; the one-time key is in the body */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CreatedIssuerClientResponse"];
+                };
+            };
+            /** @description No such direct child (KH-ORG-0404, unified) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    resumeChildIssuerClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                childId: string;
+                clientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resumed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["IssuerClientResponse"];
+                };
+            };
+            /** @description No such direct child or client */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    revokeChildIssuerClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                childId: string;
+                clientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["IssuerClientResponse"];
+                };
+            };
+            /** @description No such direct child or client */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    rotateChildIssuerClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                childId: string;
+                clientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RotateIssuerClientRequest"];
+            };
+        };
+        responses: {
+            /** @description Replacement created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CreatedIssuerClientResponse"];
+                };
+            };
+            /** @description No such direct child (KH-ORG-0404) or client (KH-ICL-0404) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    suspendChildIssuerClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                childId: string;
+                clientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Suspended */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["IssuerClientResponse"];
+                };
+            };
+            /** @description No such direct child or client */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3945,7 +4732,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Missing the org:admin scope (KH-RBC-0403) */
+            /** @description Missing the org:admin scope (KH-RBC-0403), or a requested role exceeds the caller's own role-grant ceiling (KH-USR-2403 — no self-propagation: an org:admin cannot grant ORG_ADMIN to a child's user either, only platform:admin can) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4732,7 +5519,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me) */
+            /** @description Missing the tenant:admin scope (KH-RBC-0403), the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me), or a requested role exceeds the caller's own role-grant ceiling (KH-USR-2403 — only platform:admin may grant PLATFORM_ADMIN/ORG_ADMIN) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5052,7 +5839,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me) */
+            /** @description Missing the tenant:admin scope (KH-RBC-0403), the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me), or a requested role exceeds the caller's own role-grant ceiling (KH-USR-2403 — only platform:admin may grant PLATFORM_ADMIN/ORG_ADMIN) */
             403: {
                 headers: {
                     [name: string]: unknown;

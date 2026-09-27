@@ -12,7 +12,7 @@ import { ReportStep } from './components/ReportStep';
 import { UploadMapStep } from './components/UploadMapStep';
 import { downloadCsv, generateReportCsv, generateTemplateCsv, parseCsvFile } from './csv';
 import { useBulkIssue, useIssueSchema, usePublishedSchemas } from './hooks';
-import { buildReportRows, type ReportRowView } from './report';
+import { buildReportRows, resolveItemErrorText, type ReportRowView } from './report';
 import { buildBulkIssueRequest, type BatchOptionsValues } from './request';
 import { isRowValid, validateRows, type ValidatedRow } from './rowValidation';
 import type { BulkIssueResponse } from './api';
@@ -22,15 +22,17 @@ type WizardStep = 'schema' | 'upload' | 'preview' | 'report';
 
 const BLANK_OPTIONS: BatchOptionsValues = { maxUses: '', validMinutes: '', mintClaimCodes: true };
 
-function toReportCsvRows(reportRows: ReportRowView[]) {
+function toReportCsvRows(
+  reportRows: ReportRowView[],
+  translate: (key: string) => string,
+  keyExists: (key: string) => boolean,
+) {
   return reportRows.map((row) => ({
     index: row.rowIndex + 1,
-    status: row.clientExcluded ? 'EXCLUDED' : (row.result?.status ?? 'UNKNOWN'),
     ref: row.result?.ref,
-    id: row.result?.id,
-    claimCode: row.result?.claimCode,
-    errorCode: row.result?.error?.code,
-    errorMessage: row.result?.error?.message,
+    holderRef: row.result?.holderRef,
+    status: row.clientExcluded ? 'EXCLUDED' : (row.result?.status ?? 'UNKNOWN'),
+    error: resolveItemErrorText(row.result?.error, translate, keyExists),
   }));
 }
 
@@ -43,7 +45,7 @@ export function BulkIssuePage() {
 }
 
 function BulkIssueWizard() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const localize = useLocalizedText();
   const schemas = usePublishedSchemas();
   const bulkIssue = useBulkIssue();
@@ -111,7 +113,7 @@ function BulkIssueWizard() {
 
   const handleExportReport = () => {
     if (!detail.data) return;
-    const csv = generateReportCsv(toReportCsvRows(reportRows));
+    const csv = generateReportCsv(toReportCsvRows(reportRows, t, (key) => i18n.exists(key)));
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     downloadCsv(`bulk-issue-${detail.data.code ?? 'schema'}-${timestamp}.csv`, csv);
   };

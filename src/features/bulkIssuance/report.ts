@@ -1,4 +1,4 @@
-import type { BulkIssueItemResult, BulkIssueResponse } from './api';
+import type { BulkIssueItemError, BulkIssueItemResult, BulkIssueResponse } from './api';
 import { isRowValid, type ValidatedRow } from './rowValidation';
 
 export type ReportRowStatus = 'EXCLUDED' | 'ISSUED' | 'FAILED' | 'UNKNOWN';
@@ -9,6 +9,26 @@ export interface ReportRowView {
   pseudoRef?: string;
   clientExcluded: boolean;
   result?: BulkIssueItemResult;
+}
+
+/**
+ * Resolve one row's server-reported error to a localized, user-safe string —
+ * local `errors.<code>` (preferred, matches the active UI language) falling
+ * back to the server's own `message` (work rule 3's resolution order, applied
+ * per-row since a bulk batch has no single top-level error to run through
+ * `useErrorMessage`).
+ */
+export function resolveItemErrorText(
+  error: BulkIssueItemError | undefined,
+  translate: (key: string) => string,
+  keyExists: (key: string) => boolean,
+): string {
+  if (!error) return '';
+  if (error.code) {
+    const key = `errors.${error.code}`;
+    if (keyExists(key)) return translate(key);
+  }
+  return error.message ?? translate('errors.generic');
 }
 
 /**

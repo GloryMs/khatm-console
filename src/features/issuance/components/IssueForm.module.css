@@ -12,6 +12,10 @@
   border-block-end: 1px solid var(--color-border);
 }
 
+.holderRefInput {
+  font-family: var(--font-mono);
+}
+
 .badges {
   display: inline-flex;
   gap: var(--space-1);

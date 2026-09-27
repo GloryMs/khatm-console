@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { FormField, khatmInputClass } from '@/components/ui/FormField';
 import { copyToClipboard } from '@/components/ui/clipboard';
 import { useLocalizedText } from '@/hooks/useLocalizedText';
+import { isValidHolderRef } from '@/lib/holderRef';
 import { isKnownFieldType, isSelective, type ClaimField } from '@/features/issuance/claimsDef';
 import type { AttestedIssueFormValues } from '../request';
 import styles from './DetailsForm.module.css';
@@ -56,7 +57,11 @@ function buildSchema(fields: ClaimField[], t: TFunction, localize: (text: unknow
   }
 
   return z.object({
-    holderRef: z.string().min(1, { message: t('issue.holderRefRequired') }),
+    // Optional (KH-2.8.2 veto V1-b): a human console session may leave this
+    // blank and the platform generates one. Only shape-checked when non-blank.
+    holderRef: z.string().refine((value) => value.trim() === '' || isValidHolderRef(value), {
+      message: t('issue.holderRefInvalid'),
+    }),
     maxUses: z.string(),
     validMinutes: z.string(),
     claims: z.object(claimShape),
@@ -151,8 +156,11 @@ export function DetailsForm({
           <input
             id="attested-holderRef"
             type="text"
+            dir="ltr"
             autoComplete="off"
-            className={khatmInputClass(errors.holderRef ? 'error' : 'default')}
+            spellCheck={false}
+            className={`${khatmInputClass(errors.holderRef ? 'error' : 'default')} ${styles.holderRefInput} ltr-embed`}
+            placeholder="e.g. 3f9a2c…(64 hex chars)"
             {...register('holderRef')}
           />
         </FormField>

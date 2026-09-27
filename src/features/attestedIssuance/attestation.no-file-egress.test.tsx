@@ -28,6 +28,7 @@ vi.mock('qrcode.react', () => ({
 const FILE_CONTENT = 'do-not-upload-me';
 // sha256('do-not-upload-me'), verified against Node's crypto.createHash('sha256').
 const DIGEST = '52399d3a1daebb04492a46196daf46134077a80054556cc32eea8dcaad89a216';
+const VALID_HOLDER_REF = '0123456789abcdef'.repeat(4);
 
 const auth: AuthContextValue = {
   status: 'authenticated',
@@ -95,7 +96,12 @@ function installFetchSpy(): { calls: RecordedCall[]; restore: () => void } {
       if (method === 'GET' && url.endsWith('/api/v1/schemas/schema-att-1'))
         return jsonResponse(detail);
       if (method === 'POST' && url.endsWith('/api/v1/credentials/issue'))
-        return jsonResponse({ id: 'credential-att-1', ref: 'CRD-2026-0100', sdJwt: 'sd.jwt' });
+        return jsonResponse({
+          id: 'credential-att-1',
+          ref: 'CRD-2026-0100',
+          holderRef: VALID_HOLDER_REF,
+          sdJwt: 'sd.jwt',
+        });
       if (method === 'POST' && url.endsWith('/api/v1/credentials/credential-att-1/claim-code'))
         return jsonResponse({ code: 'CLAIM-EGRESS', expiresAt: '2026-08-20T12:00:00Z' });
 
@@ -134,7 +140,10 @@ describe('attested issuance — no file egress (FS-2.4 D1)', () => {
 
     expect(await screen.findByText(DIGEST)).toBeInTheDocument();
 
-    await user.type(screen.getByLabelText(i18n.t('issue.holderRef')), 'holder-egress-001');
+    await user.type(
+      screen.getByLabelText(i18n.t('issue.holderRef')),
+      VALID_HOLDER_REF.toUpperCase(),
+    );
     await user.click(
       screen.getByRole('button', { name: i18n.t('issueAttested.details.continueToReview') }),
     );
@@ -171,8 +180,11 @@ describe('attested issuance — no file egress (FS-2.4 D1)', () => {
     expect(issueCall?.contentType).toBe('application/json');
     const issueBody = JSON.parse(issueCall?.bodyText ?? '{}') as {
       claims?: Record<string, unknown>;
+      holderRef?: string;
     };
     expect(issueBody.claims?.doc_sha256).toBe(DIGEST);
     expect(issueBody.claims?.doc_sha256).toMatch(/^[0-9a-f]{64}$/);
+    // Typed uppercase above — the request must carry the normalized (lowercase) form.
+    expect(issueBody.holderRef).toBe(VALID_HOLDER_REF);
   });
 });

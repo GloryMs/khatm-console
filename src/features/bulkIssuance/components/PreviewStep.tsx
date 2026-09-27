@@ -12,6 +12,7 @@ const ERROR_KEY_BY_KIND: Record<RowErrorKind, string> = {
   required: 'issue.fieldRequired',
   number: 'issue.fieldInvalidNumber',
   date: 'issue.fieldInvalidDate',
+  pseudoRef: 'issueBulk.row.pseudoRefInvalid',
 };
 
 interface PreviewStepProps {

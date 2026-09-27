@@ -231,6 +231,9 @@
       "not-applicable": "This schema doesn't require attestation — an attestation was sent anyway. Use the standard issue flow for this schema.",
       "bulk-not-supported": "Attested-document schemas can't be issued in bulk. Use the attested-document flow for this schema, one document at a time."
     },
+    "issuance": {
+      "validation-failed": "This request was rejected: the holder reference must be 64 hexadecimal characters, or left blank, and claims may not carry a national ID or other personal identifier."
+    },
     "error": {
       "rbc": {
         "api_key_invalid": "This API key is invalid, unknown, or the consuming party has been suspended."
@@ -254,8 +257,10 @@
     "resultEmptyTitle": "Nothing minted yet",
     "resultEmptyBody": "Fill in the form and mint to see the one-time claim code and QR here.",
     "holderRef": "Holder reference",
-    "holderRefHelp": "A pseudonymous holder identifier from your system (pseudo_ref).",
-    "holderRefRequired": "Holder reference is required",
+    "holderRefHelp": "If your organization has a system that computes a pseudonymous holder reference (64 hex characters), enter it here; otherwise leave it blank and one will be generated for you. Never enter a national ID number or any personal data here.",
+    "holderRefInvalid": "Holder reference must be 64 hexadecimal characters (0-9, a-f), or left blank.",
+    "holderRefNotProvided": "Not provided — the platform will generate one",
+    "holderRefGenerated": "Holder reference — save it in your organization's own record if you'll need to look this document up later.",
     "maxUses": "Maximum uses",
     "maxUsesHelp": "How many times this credential may be consumed (optional).",
     "validMinutes": "Validity in minutes",
@@ -480,6 +485,7 @@
     "filters": {
       "ref": "Reference",
       "pseudoRef": "Holder reference",
+      "pseudoRefHint": "Recent values are 64 hex characters; older ones may be free text.",
       "schema": "Schema",
       "schemaAny": "Any schema",
       "revoked": "Revoked",
@@ -882,6 +888,9 @@
     "templateHeading": "Download a template",
     "templateHelp": "Download a CSV template for this schema, fill it in, then upload it in the next step.",
     "downloadTemplate": "Download template CSV",
+    "row": {
+      "pseudoRefInvalid": "Holder reference must be 64 hexadecimal characters (0-9, a-f), or left blank."
+    },
     "upload": {
       "fileLabel": "CSV file",
       "rowCount": "{{count}} rows detected",
@@ -889,6 +898,7 @@
       "tooManyRows": "This file has more than {{max}} rows. Split it into smaller batches and upload separately.",
       "unmapped": "— not mapped —",
       "pseudoRefColumn": "Holder reference (pseudoRef)",
+      "pseudoRefHint": "Optional. Recent values are 64 hex characters; older ones may be free text. Leave the column unmapped, or its cells blank, to have the platform generate one per row.",
       "continue": "Continue"
     },
     "preview": {

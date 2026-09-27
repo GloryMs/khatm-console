@@ -11,6 +11,8 @@ vi.mock('qrcode.react', () => ({
   QRCodeSVG: ({ value }: { value: string }) => <div data-testid="qr-code">{value}</div>,
 }));
 
+const VALID_HOLDER_REF = '0123456789abcdef'.repeat(4);
+
 const schemas: api.SchemaSummary[] = [
   {
     id: 'schema-1',
@@ -93,6 +95,7 @@ describe('IssuePage', () => {
     const issue = vi.spyOn(api, 'issueCredential').mockResolvedValue({
       id: 'credential-1',
       ref: 'CRD-2026-0001',
+      holderRef: VALID_HOLDER_REF,
       sdJwt: 'sd.jwt',
     });
     vi.spyOn(api, 'mintClaimCode').mockResolvedValue({
@@ -109,13 +112,17 @@ describe('IssuePage', () => {
       i18n.t('issue.selectiveDisclosure'),
     );
 
-    await user.type(screen.getByLabelText(i18n.t('issue.holderRef')), 'holder-001');
+    // Typed uppercase — the request must carry the normalized (lowercase) form.
+    await user.type(
+      screen.getByLabelText(i18n.t('issue.holderRef')),
+      VALID_HOLDER_REF.toUpperCase(),
+    );
     await user.type(screen.getByLabelText('Result'), 'NO_RECORD');
     await user.click(screen.getByRole('button', { name: i18n.t('issue.submit') }));
 
     await waitFor(() => expect(issue).toHaveBeenCalledTimes(1));
     expect(issue).toHaveBeenCalledWith({
-      holderRef: 'holder-001',
+      holderRef: VALID_HOLDER_REF,
       schemaCode: 'CriminalRecord/v1',
       schemaId: 'schema-1',
       claims: { result: 'NO_RECORD', caseNumber: '' },
@@ -125,6 +132,7 @@ describe('IssuePage', () => {
     });
     expect(await screen.findByText(i18n.t('issue.codeShownOnce'))).toBeInTheDocument();
     expect(screen.getByText('CRD-2026-0001')).toBeInTheDocument();
+    expect(screen.getByText(VALID_HOLDER_REF)).toBeInTheDocument();
     // The claim code is masked by default (SecretReveal); reveal it to check the value.
     await user.click(screen.getByRole('button', { name: i18n.t('common.reveal') }));
     expect(screen.getByText('CLAIM-ABC')).toBeInTheDocument();
@@ -134,6 +142,31 @@ describe('IssuePage', () => {
     expect(screen.queryByText(i18n.t('issue.qrLocalhostHint'))).not.toBeInTheDocument();
   });
 
+  it('omits the holderRef field entirely from the request when left blank', async () => {
+    vi.spyOn(api, 'listPublishedSchemas').mockResolvedValue([schemas[0]]);
+    vi.spyOn(api, 'getIssueSchema').mockResolvedValue(detail);
+    const issue = vi.spyOn(api, 'issueCredential').mockResolvedValue({
+      id: 'credential-1',
+      ref: 'CRD-1',
+      holderRef: VALID_HOLDER_REF,
+      sdJwt: 'sd.jwt',
+    });
+    vi.spyOn(api, 'mintClaimCode').mockResolvedValue({
+      code: 'CLAIM-ABC',
+      expiresAt: '2026-07-20T12:15:00Z',
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: /Criminal record/ }));
+    await user.type(await screen.findByLabelText('Result'), 'NO_RECORD');
+    await user.click(screen.getByRole('button', { name: i18n.t('issue.submit') }));
+
+    await waitFor(() => expect(issue).toHaveBeenCalledTimes(1));
+    const sentBody = JSON.parse(JSON.stringify(issue.mock.calls[0][0]));
+    expect(sentBody).not.toHaveProperty('holderRef');
+  });
+
   it('shows the localhost warning when VITE_QR_API_BASE is explicitly set to a local address', async () => {
     vi.stubEnv('VITE_QR_API_BASE', 'http://localhost:5173');
     vi.spyOn(api, 'listPublishedSchemas').mockResolvedValue([schemas[0]]);
@@ -141,6 +174,7 @@ describe('IssuePage', () => {
     vi.spyOn(api, 'issueCredential').mockResolvedValue({
       id: 'credential-1',
       ref: 'CRD-1',
+      holderRef: VALID_HOLDER_REF,
       sdJwt: 'sd.jwt',
     });
     vi.spyOn(api, 'mintClaimCode').mockResolvedValue({
@@ -151,8 +185,7 @@ describe('IssuePage', () => {
     renderPage();
 
     await user.click(await screen.findByRole('button', { name: /Criminal record/ }));
-    await user.type(await screen.findByLabelText(i18n.t('issue.holderRef')), 'holder-001');
-    await user.type(screen.getByLabelText('Result'), 'NO_RECORD');
+    await user.type(await screen.findByLabelText('Result'), 'NO_RECORD');
     await user.click(screen.getByRole('button', { name: i18n.t('issue.submit') }));
 
     const qrBox = await screen.findByText(i18n.t('issue.qrLocalhostHint'));
@@ -171,6 +204,7 @@ describe('IssuePage', () => {
     vi.spyOn(api, 'issueCredential').mockResolvedValue({
       id: 'credential-1',
       ref: 'CRD-1',
+      holderRef: VALID_HOLDER_REF,
       sdJwt: 'sd.jwt',
     });
     vi.spyOn(api, 'mintClaimCode').mockResolvedValue({
@@ -181,8 +215,7 @@ describe('IssuePage', () => {
     renderPage();
 
     await user.click(await screen.findByRole('button', { name: /Criminal record/ }));
-    await user.type(await screen.findByLabelText(i18n.t('issue.holderRef')), 'holder-001');
-    await user.type(screen.getByLabelText('Result'), 'NO_RECORD');
+    await user.type(await screen.findByLabelText('Result'), 'NO_RECORD');
     await user.click(screen.getByRole('button', { name: i18n.t('issue.submit') }));
 
     expect(await screen.findByText(i18n.t('issue.qrLocalhostHint'))).toBeInTheDocument();
@@ -199,6 +232,7 @@ describe('IssuePage', () => {
     vi.spyOn(api, 'issueCredential').mockResolvedValue({
       id: 'credential-1',
       ref: 'CRD-1',
+      holderRef: VALID_HOLDER_REF,
       sdJwt: 'sd.jwt',
     });
     vi.spyOn(api, 'mintClaimCode').mockResolvedValue({
@@ -209,8 +243,7 @@ describe('IssuePage', () => {
     renderPage();
 
     await user.click(await screen.findByRole('button', { name: /Criminal record/ }));
-    await user.type(await screen.findByLabelText(i18n.t('issue.holderRef')), 'holder-001');
-    await user.type(screen.getByLabelText('Result'), 'NO_RECORD');
+    await user.type(await screen.findByLabelText('Result'), 'NO_RECORD');
     await user.click(screen.getByRole('button', { name: i18n.t('issue.submit') }));
 
     expect(await screen.findByTestId('qr-code')).toHaveTextContent(
@@ -226,6 +259,7 @@ describe('IssuePage', () => {
     vi.spyOn(api, 'issueCredential').mockResolvedValue({
       id: 'credential-1',
       ref: 'CRD-1',
+      holderRef: VALID_HOLDER_REF,
       sdJwt: 'sd.jwt',
     });
     vi.spyOn(api, 'mintClaimCode').mockResolvedValue({
@@ -237,11 +271,7 @@ describe('IssuePage', () => {
     renderPage();
 
     await user.click(await screen.findByRole('button', { name: /السجل الجنائي/ }));
-    await user.type(
-      await screen.findByLabelText(i18n.t('issue.holderRef', { lng: 'ar' })),
-      'holder-001',
-    );
-    await user.type(screen.getByLabelText('النتيجة'), 'NO_RECORD');
+    await user.type(await screen.findByLabelText('النتيجة'), 'NO_RECORD');
     await user.click(screen.getByRole('button', { name: i18n.t('issue.submit', { lng: 'ar' }) }));
 
     expect(

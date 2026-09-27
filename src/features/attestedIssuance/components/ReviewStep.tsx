@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ApiErrorBanner } from '@/components/ui/ApiErrorBanner';
 import { Banner } from '@/components/ui/Banner';
 import { Button } from '@/components/ui/Button';
 import { TypeToConfirmDialog } from '@/components/ui/TypeToConfirmDialog';
@@ -16,7 +17,10 @@ interface ReviewStepProps {
   fields: ClaimField[];
   values: AttestedIssueFormValues;
   isBusy: boolean;
-  errorMessage?: string;
+  /** The raw thrown error, if the last confirm attempt failed — rendered via
+   * the standard `ApiErrorBanner` so `code`/`traceId` always show (work rule 3),
+   * not just a bare message. */
+  error?: unknown;
   onConfirm: () => void;
   onBack: () => void;
 }
@@ -35,7 +39,7 @@ export function ReviewStep({
   fields,
   values,
   isBusy,
-  errorMessage,
+  error,
   onConfirm,
   onBack,
 }: ReviewStepProps) {
@@ -62,7 +66,9 @@ export function ReviewStep({
         </div>
         <div className={styles.row}>
           <dt>{t('issue.holderRef')}</dt>
-          <dd>{values.holderRef}</dd>
+          <dd className="ltr-embed">
+            {values.holderRef.trim() || t('issue.holderRefNotProvided')}
+          </dd>
         </div>
         {fields.map((field) => (
           <div className={styles.row} key={field.name}>
@@ -113,10 +119,11 @@ export function ReviewStep({
           busyLabel={t('issueAttested.review.issuing')}
           cancelLabel={t('issue.cancel')}
           isBusy={isBusy}
-          errorMessage={errorMessage}
           onConfirm={onConfirm}
           onCancel={() => setDialogOpen(false)}
-        />
+        >
+          <ApiErrorBanner error={error} />
+        </TypeToConfirmDialog>
       )}
     </div>
   );

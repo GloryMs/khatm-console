@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import type { ClaimField } from '@/features/issuance/claimsDef';
 import { BULK_MAX_ROWS, type ParsedCsv } from '../csv';
-import { PSEUDO_REF_FIELD, type ColumnMapping } from '../columnMapping';
+import { type ColumnMapping } from '../columnMapping';
 import styles from './UploadMapStep.module.css';
 
 interface UploadMapStepProps {
@@ -88,7 +88,7 @@ export function UploadMapStep({
             </label>
           ))}
           <label className={styles.mappingLabel}>
-            <span>{PSEUDO_REF_FIELD}</span>
+            <span>{t('issueBulk.upload.pseudoRefColumn')}</span>
             <select
               value={mapping.pseudoRef ?? ''}
               onChange={(event) => setPseudoRefMapping(event.target.value)}
@@ -100,6 +100,7 @@ export function UploadMapStep({
                 </option>
               ))}
             </select>
+            <span className={styles.hint}>{t('issueBulk.upload.pseudoRefHint')}</span>
           </label>
         </div>
       )}
