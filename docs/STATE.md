@@ -177,9 +177,8 @@ status, error` — `claimCode`/`id`/`errorCode`+`errorMessage` all dropped,
     unchanged) re-run clean after the fix; `format:check` clean on the two
     touched files. Test count stays 313 (see above) — no logic changed, only
     a shared shell component's optional prop and one feature's CSS/markup.
-  - **PR opened and merged** (squash, branch deleted) on Majd's go-ahead
-    after the walkthrough above — see "Last completed" for the PR number and
-    merge timestamp.
+  - **PR #28 opened and merged** (squash, branch deleted) on Majd's go-ahead
+    after the walkthrough above.
 
 - C12-org-hierarchy-console (console side of FS-2.5's tenant hierarchy + org admin,
   session `SESSION-C12-org-hierarchy-console.md`) — **DONE. PR #27 merged to
@@ -493,7 +492,7 @@ contract:update`) confirmed the contract was already current (no diff against wh
   stack (console + `khatm-api`/`khatm-worker`) rebuilt from current source
   for the walkthrough. Majd's live walkthrough (EN/AR + RTL, local Docker
   Desktop) passed 2026-09-27 — see "Current phase / task" for what was
-  covered and the one bug found and fixed live. **PR merged to `main`
+  covered and the one bug found and fixed live. **PR #28 merged to `main`
   2026-09-27** (squash, branch deleted) on Majd's explicit go-ahead.
 
 - 2026-08-20 (PR #27 merge, following Majd's live walkthrough against the
