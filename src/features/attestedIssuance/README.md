@@ -27,6 +27,18 @@ convention field (FS-2.4 D3) and everything else; `request.ts` builds the
 exact `IssueRequest` body, always injecting the computed digest and always
 sending a (possibly empty) `attestation` object.
 
+**`holderRef` (KH-2.8.2 veto V1-b, session C13a):** optional for this
+human-operated flow — `DetailsForm` only shape-checks it when non-blank
+(`@/lib/holderRef#isValidHolderRef`, `issue.holderRefInvalid`), and
+`request.ts` normalizes (trim + lowercase) and omits it entirely from the
+request when left blank, letting the platform generate one. `ReviewStep`
+shows either the typed value or `issue.holderRefNotProvided`; the success
+screen always shows `IssueResponse.holderRef` (generated or supplied) plus a
+copy button, and now passes the raw thrown error to `ApiErrorBanner` (via
+`TypeToConfirmDialog`'s `children` slot) instead of a pre-resolved string, so
+`code`/`traceId` show for a rejected confirm (e.g. `KH-ISS-0400`) same as
+every other error surface (work rule 3).
+
 The D1 no-file-egress guarantee has its own test,
 `attestation.no-file-egress.test.ts` — spies on `fetch` across a full
 scan-to-issue run and asserts no request ever carries the file's bytes.

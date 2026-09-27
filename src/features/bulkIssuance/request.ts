@@ -1,3 +1,4 @@
+import { normalizeHolderRef } from '@/lib/holderRef';
 import type { BulkIssueDefaults, BulkIssueItem, BulkIssueRequest } from './api';
 import type { ValidatedRow } from './rowValidation';
 
@@ -28,10 +29,15 @@ export function buildBulkIssueRequest(
 ): BulkIssueRequest {
   const maxUses = toNumber(options.maxUses);
   const validMinutes = toNumber(options.validMinutes);
-  const items: BulkIssueItem[] = validRows.map((row) => ({
-    claims: buildClaimsMap(row.claims),
-    pseudoRef: row.pseudoRef || undefined,
-  }));
+  const items: BulkIssueItem[] = validRows.map((row) => {
+    const pseudoRef = row.pseudoRef ? normalizeHolderRef(row.pseudoRef) : undefined;
+    return {
+      claims: buildClaimsMap(row.claims),
+      // Omitted entirely when blank (not "", not null) — same contract as the
+      // single-issue holderRef field (KH-2.8.2 veto V1-b).
+      ...(pseudoRef ? { pseudoRef } : {}),
+    };
+  });
   const defaults: BulkIssueDefaults | undefined =
     maxUses !== undefined || validMinutes !== undefined ? { maxUses, validMinutes } : undefined;
 

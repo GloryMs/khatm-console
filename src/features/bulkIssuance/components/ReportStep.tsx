@@ -2,8 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge';
 import tableStyles from '@/components/ui/Table.module.css';
 import { copyToClipboard } from '@/components/ui/clipboard';
-import type { BulkIssueItemError, BulkIssueResponse } from '../api';
-import { deriveReportStatus, type ReportRowView } from '../report';
+import type { BulkIssueResponse } from '../api';
+import { deriveReportStatus, resolveItemErrorText, type ReportRowView } from '../report';
 import styles from './ReportStep.module.css';
 
 interface ReportStepProps {
@@ -39,15 +39,6 @@ const STATUS_TONE = {
 export function ReportStep({ reportRows, response, onExport, onStartOver }: ReportStepProps) {
   const { t, i18n } = useTranslation();
 
-  const resolveItemError = (error: BulkIssueItemError | undefined): string => {
-    if (!error) return '';
-    if (error.code) {
-      const key = `errors.${error.code}`;
-      if (i18n.exists(key)) return t(key);
-    }
-    return error.message ?? t('errors.generic');
-  };
-
   const excludedCount = reportRows.filter((row) => row.clientExcluded).length;
   const hasClaimCodes = reportRows.some((row) => row.result?.claimCode);
 
@@ -72,6 +63,7 @@ export function ReportStep({ reportRows, response, onExport, onStartOver }: Repo
               <th>{t('issueBulk.upload.pseudoRefColumn')}</th>
               <th>{t('issueBulk.report.columnStatus')}</th>
               <th>{t('issue.refLabel')}</th>
+              <th>{t('issue.holderRef')}</th>
               <th>{t('issue.claimCodeLabel')}</th>
               <th>{t('issueBulk.report.columnError')}</th>
             </tr>
@@ -87,6 +79,7 @@ export function ReportStep({ reportRows, response, onExport, onStartOver }: Repo
                     <StatusBadge tone={STATUS_TONE[status]}>{t(STATUS_KEY[status])}</StatusBadge>
                   </td>
                   <td className={tableStyles.codeCell}>{row.result?.ref}</td>
+                  <td className={tableStyles.codeCell}>{row.result?.holderRef}</td>
                   <td className={tableStyles.codeCell}>
                     {row.result?.claimCode && (
                       <>
@@ -95,7 +88,7 @@ export function ReportStep({ reportRows, response, onExport, onStartOver }: Repo
                       </>
                     )}
                   </td>
-                  <td>{resolveItemError(row.result?.error)}</td>
+                  <td>{resolveItemErrorText(row.result?.error, t, (key) => i18n.exists(key))}</td>
                 </tr>
               );
             })}

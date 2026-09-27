@@ -165,8 +165,14 @@
           "claimCode": {
             "type": "string"
           },
+          "claimed": {
+            "type": "boolean"
+          },
           "error": {
             "$ref": "#/components/schemas/BulkIssueItemError"
+          },
+          "holderRef": {
+            "type": "string"
           },
           "id": {
             "type": "string"
@@ -535,6 +541,28 @@
         ],
         "type": "object"
       },
+      "CreateIssuerClientRequest": {
+        "properties": {
+          "allowedSchemaIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "name": {
+            "$ref": "#/components/schemas/NameI18nRequest"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "CreateUserRequest": {
         "properties": {
           "displayNameI18n": {
@@ -568,6 +596,31 @@
             "type": "string"
           },
           "username": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "CreatedIssuerClientResponse": {
+        "properties": {
+          "apiKey": {
+            "type": "string"
+          },
+          "client": {
+            "$ref": "#/components/schemas/IssuerClientResponse"
+          },
+          "holderHmacSecret": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "keyPrefix": {
+            "type": "string"
+          },
+          "retiringClientId": {
+            "format": "uuid",
             "type": "string"
           }
         },
@@ -846,12 +899,17 @@
             "type": "object"
           },
           "holderRef": {
-            "minLength": 1,
+            "description": "64 lowercase hex characters (the connector's holder HMAC). Required for machine callers; a human console session may omit it and the platform generates a random one, returned in the response's holderRef.",
+            "pattern": "^[0-9a-f]{64}$",
             "type": "string"
           },
           "maxUses": {
             "format": "int32",
             "type": "integer"
+          },
+          "mintClaimCode": {
+            "description": "Mint a one-time wallet claim code in the same transaction and return it as claimCode. Machine connectors SHOULD set this: an idempotent replay can reissue a claim code, never an sdJwt.",
+            "type": "boolean"
           },
           "schemaCode": {
             "type": "string"
@@ -871,21 +929,97 @@
             "type": "integer"
           }
         },
-        "required": [
-          "holderRef"
-        ],
         "type": "object"
       },
       "IssueResponse": {
         "description": "Result of a successful SD-JWT credential issuance",
         "properties": {
+          "claimCode": {
+            "nullable": true,
+            "type": "string"
+          },
+          "claimCodeExpiresAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "claimCodeReissued": {
+            "type": "boolean"
+          },
+          "claimed": {
+            "type": "boolean"
+          },
+          "deliveryLost": {
+            "type": "boolean"
+          },
+          "holderRef": {
+            "type": "string"
+          },
           "id": {
+            "type": "string"
+          },
+          "issuerClientId": {
             "type": "string"
           },
           "ref": {
             "type": "string"
           },
           "sdJwt": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "IssuerClientResponse": {
+        "properties": {
+          "allowedSchemaIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "keyPrefix": {
+            "type": "string"
+          },
+          "lastUsedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "name": {
+            "$ref": "#/components/schemas/LocalizedText"
+          },
+          "retireAfter": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "rotatedFrom": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "scopes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "status": {
+            "type": "string"
+          },
+          "tenantId": {
+            "format": "uuid",
             "type": "string"
           }
         },
@@ -1147,6 +1281,15 @@
           "validTo": {
             "format": "date-time",
             "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "RotateIssuerClientRequest": {
+        "properties": {
+          "retireAfterHours": {
+            "format": "int32",
+            "type": "integer"
           }
         },
         "type": "object"
@@ -3406,6 +3549,17 @@
       "post": {
         "description": "The C3 console wizard's CSV-per-schema flow (KH-1.1.3) — up to 200 items, one schema per batch, each issued independently through the same single-issue path (no parallel issuance logic, no bypass of any single-issue guard). One bad row never rolls back the batch: the response reports every item's outcome by index, ISSUED or FAILED with its own error. Setting mintClaimCodes:true mints a one-time wallet claim code for every successfully issued item (the existing POST /{id}/claim-code path) and returns it in that item's result — shown here exactly once. Requires the same scope as /issue: session or TENANT API key (a CONSUMING_PARTY key is always 403 here).",
         "operationId": "bulkIssue",
+        "parameters": [
+          {
+            "description": "1-128 printable ASCII characters naming this request (KH-2.8.2, spec FS-2.7a D5). REQUIRED for machine issuer clients (Bearer khi_...; KH-IDEM-0400 without it), optional and honored for console sessions and tenant API keys. Retrying the identical request with the same key never issues twice: it replays the original result with Idempotent-Replayed: true. A replay cannot resend an sdJwt (never stored), so machine connectors SHOULD request mintClaimCode(s): a replay then reissues the claim code while it is unclaimed (the previous code stops working), reports claimed:true once the wallet has claimed it, or deliveryLost:true when nothing is left to deliver. The same key with a different body is KH-IDEM-0422; a twin still in progress is KH-IDEM-0409. Keys are kept for 30 days.",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3425,7 +3579,16 @@
                 }
               }
             },
-            "description": "Per-item report (always 200)"
+            "description": "Per-item report (always 200)",
+            "headers": {
+              "Idempotent-Replayed": {
+                "description": "Present with value true when this response was replayed from the Idempotency-Key record and nothing new was issued",
+                "schema": {
+                  "type": "boolean"
+                },
+                "style": "simple"
+              }
+            }
           },
           "400": {
             "content": {
@@ -3456,6 +3619,35 @@
               }
             },
             "description": "Missing the issue scope, or called with a CONSUMING_PARTY API key instead of a console session or TENANT API key"
+          },
+          "409": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "A request with the same Idempotency-Key is still in progress (KH-IDEM-0409); retry after the Retry-After seconds",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying (always 2)",
+                "schema": {
+                  "type": "integer"
+                },
+                "style": "simple"
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The Idempotency-Key was already used with a different request body (KH-IDEM-0422); nothing was issued"
           }
         },
         "summary": "Issue a batch of credentials against one schema",
@@ -3572,6 +3764,17 @@
       "post": {
         "description": "Every claim becomes a salted, selectively-disclosable SD-JWT disclosure (spec FS-0.4 D1) — none of them appear as a plaintext value in the persisted, signed payload. The response's sdJwt is a one-time delivery of the full presentation (compact JWT plus every disclosure); the platform never stores it in that form.",
         "operationId": "issue",
+        "parameters": [
+          {
+            "description": "1-128 printable ASCII characters naming this request (KH-2.8.2, spec FS-2.7a D5). REQUIRED for machine issuer clients (Bearer khi_...; KH-IDEM-0400 without it), optional and honored for console sessions and tenant API keys. Retrying the identical request with the same key never issues twice: it replays the original result with Idempotent-Replayed: true. A replay cannot resend an sdJwt (never stored), so machine connectors SHOULD request mintClaimCode(s): a replay then reissues the claim code while it is unclaimed (the previous code stops working), reports claimed:true once the wallet has claimed it, or deliveryLost:true when nothing is left to deliver. The same key with a different body is KH-IDEM-0422; a twin still in progress is KH-IDEM-0409. Keys are kept for 30 days.",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3591,7 +3794,16 @@
                 }
               }
             },
-            "description": "Credential issued"
+            "description": "Credential issued",
+            "headers": {
+              "Idempotent-Replayed": {
+                "description": "Present with value true when this response was replayed from the Idempotency-Key record and nothing new was issued",
+                "schema": {
+                  "type": "boolean"
+                },
+                "style": "simple"
+              }
+            }
           },
           "400": {
             "content": {
@@ -3602,6 +3814,35 @@
               }
             },
             "description": "Bean Validation failed (e.g. a missing holderRef); the schema requires attestation and none was submitted (KH-ATT-0400); or attestation was submitted for a schema that does not require it (KH-ATT-0401, spec FS-2.4 item 2)"
+          },
+          "409": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "A request with the same Idempotency-Key is still in progress (KH-IDEM-0409); retry after the Retry-After seconds",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying (always 2)",
+                "schema": {
+                  "type": "integer"
+                },
+                "style": "simple"
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The Idempotency-Key was already used with a different request body (KH-IDEM-0422); nothing was issued"
           },
           "500": {
             "content": {
@@ -3861,6 +4102,368 @@
         ]
       }
     },
+    "/api/v1/issuer-clients": {
+      "get": {
+        "description": "The tenant's issuer clients, newest first: prefix, status, scopes, allowed schemas, last use. Never returns the key, its secret, or its hash. Requires key:manage.",
+        "operationId": "listIssuerClients",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IssuerClientResponse"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "The tenant's issuer clients"
+          },
+          "401": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No valid console session"
+          },
+          "403": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Missing the key:manage scope (KH-RBC-0403)"
+          }
+        },
+        "summary": "List issuer clients",
+        "tags": [
+          "issuer-clients"
+        ]
+      },
+      "post": {
+        "description": "Creates a client and returns its khi_ API key ONCE — it cannot be retrieved again. For the first client of a root tenant the response also carries the tenant's holder HMAC secret (holderHmacSecret), also shown once; later clients and child-tenant clients never carry one. Requires key:manage.",
+        "operationId": "createIssuerClient",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateIssuerClientRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedIssuerClientResponse"
+                }
+              }
+            },
+            "description": "Created; the one-time key is in the body"
+          },
+          "400": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bean Validation failed, or an unknown schema id (KH-ICL-0400)"
+          },
+          "401": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No valid console session"
+          },
+          "403": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Missing the key:manage scope (KH-RBC-0403)"
+          },
+          "503": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The holder secret could not be stored in Vault (KH-ICL-0503)"
+          }
+        },
+        "summary": "Create an issuer client",
+        "tags": [
+          "issuer-clients"
+        ]
+      }
+    },
+    "/api/v1/issuer-clients/{id}/resume": {
+      "post": {
+        "description": "SUSPENDED → ACTIVE. Requires key:manage.",
+        "operationId": "resumeIssuerClient",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuerClientResponse"
+                }
+              }
+            },
+            "description": "Resumed"
+          },
+          "404": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No such client (KH-ICL-0404)"
+          },
+          "409": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The client is not SUSPENDED (KH-ICL-1409)"
+          }
+        },
+        "summary": "Resume an issuer client",
+        "tags": [
+          "issuer-clients"
+        ]
+      }
+    },
+    "/api/v1/issuer-clients/{id}/revoke": {
+      "post": {
+        "description": "Permanent. Requires key:manage.",
+        "operationId": "revokeIssuerClient",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuerClientResponse"
+                }
+              }
+            },
+            "description": "Revoked"
+          },
+          "404": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No such client (KH-ICL-0404)"
+          },
+          "409": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Already revoked (KH-ICL-1409)"
+          }
+        },
+        "summary": "Revoke an issuer client",
+        "tags": [
+          "issuer-clients"
+        ]
+      }
+    },
+    "/api/v1/issuer-clients/{id}/rotate": {
+      "post": {
+        "description": "Mints a replacement client (new key, same schemas and expiry) and puts this one into a grace window: it keeps authenticating for retireAfterHours (0-72, default 24), then is revoked by the worker. Only an ACTIVE client can be rotated. Requires key:manage.",
+        "operationId": "rotateIssuerClient",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RotateIssuerClientRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedIssuerClientResponse"
+                }
+              }
+            },
+            "description": "Replacement created; new key in the body"
+          },
+          "400": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "retireAfterHours outside 0-72 (KH-ICL-0400)"
+          },
+          "401": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No valid console session"
+          },
+          "403": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Missing the key:manage scope (KH-RBC-0403)"
+          },
+          "404": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No such client in this tenant (KH-ICL-0404)"
+          },
+          "409": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The client is not ACTIVE (KH-ICL-1409)"
+          }
+        },
+        "summary": "Rotate an issuer client's key",
+        "tags": [
+          "issuer-clients"
+        ]
+      }
+    },
+    "/api/v1/issuer-clients/{id}/suspend": {
+      "post": {
+        "description": "ACTIVE → SUSPENDED; its key is rejected until resumed. Requires key:manage.",
+        "operationId": "suspendIssuerClient",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuerClientResponse"
+                }
+              }
+            },
+            "description": "Suspended"
+          },
+          "404": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No such client (KH-ICL-0404)"
+          },
+          "409": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The client is not ACTIVE (KH-ICL-1409)"
+          }
+        },
+        "summary": "Suspend an issuer client",
+        "tags": [
+          "issuer-clients"
+        ]
+      }
+    },
     "/api/v1/org/children": {
       "get": {
         "description": "Every direct child of the caller's own tenant and its status — never grandchildren (spec §7). Requires the org:admin scope.",
@@ -3903,6 +4506,306 @@
         "summary": "List the caller's direct children",
         "tags": [
           "org-admin"
+        ]
+      }
+    },
+    "/api/v1/org/children/{childId}/issuer-clients": {
+      "get": {
+        "description": "Requires org:admin on the parent tenant; the child must be a direct child.",
+        "operationId": "listChildIssuerClients",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "childId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IssuerClientResponse"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "The child's issuer clients"
+          },
+          "404": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No such direct child (KH-ORG-0404, unified)"
+          }
+        },
+        "summary": "List a child tenant's issuer clients",
+        "tags": [
+          "org-issuer-clients"
+        ]
+      },
+      "post": {
+        "description": "As POST /api/v1/issuer-clients, in the child. The child inherits the root tenant's holder secret, so no holderHmacSecret is ever returned here.",
+        "operationId": "createChildIssuerClient",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "childId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateIssuerClientRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedIssuerClientResponse"
+                }
+              }
+            },
+            "description": "Created; the one-time key is in the body"
+          },
+          "404": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No such direct child (KH-ORG-0404, unified)"
+          }
+        },
+        "summary": "Create an issuer client in a child tenant",
+        "tags": [
+          "org-issuer-clients"
+        ]
+      }
+    },
+    "/api/v1/org/children/{childId}/issuer-clients/{clientId}/resume": {
+      "post": {
+        "operationId": "resumeChildIssuerClient",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "childId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "clientId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuerClientResponse"
+                }
+              }
+            },
+            "description": "Resumed"
+          },
+          "404": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No such direct child or client"
+          }
+        },
+        "summary": "Resume a child's issuer client",
+        "tags": [
+          "org-issuer-clients"
+        ]
+      }
+    },
+    "/api/v1/org/children/{childId}/issuer-clients/{clientId}/revoke": {
+      "post": {
+        "operationId": "revokeChildIssuerClient",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "childId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "clientId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuerClientResponse"
+                }
+              }
+            },
+            "description": "Revoked"
+          },
+          "404": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No such direct child or client"
+          }
+        },
+        "summary": "Revoke a child's issuer client",
+        "tags": [
+          "org-issuer-clients"
+        ]
+      }
+    },
+    "/api/v1/org/children/{childId}/issuer-clients/{clientId}/rotate": {
+      "post": {
+        "operationId": "rotateChildIssuerClient",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "childId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "clientId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RotateIssuerClientRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedIssuerClientResponse"
+                }
+              }
+            },
+            "description": "Replacement created"
+          },
+          "404": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No such direct child (KH-ORG-0404) or client (KH-ICL-0404)"
+          }
+        },
+        "summary": "Rotate a child's issuer client",
+        "tags": [
+          "org-issuer-clients"
+        ]
+      }
+    },
+    "/api/v1/org/children/{childId}/issuer-clients/{clientId}/suspend": {
+      "post": {
+        "operationId": "suspendChildIssuerClient",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "childId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "clientId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuerClientResponse"
+                }
+              }
+            },
+            "description": "Suspended"
+          },
+          "404": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No such direct child or client"
+          }
+        },
+        "summary": "Suspend a child's issuer client",
+        "tags": [
+          "org-issuer-clients"
         ]
       }
     },
@@ -4244,7 +5147,7 @@
                 }
               }
             },
-            "description": "Missing the org:admin scope (KH-RBC-0403)"
+            "description": "Missing the org:admin scope (KH-RBC-0403), or a requested role exceeds the caller's own role-grant ceiling (KH-USR-2403 — no self-propagation: an org:admin cannot grant ORG_ADMIN to a child's user either, only platform:admin can)"
           },
           "404": {
             "content": {
@@ -5276,7 +6179,7 @@
                 }
               }
             },
-            "description": "Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me)"
+            "description": "Missing the tenant:admin scope (KH-RBC-0403), the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me), or a requested role exceeds the caller's own role-grant ceiling (KH-USR-2403 — only platform:admin may grant PLATFORM_ADMIN/ORG_ADMIN)"
           },
           "409": {
             "content": {
@@ -5677,7 +6580,7 @@
                 }
               }
             },
-            "description": "Missing the tenant:admin scope (KH-RBC-0403), or the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me)"
+            "description": "Missing the tenant:admin scope (KH-RBC-0403), the caller's own mustChangePassword flag is set (KH-USR-0403 — see GET /api/v1/auth/me), or a requested role exceeds the caller's own role-grant ceiling (KH-USR-2403 — only platform:admin may grant PLATFORM_ADMIN/ORG_ADMIN)"
           },
           "404": {
             "content": {
@@ -5977,6 +6880,10 @@
       "name": "auth"
     },
     {
+      "description": "Machine-to-machine issuer clients — keys, rotation, suspension, revocation",
+      "name": "issuer-clients"
+    },
+    {
       "description": "Credential schema (credential type) lookups and authoring",
       "name": "schema"
     },
@@ -5991,6 +6898,10 @@
     {
       "description": "Wallet claim-code delivery",
       "name": "claim"
+    },
+    {
+      "description": "Parent-organisation management of direct children's issuer clients",
+      "name": "org-issuer-clients"
     },
     {
       "description": "org:admin on-behalf-of plane — direct children only (spec FS-2.5 §3/§4)",

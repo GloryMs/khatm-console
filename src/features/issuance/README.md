@@ -7,7 +7,14 @@ one-time claim code to a wallet.
 - `api.ts` wraps generated contract calls only: schema list/detail, issue, and
   claim-code mint.
 - `claimsDef.ts` parses `claimsDefJson` into `ClaimField[]` for `IssueForm`.
-- `IssueForm.tsx` renders holder pseudo_ref, defaults, and dynamic claim fields.
+- `IssueForm.tsx` renders the holder reference, defaults, and dynamic claim
+  fields. `holderRef` is optional (KH-2.8.2 veto V1-b): left blank, the
+  platform generates one; if typed, it must be 64 hex characters
+  (`@/lib/holderRef`) or the field shows `issue.holderRefInvalid`. Normalized
+  (trimmed, lowercased) and omitted entirely from the request when blank —
+  never sent as `""`. `IssuePage`'s success screen always shows
+  `IssueResponse.holderRef` (generated or supplied) alongside the credential
+  ref.
 - Selective-disclosure badges use `SchemaDetail.sdFields`; required validation
   remains driven by `claims_def.required`.
 - Schema defaults prefill max uses and ISO-8601 validity display minutes.

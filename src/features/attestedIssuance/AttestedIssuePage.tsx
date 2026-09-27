@@ -8,7 +8,6 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { SecretReveal } from '@/components/ui/SecretReveal';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { copyToClipboard } from '@/components/ui/clipboard';
-import { useErrorMessage } from '@/api/useErrorMessage';
 import { RequireScope } from '@/features/auth/RequireScope';
 import { parseClaimsDef } from '@/features/issuance/claimsDef';
 import { SchemaPicker } from '@/features/issuance/components/SchemaPicker';
@@ -27,6 +26,7 @@ type WizardStep = 'schema' | 'scan' | 'details' | 'review' | 'success';
 
 interface SuccessState {
   ref: string;
+  holderRef: string;
   code: string;
   expiresAt: string;
   qrApiBase: string;
@@ -68,6 +68,19 @@ function SuccessView({
           {t('common.copy')}
         </Button>
       </div>
+
+      <div className={styles.valueRow}>
+        <span className={styles.valueLabel}>{t('issue.holderRef')}</span>
+        <span className={`${styles.codeValue} ltr-embed`}>{success.holderRef}</span>
+        <Button
+          variant="ghost"
+          type="button"
+          onClick={() => void copyToClipboard(success.holderRef)}
+        >
+          {t('common.copy')}
+        </Button>
+      </div>
+      <p className={styles.help}>{t('issue.holderRefGenerated')}</p>
 
       <SecretReveal
         label={t('issue.claimCodeLabel')}
@@ -114,7 +127,6 @@ export function AttestedIssuePage() {
 function AttestedIssueWizard() {
   const { t } = useTranslation();
   const localize = useLocalizedText();
-  const resolveError = useErrorMessage();
   const schemas = useAttestedSchemas();
   const issueAndMint = useIssueAndMintCredential();
 
@@ -164,6 +176,7 @@ function AttestedIssueWizard() {
     const qrApiBase = getQrApiBase();
     setSuccess({
       ref: response.issued.ref ?? requireText(response.issued.id, 'issue.missingCredentialId'),
+      holderRef: requireText(response.issued.holderRef, 'issue.missingHolderRef'),
       code,
       expiresAt,
       qrApiBase,
@@ -249,7 +262,7 @@ function AttestedIssueWizard() {
                   fields={otherFields}
                   values={formValues}
                   isBusy={issueAndMint.isPending}
-                  errorMessage={issueAndMint.isError ? resolveError(issueAndMint.error) : undefined}
+                  error={issueAndMint.isError ? issueAndMint.error : undefined}
                   onConfirm={() => void onConfirmIssue()}
                   onBack={() => setStep('details')}
                 />

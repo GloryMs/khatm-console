@@ -14,6 +14,7 @@ vi.mock('qrcode.react', () => ({
 
 // sha256('scan-bytes'), verified against Node's crypto.createHash('sha256').
 const KNOWN_DIGEST = '4ccad8430338d80eb58b62bb7f7636ae1cea1d615b8b5098a4d1a10efbd22a45';
+const VALID_HOLDER_REF = '0123456789abcdef'.repeat(4);
 
 const baseAuth: AuthContextValue = {
   status: 'authenticated',
@@ -93,6 +94,7 @@ describe('AttestedIssuePage full walkthrough', () => {
     const issue = vi.spyOn(issuanceApi, 'issueCredential').mockResolvedValue({
       id: 'credential-att-1',
       ref: 'CRD-2026-0099',
+      holderRef: VALID_HOLDER_REF,
       sdJwt: 'sd.jwt',
     });
     vi.spyOn(issuanceApi, 'mintClaimCode').mockResolvedValue({
@@ -114,7 +116,10 @@ describe('AttestedIssuePage full walkthrough', () => {
     expect(await screen.findByText(KNOWN_DIGEST)).toBeInTheDocument();
     expect(screen.queryByLabelText('Document SHA-256')).not.toBeInTheDocument();
 
-    await user.type(screen.getByLabelText(i18n.t('issue.holderRef')), 'holder-att-001');
+    await user.type(
+      screen.getByLabelText(i18n.t('issue.holderRef')),
+      VALID_HOLDER_REF.toUpperCase(),
+    );
     await user.type(screen.getByLabelText('Document Type'), 'IDENTITY_DOCUMENT');
     await user.click(
       screen.getByRole('button', { name: i18n.t('issueAttested.details.continueToReview') }),
@@ -133,7 +138,8 @@ describe('AttestedIssuePage full walkthrough', () => {
 
     await waitFor(() => expect(issue).toHaveBeenCalledTimes(1));
     expect(issue).toHaveBeenCalledWith({
-      holderRef: 'holder-att-001',
+      // Typed uppercase above — the request must carry the normalized (lowercase) form.
+      holderRef: VALID_HOLDER_REF,
       schemaCode: 'AttestedDocument/v1',
       schemaId: 'schema-att-1',
       claims: {
@@ -149,5 +155,56 @@ describe('AttestedIssuePage full walkthrough', () => {
     });
 
     expect(await screen.findByText('CRD-2026-0099')).toBeInTheDocument();
+    expect(screen.getByText(VALID_HOLDER_REF)).toBeInTheDocument();
+  });
+
+  it('omits holderRef from the request when left blank, and blocks submit with a shape error for free text', async () => {
+    vi.spyOn(issuanceApi, 'listAttestedSchemas').mockResolvedValue([attestedSchema]);
+    vi.spyOn(issuanceApi, 'getIssueSchema').mockResolvedValue(attestedDetail);
+    const issue = vi.spyOn(issuanceApi, 'issueCredential').mockResolvedValue({
+      id: 'credential-att-2',
+      ref: 'CRD-2026-0100',
+      holderRef: VALID_HOLDER_REF,
+      sdJwt: 'sd.jwt',
+    });
+    vi.spyOn(issuanceApi, 'mintClaimCode').mockResolvedValue({
+      code: 'CLAIM-ATT-2',
+      expiresAt: '2026-08-20T12:00:00Z',
+    });
+
+    const user = userEvent.setup();
+    renderPage({ ...baseAuth, hasScope: (scope) => scope === 'issue' });
+
+    await user.click(await screen.findByRole('button', { name: /Attested Document/ }));
+    const fileInput = await screen.findByLabelText(i18n.t('issueAttested.scan.pickFile'));
+    await user.upload(fileInput, new File(['scan-bytes'], 'scan.bin'));
+    await screen.findByText(KNOWN_DIGEST);
+
+    // Free text is rejected before the request is ever built.
+    await user.type(screen.getByLabelText(i18n.t('issue.holderRef')), 'holder-att-001');
+    await user.click(
+      screen.getByRole('button', { name: i18n.t('issueAttested.details.continueToReview') }),
+    );
+    expect(await screen.findByText(i18n.t('issue.holderRefInvalid'))).toBeInTheDocument();
+
+    // Clear it and continue with a blank value instead.
+    await user.clear(screen.getByLabelText(i18n.t('issue.holderRef')));
+    await user.type(screen.getByLabelText('Document Type'), 'IDENTITY_DOCUMENT');
+    await user.click(
+      screen.getByRole('button', { name: i18n.t('issueAttested.details.continueToReview') }),
+    );
+
+    expect(await screen.findByText(i18n.t('issue.holderRefNotProvided'))).toBeInTheDocument();
+    await user.click(screen.getByLabelText(i18n.t('issueAttested.review.acknowledge')));
+    await user.click(screen.getByRole('button', { name: i18n.t('issueAttested.review.issueCta') }));
+    const typeInput = await screen.findByLabelText(i18n.t('issueAttested.review.typePrompt'));
+    await user.type(typeInput, KNOWN_DIGEST.slice(0, 8));
+    await user.click(
+      screen.getByRole('button', { name: i18n.t('issueAttested.review.confirmCta') }),
+    );
+
+    await waitFor(() => expect(issue).toHaveBeenCalledTimes(1));
+    const sentBody = JSON.parse(JSON.stringify(issue.mock.calls[0][0]));
+    expect(sentBody).not.toHaveProperty('holderRef');
   });
 });

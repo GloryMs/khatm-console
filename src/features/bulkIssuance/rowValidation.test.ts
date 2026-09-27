@@ -61,4 +61,40 @@ describe('validateRows', () => {
     expect(rows.map((r) => r.rowIndex)).toEqual([0, 1, 2]);
     expect(rows.map(isRowValid)).toEqual([true, false, true]);
   });
+
+  describe('pseudoRef', () => {
+    const HOLDER_REF = '11111111'.repeat(8);
+
+    it('treats a blank pseudoRef cell as absence, not an error', () => {
+      const parsed = parsedFrom(['fullName', 'pseudoRef'], [['Ali', '']]);
+      const mapping = autoMapColumns(parsed.headers, fields);
+      const [row] = validateRows(parsed, fields, mapping);
+      expect(isRowValid(row)).toBe(true);
+      expect(row.pseudoRef).toBeUndefined();
+    });
+
+    it('treats an unmapped pseudoRef column as absence, not an error', () => {
+      const parsed = parsedFrom(['fullName'], [['Ali']]);
+      const mapping = autoMapColumns(parsed.headers, fields);
+      const [row] = validateRows(parsed, fields, mapping);
+      expect(isRowValid(row)).toBe(true);
+      expect(row.pseudoRef).toBeUndefined();
+    });
+
+    it('flags a non-blank pseudoRef that is not 64 hex characters', () => {
+      const parsed = parsedFrom(['fullName', 'pseudoRef'], [['Ali', 'holder-1']]);
+      const mapping = autoMapColumns(parsed.headers, fields);
+      const [row] = validateRows(parsed, fields, mapping);
+      expect(isRowValid(row)).toBe(false);
+      expect(row.errors).toEqual([{ fieldName: 'pseudoRef', kind: 'pseudoRef' }]);
+    });
+
+    it('accepts a well-formed 64-hex pseudoRef', () => {
+      const parsed = parsedFrom(['fullName', 'pseudoRef'], [['Ali', HOLDER_REF]]);
+      const mapping = autoMapColumns(parsed.headers, fields);
+      const [row] = validateRows(parsed, fields, mapping);
+      expect(isRowValid(row)).toBe(true);
+      expect(row.pseudoRef).toBe(HOLDER_REF);
+    });
+  });
 });

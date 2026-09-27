@@ -20,6 +20,10 @@
   overflow-wrap: anywhere;
 }
 
+.holderRefInput {
+  font-family: var(--font-mono);
+}
+
 .staticFields {
   display: flex;
   flex-direction: column;
