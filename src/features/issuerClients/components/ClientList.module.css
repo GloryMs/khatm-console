@@ -1,0 +1,33 @@
+.name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nameText {
+  font-weight: 600;
+}
+
+.schemaChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.chip {
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-2);
+  font-size: var(--fs-xs);
+}
+
+.noChips {
+  color: var(--color-text-muted);
+  font-size: var(--fs-xs);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

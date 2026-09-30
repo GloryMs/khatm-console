@@ -6,8 +6,10 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import i18n from '@/i18n';
 import { AuthContext, type AuthContextValue } from '@/features/auth/AuthContext';
+import * as schemasApi from '@/features/schemas/api';
 import type { SchemaSummary } from '@/features/schemas/api';
 import type { UserSummary } from '@/features/tenants/api';
+import type { IssuerClientResponse } from '@/features/issuerClients/api';
 import * as orgApi from './api';
 import { OrgChildPage } from './OrgChildPage';
 
@@ -49,6 +51,14 @@ const childSchema: SchemaSummary = {
   version: 1,
   status: 'PUBLISHED',
   nameI18n: { en: 'Passport', ar: 'جواز سفر' },
+};
+
+const childClient: IssuerClientResponse = {
+  id: 'ic-1',
+  keyPrefix: 'khi_child0001',
+  status: 'ACTIVE',
+  name: { en: 'Border connector', ar: 'موصل الحدود' },
+  allowedSchemaIds: [],
 };
 
 function renderPage(auth: AuthContextValue) {
@@ -214,5 +224,95 @@ describe('OrgChildPage schemas tab', () => {
     await user.click(await screen.findByRole('tab', { name: i18n.t('org.child.tabSchemas') }));
 
     expect(await screen.findByText(i18n.t('org.child.schemasEmpty'))).toBeInTheDocument();
+  });
+});
+
+describe('OrgChildPage issuer clients tab (spec FS-2.7a D10 D3)', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("lists the child's issuer clients and creates one on behalf of it, with no holderHmacSecret ever requested", async () => {
+    vi.spyOn(orgApi, 'listChildren').mockResolvedValue([child]);
+    vi.spyOn(schemasApi, 'listSchemas').mockResolvedValue([]);
+    vi.spyOn(orgApi, 'listChildIssuerClients').mockResolvedValue([childClient]);
+    const createChildIssuerClient = vi.spyOn(orgApi, 'createChildIssuerClient').mockResolvedValue({
+      id: 'ic-2',
+      keyPrefix: 'khi_child0002',
+      apiKey: 'khi_child0002_secretvalue',
+    });
+    const user = userEvent.setup();
+    renderPage(orgAdminAuth);
+
+    await user.click(
+      await screen.findByRole('tab', { name: i18n.t('org.child.tabIssuerClients') }),
+    );
+    expect(await screen.findByText('khi_child0001')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: i18n.t('clients.createCta') }));
+    const dialog = screen.getByRole('dialog');
+    await user.type(within(dialog).getByLabelText(i18n.t('clients.create.nameEn')), 'Border');
+    await user.type(within(dialog).getByLabelText(i18n.t('clients.create.nameAr')), 'حدود');
+    await user.click(within(dialog).getByRole('button', { name: i18n.t('clients.create.submit') }));
+
+    await waitFor(() =>
+      expect(createChildIssuerClient).toHaveBeenCalledWith(
+        'child-1',
+        expect.objectContaining({ name: { en: 'Border', ar: 'حدود' } }),
+      ),
+    );
+
+    await user.click(await screen.findByRole('button', { name: i18n.t('common.reveal') }));
+    expect(await screen.findByText('khi_child0002_secretvalue')).toBeInTheDocument();
+    // The child never receives a holderHmacSecret (spec D9) — nothing to reveal for it.
+    expect(screen.queryByText(i18n.t('clients.reveal.holderSecretLabel'))).not.toBeInTheDocument();
+  });
+
+  it('suspends a child issuer client on behalf of it', async () => {
+    vi.spyOn(orgApi, 'listChildren').mockResolvedValue([child]);
+    vi.spyOn(schemasApi, 'listSchemas').mockResolvedValue([]);
+    vi.spyOn(orgApi, 'listChildIssuerClients').mockResolvedValue([childClient]);
+    const suspendChildIssuerClient = vi
+      .spyOn(orgApi, 'suspendChildIssuerClient')
+      .mockResolvedValue({ ...childClient, status: 'SUSPENDED' });
+    const user = userEvent.setup();
+    renderPage(orgAdminAuth);
+
+    await user.click(
+      await screen.findByRole('tab', { name: i18n.t('org.child.tabIssuerClients') }),
+    );
+    await user.click(await screen.findByRole('button', { name: i18n.t('clients.actionSuspend') }));
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: i18n.t('clients.suspendConfirm.confirm'),
+      }),
+    );
+
+    await waitFor(() => expect(suspendChildIssuerClient).toHaveBeenCalledWith('child-1', 'ic-1'));
+  });
+
+  it('revokes a child issuer client only after the exact key prefix is typed', async () => {
+    vi.spyOn(orgApi, 'listChildren').mockResolvedValue([child]);
+    vi.spyOn(schemasApi, 'listSchemas').mockResolvedValue([]);
+    vi.spyOn(orgApi, 'listChildIssuerClients').mockResolvedValue([childClient]);
+    const revokeChildIssuerClient = vi
+      .spyOn(orgApi, 'revokeChildIssuerClient')
+      .mockResolvedValue({ ...childClient, status: 'REVOKED' });
+    const user = userEvent.setup();
+    renderPage(orgAdminAuth);
+
+    await user.click(
+      await screen.findByRole('tab', { name: i18n.t('org.child.tabIssuerClients') }),
+    );
+    await user.click(await screen.findByRole('button', { name: i18n.t('clients.actionRevoke') }));
+    const dialog = screen.getByRole('dialog');
+    const confirm = within(dialog).getByRole('button', {
+      name: i18n.t('clients.revokeConfirm.confirm'),
+    });
+    expect(confirm).toBeDisabled();
+
+    await user.type(within(dialog).getByRole('textbox'), 'khi_child0001');
+    expect(confirm).toBeEnabled();
+    await user.click(confirm);
+
+    await waitFor(() => expect(revokeChildIssuerClient).toHaveBeenCalledWith('child-1', 'ic-1'));
   });
 });

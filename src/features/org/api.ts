@@ -7,6 +7,12 @@ import type {
   UserSummary,
 } from '@/features/tenants/api';
 import type { SchemaSummary } from '@/features/schemas/api';
+import type {
+  CreateIssuerClientRequest,
+  CreatedIssuerClientResponse,
+  IssuerClientResponse,
+  RotateIssuerClientRequest,
+} from '@/features/issuerClients/api';
 
 export type TenantRef = components['schemas']['TenantRef'];
 export type OrgReportView = components['schemas']['OrgReportView'];
@@ -86,6 +92,78 @@ export function disableChildUser(id: string, userId: string): Promise<UserSummar
 export function resetChildUserPassword(id: string, userId: string): Promise<CreateUserResponse> {
   return apiFetch<CreateUserResponse>(
     `${BASE}/children/${encodeURIComponent(id)}/users/${encodeURIComponent(userId)}/reset-password`,
+    { method: 'POST' },
+  );
+}
+
+/**
+ * A direct child's issuer clients, on behalf of it (spec FS-2.7a D10 D3) —
+ * the same shape as the tenant's own `/api/v1/issuer-clients`, reached
+ * through the parent's `org:admin` scope rather than the child's own
+ * `key:manage`. Requires the `org:admin` scope.
+ */
+export function listChildIssuerClients(childId: string): Promise<IssuerClientResponse[]> {
+  return apiFetch<IssuerClientResponse[]>(
+    `${BASE}/children/${encodeURIComponent(childId)}/issuer-clients`,
+  );
+}
+
+/**
+ * Creates an issuer client in a direct child. The child inherits the root
+ * tenant's holder HMAC secret, so the response never carries one here.
+ * Requires the `org:admin` scope.
+ */
+export function createChildIssuerClient(
+  childId: string,
+  req: CreateIssuerClientRequest,
+): Promise<CreatedIssuerClientResponse> {
+  return apiFetch<CreatedIssuerClientResponse>(
+    `${BASE}/children/${encodeURIComponent(childId)}/issuer-clients`,
+    { method: 'POST', body: req },
+  );
+}
+
+/** Requires the `org:admin` scope. */
+export function rotateChildIssuerClient(
+  childId: string,
+  clientId: string,
+  req: RotateIssuerClientRequest,
+): Promise<CreatedIssuerClientResponse> {
+  return apiFetch<CreatedIssuerClientResponse>(
+    `${BASE}/children/${encodeURIComponent(childId)}/issuer-clients/${encodeURIComponent(clientId)}/rotate`,
+    { method: 'POST', body: req },
+  );
+}
+
+/** Requires the `org:admin` scope. */
+export function suspendChildIssuerClient(
+  childId: string,
+  clientId: string,
+): Promise<IssuerClientResponse> {
+  return apiFetch<IssuerClientResponse>(
+    `${BASE}/children/${encodeURIComponent(childId)}/issuer-clients/${encodeURIComponent(clientId)}/suspend`,
+    { method: 'POST' },
+  );
+}
+
+/** Requires the `org:admin` scope. */
+export function resumeChildIssuerClient(
+  childId: string,
+  clientId: string,
+): Promise<IssuerClientResponse> {
+  return apiFetch<IssuerClientResponse>(
+    `${BASE}/children/${encodeURIComponent(childId)}/issuer-clients/${encodeURIComponent(clientId)}/resume`,
+    { method: 'POST' },
+  );
+}
+
+/** Requires the `org:admin` scope. */
+export function revokeChildIssuerClient(
+  childId: string,
+  clientId: string,
+): Promise<IssuerClientResponse> {
+  return apiFetch<IssuerClientResponse>(
+    `${BASE}/children/${encodeURIComponent(childId)}/issuer-clients/${encodeURIComponent(clientId)}/revoke`,
     { method: 'POST' },
   );
 }

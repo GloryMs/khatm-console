@@ -5,9 +5,10 @@ children only — never grandchildren (spec §7). Entity management, not content
 — org:admin never reads a child's credentials, proofs, or keys.
 
 **Routes:** `/org` (`OrgPage`, children list + suspend/activate + the
-aggregated report) and `/org/children/:id` (`OrgChildPage`, a child's users +
-read-only schemas, always showing the "acting on behalf of" banner), both
-self-gated with `RequireScope('org:admin')`.
+aggregated report) and `/org/children/:id` (`OrgChildPage`, a child's users,
+read-only schemas, and issuer clients — full lifecycle, spec FS-2.7a D10 D3 —
+always showing the "acting on behalf of" banner), both self-gated with
+`RequireScope('org:admin')`.
 
 **Queries / mutations:** `useChildren` → `GET /api/v1/org/children`;
 `useSuspendChild`/`useActivateChild` → `POST .../children/{id}/suspend|activate`
@@ -24,3 +25,10 @@ not the browser's local timezone, so "start of period" is deterministic.
 
 There is no single "get one child" endpoint — `OrgChildPage` resolves the
 child's display name from the already-fetched `useChildren()` list by id.
+
+The issuer-clients tab's `useChild*IssuerClient` hooks (`hooks.ts`) reuse
+`features/issuerClients`'s `ClientList`/`CreateClientDialog`/`RotateDialog`/
+`RevealSecretsDialog` components against this feature's own child-scoped
+`api.ts` calls — no separate component tree. A child never receives a
+`holderHmacSecret` (it inherits the root tenant's), so `RevealSecretsDialog`
+is always opened here without one.
