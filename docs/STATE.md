@@ -14,12 +14,12 @@
   walkthrough note below and "Last completed" for the merge record.
   **Preamble.** `khatm-platform` `main` confirmed past both KH-2.8.1 (PR #69)
   and KH-2.8.2 (PR #70) — `git log` shows both merged. `npm run
-  contract:update` had actually already been pulled by the prior C13a
+contract:update` had actually already been pulled by the prior C13a
   session's own preamble (it fetched past both PRs to get `holderRef`), so
   this session's fetch was a no-op re-confirmation, not a fresh vendor: every
   named field/route from the brief's gate — `GET/POST /api/v1/issuer-clients`,
   `/{id}/rotate|suspend|resume|revoke`, `GET/POST/rotate/suspend/resume/revoke
-  /api/v1/org/children/{childId}/issuer-clients/{clientId}`, `keyPrefix`,
+/api/v1/org/children/{childId}/issuer-clients/{clientId}`, `keyPrefix`,
   `apiKey`, `holderHmacSecret`, `retiringClientId`, `status`, `lastUsedAt`,
   `allowedSchemaIds`, `rotatedFrom`, `retireAfter` — present, confirmed by
   direct `grep`/`Read` of `contracts/openapi.json`, not assumed. The org-child
@@ -27,7 +27,7 @@
   resume/revoke), not just read — better than the brief's own "read + actions
   if provided" hedge, so D3 below is not read-only. `MeResponse.scopes`
   confirmed present (already vendored by C11). Baseline `npm run
-  typecheck`/`lint`/`test` (313/313) green on `main` before branching.
+typecheck`/`lint`/`test` (313/313) green on `main` before branching.
   **Investigation, per the brief's own conditional gate:** cross-tenant
   `platform:admin` read of issuer clients across tenants — grepped the full
   contract for any `/admin/issuer-clients` or similar path; none exists, only
@@ -41,7 +41,7 @@
   reading `khatm-platform`'s `ErrorCode.java` directly shows the actual
   `messageKey`s are `issuer-client.validation-failed` (`KH-ICL-0400`),
   `issuer-client.not-found` (`KH-ICL-0404`), `issuer-client.invalid-
-  transition` (`KH-ICL-1409`), and `issuer-client.holder-secret-unavailable`
+transition` (`KH-ICL-1409`), and `issuer-client.holder-secret-unavailable`
   (`KH-ICL-0503`) — no `icl.*` prefix anywhere. `KH-ICL-0409` is registry-only
   (never returned to a console caller; the M2M auth path returns
   `KH_AUTH_0401`'s body verbatim for anti-enumeration, per spec D12) so it has
@@ -76,7 +76,7 @@
     `ClientList`/`CreateClientDialog`/`RotateDialog`/`RevealSecretsDialog`
     components verbatim against six new child-scoped functions added to
     `org/api.ts`/`org/hooks.ts` (`list/create/rotate/suspend/resume/revoke
-    ChildIssuerClient`) — no parallel component tree, per the brief's own
+ChildIssuerClient`) — no parallel component tree, per the brief's own
     "no parallel pattern" instruction for `OnBehalfOfExecutor#runAsChildOrg`.
     A child's `RevealSecretsDialog` is always opened without a
     `holderHmacSecret` (the contract never returns one for a child — it
@@ -86,7 +86,7 @@
     platform ask (cross-tenant `platform:admin` issuer-client read, if ever
     wanted, needs a new endpoint — none exists today).
   - **D5 — READMEs.** New `features/issuerClients/README.md`; `features/
-    org/README.md` extended for the third tab and its component reuse.
+org/README.md` extended for the third tab and its component reuse.
   - **Veto answers used:** V1 = (a), `/clients` self-gated on `key:manage`
     (default). V2 = the stronger explicit-close reveal dialog (default,
     described above). V3 = separate warning-toned block for the holder
@@ -101,11 +101,11 @@
     test, not itemized in the brief:** both `ClientsPage`'s and
     `OrgChildPage`'s revoke `TypeToConfirmDialog` initially passed the
     resolved error string through the plain `errorMessage` prop — no `code`,
-    no `traceId`, the *exact* same gap the 2026-09-27 C13a session already
+    no `traceId`, the _exact_ same gap the 2026-09-27 C13a session already
     found and fixed on `AttestedIssuePage`'s `ReviewStep` for a different
     dialog. Fixed the same way: pass the raw `error: unknown` through
     `TypeToConfirmDialog`'s existing `children` slot as `<ApiErrorBanner
-    error={...} />` instead of the string prop. Caught by a test asserting
+error={...} />` instead of the string prop. Caught by a test asserting
     the code/traceId actually render, not just that some error text does —
     worth remembering that this dialog's plain-string path is an easy trap
     for the next new type-to-confirm caller too.
@@ -641,7 +641,7 @@ contract:update`) confirmed the contract was already current (no diff against wh
   `errors["issuer-client"].*` brief-vs-code discrepancy, veto answers, the two
   bugs found and fixed while writing tests, test counts) is under "Current
   phase / task" above rather than duplicated here. Baseline `npm run
-  typecheck`/`lint`/`test` (313/313) confirmed green on `main` before
+typecheck`/`lint`/`test` (313/313) confirmed green on `main` before
   branching. `khatm-console`'s running container was rebuilt from the branch
   for Majd's walkthrough (it had predated this session's changes entirely —
   see "Current phase / task" for the full story, including the DB check that
