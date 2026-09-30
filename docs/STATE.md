@@ -6,6 +6,159 @@
 
 ## Current phase / task
 
+- C13-issuer-clients (console side of FS-2.7a D10 — `/clients` issuer-client
+  (M2M) management for `tenant:admin`/`key:manage`, session
+  `SESSION-C13-issuer-clients.md`, branch `feat/C13-issuer-clients`) —
+  **DONE. PR opened and merged to `main` 2026-09-30** (squash, branch
+  deleted), after Majd's live walkthrough and Arabic/RTL pass — see the live
+  walkthrough note below and "Last completed" for the merge record.
+  **Preamble.** `khatm-platform` `main` confirmed past both KH-2.8.1 (PR #69)
+  and KH-2.8.2 (PR #70) — `git log` shows both merged. `npm run
+  contract:update` had actually already been pulled by the prior C13a
+  session's own preamble (it fetched past both PRs to get `holderRef`), so
+  this session's fetch was a no-op re-confirmation, not a fresh vendor: every
+  named field/route from the brief's gate — `GET/POST /api/v1/issuer-clients`,
+  `/{id}/rotate|suspend|resume|revoke`, `GET/POST/rotate/suspend/resume/revoke
+  /api/v1/org/children/{childId}/issuer-clients/{clientId}`, `keyPrefix`,
+  `apiKey`, `holderHmacSecret`, `retiringClientId`, `status`, `lastUsedAt`,
+  `allowedSchemaIds`, `rotatedFrom`, `retireAfter` — present, confirmed by
+  direct `grep`/`Read` of `contracts/openapi.json`, not assumed. The org-child
+  plane turned out to expose **full lifecycle** (create/rotate/suspend/
+  resume/revoke), not just read — better than the brief's own "read + actions
+  if provided" hedge, so D3 below is not read-only. `MeResponse.scopes`
+  confirmed present (already vendored by C11). Baseline `npm run
+  typecheck`/`lint`/`test` (313/313) green on `main` before branching.
+  **Investigation, per the brief's own conditional gate:** cross-tenant
+  `platform:admin` read of issuer clients across tenants — grepped the full
+  contract for any `/admin/issuer-clients` or similar path; none exists, only
+  the tenant-scoped `/issuer-clients` (`key:manage`) and the parent-child
+  `/org/children/{id}/issuer-clients` (`org:admin`) families. Matches
+  `khatm-platform`'s own STATE note that cross-tenant read was out of scope
+  for KH-2.8.1. **D4 is therefore not built** — recorded as a platform ask
+  below, exactly as the brief's own fallback wording anticipated.
+  **A real brief-vs-code discrepancy caught before writing any i18n, not
+  after:** the brief's D2 says `errors.icl.*` for the `KH-ICL-*` codes, but
+  reading `khatm-platform`'s `ErrorCode.java` directly shows the actual
+  `messageKey`s are `issuer-client.validation-failed` (`KH-ICL-0400`),
+  `issuer-client.not-found` (`KH-ICL-0404`), `issuer-client.invalid-
+  transition` (`KH-ICL-1409`), and `issuer-client.holder-secret-unavailable`
+  (`KH-ICL-0503`) — no `icl.*` prefix anywhere. `KH-ICL-0409` is registry-only
+  (never returned to a console caller; the M2M auth path returns
+  `KH_AUTH_0401`'s body verbatim for anti-enumeration, per spec D12) so it has
+  no console-facing message at all. Built `errors["issuer-client"].*` in both
+  i18n files against the real keys, not the brief's guess.
+  - **D1 — `features/issuerClients/`.** `api.ts` (generated types + the six
+    tenant-scoped calls only — no hand-written paths/types), `hooks.ts`
+    (TanStack Query, invalidating the list on every mutation), `ClientsPage`
+    (self-gated `RequireScope('key:manage')`, matching `KeyManagementPage`'s
+    pattern — narrower than `tenant:admin` since the key is signing-grade),
+    `components/ClientList` (name/prefix/status/allowed-schemas/relative-
+    last-used/actions, status-gated action set matching the contract's own
+    legal transitions), `CreateClientDialog` (name ar/en, `allowedSchemaIds`
+    multi-select from `GET /schemas`, optional `expiresAt`), `RotateDialog`
+    (plain form, `retireAfterHours` 0-72 default 24, not a type-to-confirm —
+    the brief's V4 doesn't ask for one), `RevealSecretsDialog` (V2/V3).
+  - **D1 — one-time reveal, stronger than the C2b/MintedKeyModal precedent
+    per the brief's explicit V2:** `RevealSecretsDialog` has no plain
+    "Done"/"Cancel" close and no overlay-click dismiss — the only path out is
+    an explicit "I copied the key — close" button
+    (`clients.reveal.confirmCopiedAndClose`). Both secrets render through the
+    existing shared `SecretReveal` (masked-by-default, explicit reveal,
+    copy). Neither `apiKey` nor `holderHmacSecret` ever touches the query
+    cache — `useCreateIssuerClient`/`useRotateIssuerClient`'s resolved
+    `mutateAsync` value is held only in `ClientsPage`'s local `revealState`,
+    discarded on close, same discipline as `consumingParties`'s `mintedKey`.
+  - **D2 — i18n.** `clients.*` (title, list columns, every dialog's copy) and
+    `errors["issuer-client"].*` (see the discrepancy note above) added to
+    both `en.json`/`ar.json` in this commit; parity test green.
+  - **D3 — `/org` child tab.** `OrgChildPage` gained a third "Issuer clients"
+    tab (`org.child.tabIssuerClients`), reusing `issuerClients`'s
+    `ClientList`/`CreateClientDialog`/`RotateDialog`/`RevealSecretsDialog`
+    components verbatim against six new child-scoped functions added to
+    `org/api.ts`/`org/hooks.ts` (`list/create/rotate/suspend/resume/revoke
+    ChildIssuerClient`) — no parallel component tree, per the brief's own
+    "no parallel pattern" instruction for `OnBehalfOfExecutor#runAsChildOrg`.
+    A child's `RevealSecretsDialog` is always opened without a
+    `holderHmacSecret` (the contract never returns one for a child — it
+    inherits the root's). The existing `OnBehalfOfBanner` covers this tab
+    too, unconditionally, same as the other two.
+  - **D4 — not built.** See the investigation note above; logged as a
+    platform ask (cross-tenant `platform:admin` issuer-client read, if ever
+    wanted, needs a new endpoint — none exists today).
+  - **D5 — READMEs.** New `features/issuerClients/README.md`; `features/
+    org/README.md` extended for the third tab and its component reuse.
+  - **Veto answers used:** V1 = (a), `/clients` self-gated on `key:manage`
+    (default). V2 = the stronger explicit-close reveal dialog (default,
+    described above). V3 = separate warning-toned block for the holder
+    secret (default). V4 = 0-72h window, default 24 (default). V5 =
+    `TypeToConfirmDialog` keyed on `keyPrefix` for revoke only; suspend/
+    resume use the plain `ConfirmDialog` (default). V6 = status badges reuse
+    `StatusBadge`'s existing tone vocabulary; `lastUsedAt` is relative — new
+    `relativeTime.ts` (`Intl.RelativeTimeFormat`), the console's first
+    relative-time surface (every other timestamp column is absolute
+    `Intl.DateTimeFormat`) (default).
+  - **One real work-rule-3 gap found and fixed while writing the revoke
+    test, not itemized in the brief:** both `ClientsPage`'s and
+    `OrgChildPage`'s revoke `TypeToConfirmDialog` initially passed the
+    resolved error string through the plain `errorMessage` prop — no `code`,
+    no `traceId`, the *exact* same gap the 2026-09-27 C13a session already
+    found and fixed on `AttestedIssuePage`'s `ReviewStep` for a different
+    dialog. Fixed the same way: pass the raw `error: unknown` through
+    `TypeToConfirmDialog`'s existing `children` slot as `<ApiErrorBanner
+    error={...} />` instead of the string prop. Caught by a test asserting
+    the code/traceId actually render, not just that some error text does —
+    worth remembering that this dialog's plain-string path is an easy trap
+    for the next new type-to-confirm caller too.
+  - **One real bug found and fixed while writing the rotate test:** clearing
+    `RotateDialog`'s hours `<input type="number">` produced `NaN`, logged as
+    a React "Received NaN for the `value` attribute" warning because the
+    controlled `value` prop was fed the raw state number. Fixed by rendering
+    `''` when `Number.isNaN(hours)` — the validity check (`!valid` blocks
+    submit) already treated `NaN` correctly; only the DOM value binding was
+    wrong.
+  - **Tests: 333 total now (was 313)** — `issuerClients/api.test.ts` (4,
+    spying on `apiFetch` directly per the `keyManagement`/`consumeSim`
+    precedent), `relativeTime.test.ts` (5, exact `Intl.RelativeTimeFormat`
+    strings in `en`/`ar`), `ClientsPage.test.tsx` (7: scope gate, create +
+    one-time reveal with both secrets then gone after the explicit close,
+    `KH-ICL-0503` code+traceId on create, rotate sending the exact
+    `retireAfterHours` and showing the retiring note, suspend via plain
+    confirm, revoke armed only on exact `keyPrefix`, `KH-ICL-1409`
+    code+traceId on revoke), `issuerClients.no-secret-egress.test.tsx` (1:
+    spies on `console.log/error/warn/info` and inspects the live
+    `QueryClient` cache directly — never contains either secret at any point
+    in the flow, and both are gone from the DOM after close), 3 new in
+    `OrgChildPage.test.tsx` (issuer-clients tab list + create with no
+    `holderHmacSecret` requested, suspend and revoke on behalf of the child).
+    `npm run typecheck`/`lint` (only the pre-existing `FormField.tsx`
+    warning)/`test` (333/333) all green; `format:check` clean on every file
+    this session touched (3 files needed one `prettier --write` pass,
+    reverified clean) — same 15 pre-existing untracked-file failures as
+    every prior session (`.vscode/`, `docs/sessions/`, `docs/specs/`),
+    untouched. RTL grep (`(margin|padding|border)-(left|right)`, bare
+    `left:`/`right:`, physical `text-align`, `float:`) across every new
+    `.module.css` and every changed `.tsx`: zero matches.
+  - **Console rebuilt for the walkthrough, a real gap not a precaution:**
+    `khatm-console`'s running container was built 2026-09-27 (the prior C13a
+    session), so it had none of this session's routes/nav — first observed
+    live as "the page just doesn't appear for anyone," which briefly looked
+    like a scope/role problem before the container's build timestamp settled
+    it. Checked the seeded local DB directly (`app_user`/`user_role`/`role`,
+    RLS-forced, queried via `SET app.khatm_system = 'on'`, same technique as
+    the 2026-08-20 C12 entry) to confirm role data was never the issue —
+    every `TENANT_ADMIN`/`PLATFORM_ADMIN` role already carries both
+    `tenant:admin` and `key:manage` together (`moi-admin`, `admin`, etc. all
+    qualify). Rebuilt (`docker compose build khatm-console`, cached
+    `node_modules`/`npm ci` layer, only `tsc -b && vite build` ran fresh —
+    fast) and recreated (`--force-recreate`) against the branch; `/clients`
+    and the sidebar item appeared immediately after.
+  - **Majd's live walkthrough (2026-09-30, local Docker Desktop, rebuilt
+    console + the already-current `khatm-api`/`khatm-worker`/Vault) —
+    passed**, explicitly including an Arabic/RTL pass. No console bugs
+    surfaced beyond the stale-container false alarm above. **PR opened and
+    merged to `main` 2026-09-30** (squash, branch deleted) on Majd's explicit
+    go-ahead.
+
 - C13a-holderref-contract (console side of the KH-2.8.2 `holderRef` veto V1-b —
   optional for human sessions, platform-generated when absent, 64-hex when
   present — session `docs/sessions/SESSION-C13a-holderref-contract-FINAL.md`,
@@ -481,6 +634,21 @@ contract:update`) confirmed the contract was already current (no diff against wh
   walkthrough. See "Last completed" 2026-07-30 for the full record.
 
 ## Last completed
+
+- 2026-09-30 (feat/C13-issuer-clients, session `SESSION-C13-issuer-clients.md`
+  — delivered, walkthrough passed, merged): full delivery record (D1–D3/D5,
+  D4 not built and logged as a platform ask, the `errors.icl.*` vs.
+  `errors["issuer-client"].*` brief-vs-code discrepancy, veto answers, the two
+  bugs found and fixed while writing tests, test counts) is under "Current
+  phase / task" above rather than duplicated here. Baseline `npm run
+  typecheck`/`lint`/`test` (313/313) confirmed green on `main` before
+  branching. `khatm-console`'s running container was rebuilt from the branch
+  for Majd's walkthrough (it had predated this session's changes entirely —
+  see "Current phase / task" for the full story, including the DB check that
+  ruled out a role/scope cause first). Majd's live walkthrough (2026-09-30,
+  local Docker Desktop), explicitly including Arabic/RTL, passed. **PR opened
+  and merged to `main` 2026-09-30** (squash, branch deleted) on Majd's
+  explicit go-ahead.
 
 - 2026-09-27 (feat/C13a-holderref-contract, session
   `SESSION-C13a-holderref-contract-FINAL.md` — delivered, walkthrough passed,

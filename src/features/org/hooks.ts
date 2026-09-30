@@ -1,15 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CreateUserRequest } from '@/features/tenants/api';
+import type {
+  CreateIssuerClientRequest,
+  RotateIssuerClientRequest,
+} from '@/features/issuerClients/api';
 import {
   activateChild,
+  createChildIssuerClient,
   createChildUser,
   disableChildUser,
   fetchOrgReports,
+  listChildIssuerClients,
   listChildren,
   listChildSchemas,
   listChildUsers,
   resetChildUserPassword,
+  resumeChildIssuerClient,
+  revokeChildIssuerClient,
+  rotateChildIssuerClient,
   suspendChild,
+  suspendChildIssuerClient,
   type OrgReportParams,
 } from './api';
 
@@ -18,6 +28,7 @@ export const orgKeys = {
   children: () => [...orgKeys.all, 'children'] as const,
   childUsers: (id: string) => [...orgKeys.all, 'children', id, 'users'] as const,
   childSchemas: (id: string) => [...orgKeys.all, 'children', id, 'schemas'] as const,
+  childIssuerClients: (id: string) => [...orgKeys.all, 'children', id, 'issuerClients'] as const,
   reports: (params: OrgReportParams) => [...orgKeys.all, 'reports', params] as const,
 };
 
@@ -94,6 +105,65 @@ export function useResetChildUserPassword() {
   return useMutation({
     mutationFn: ({ childId, userId }: { childId: string; userId: string }) =>
       resetChildUserPassword(childId, userId),
+  });
+}
+
+/** A direct child's issuer clients, on behalf of it. */
+export function useChildIssuerClients(childId: string | undefined) {
+  return useQuery({
+    queryKey: childId
+      ? orgKeys.childIssuerClients(childId)
+      : [...orgKeys.all, 'issuerClients', 'none'],
+    queryFn: () => listChildIssuerClients(childId as string),
+    enabled: Boolean(childId),
+  });
+}
+
+function useInvalidateChildIssuerClients(childId: string) {
+  const queryClient = useQueryClient();
+  return () => {
+    void queryClient.invalidateQueries({ queryKey: orgKeys.childIssuerClients(childId) });
+  };
+}
+
+export function useCreateChildIssuerClient(childId: string) {
+  const invalidate = useInvalidateChildIssuerClients(childId);
+  return useMutation({
+    mutationFn: (req: CreateIssuerClientRequest) => createChildIssuerClient(childId, req),
+    onSuccess: invalidate,
+  });
+}
+
+export function useRotateChildIssuerClient(childId: string) {
+  const invalidate = useInvalidateChildIssuerClients(childId);
+  return useMutation({
+    mutationFn: ({ clientId, req }: { clientId: string; req: RotateIssuerClientRequest }) =>
+      rotateChildIssuerClient(childId, clientId, req),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSuspendChildIssuerClient(childId: string) {
+  const invalidate = useInvalidateChildIssuerClients(childId);
+  return useMutation({
+    mutationFn: (clientId: string) => suspendChildIssuerClient(childId, clientId),
+    onSuccess: invalidate,
+  });
+}
+
+export function useResumeChildIssuerClient(childId: string) {
+  const invalidate = useInvalidateChildIssuerClients(childId);
+  return useMutation({
+    mutationFn: (clientId: string) => resumeChildIssuerClient(childId, clientId),
+    onSuccess: invalidate,
+  });
+}
+
+export function useRevokeChildIssuerClient(childId: string) {
+  const invalidate = useInvalidateChildIssuerClients(childId);
+  return useMutation({
+    mutationFn: (clientId: string) => revokeChildIssuerClient(childId, clientId),
+    onSuccess: invalidate,
   });
 }
 

@@ -29,6 +29,7 @@ const NAV_ITEMS: NavItemDef[] = [
   { to: '/tenants', labelKey: 'nav.tenants', icon: '⌂', scope: 'platform:admin' },
   { to: '/org', labelKey: 'nav.org', icon: '⛯', scope: 'org:admin' },
   { to: '/key-management', labelKey: 'nav.keyManagement', icon: '⚙', scope: 'key:manage' },
+  { to: '/clients', labelKey: 'nav.clients', icon: '⚡', scope: 'key:manage' },
   { to: '/security', labelKey: 'nav.security', icon: '⚿' },
 ];
 

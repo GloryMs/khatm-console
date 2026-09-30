@@ -20,6 +20,7 @@
     "tenants": "Tenants",
     "org": "Organization",
     "keyManagement": "Key Management",
+    "clients": "Issuer Clients",
     "security": "Security"
   },
   "shell": {
@@ -233,6 +234,12 @@
     },
     "issuance": {
       "validation-failed": "This request was rejected: the holder reference must be 64 hexadecimal characters, or left blank, and claims may not carry a national ID or other personal identifier."
+    },
+    "issuer-client": {
+      "validation-failed": "This request failed a business check — check the name, allowed schemas, and the retire window (0 to 72 hours).",
+      "not-found": "No issuer client with this id was found in this tenant.",
+      "invalid-transition": "That action isn't available from this client's current status.",
+      "holder-secret-unavailable": "The tenant's holder secret couldn't be stored in Vault, so the client wasn't created. Try again shortly, or contact support with the trace ID below."
     },
     "error": {
       "rbc": {
@@ -706,6 +713,7 @@
       "onBehalfOfNotice": "You are acting on behalf of: {{child}} — actions here are recorded as an on-behalf-of action.",
       "tabUsers": "Users",
       "tabSchemas": "Schemas",
+      "tabIssuerClients": "Issuer clients",
       "addUserCta": "Add user",
       "addUserTitle": "Add a user to this child tenant",
       "schemasEmpty": "This child has no schemas yet.",
@@ -877,6 +885,88 @@
         "confirm": "Yes, force retire",
         "confirming": "Force retiring…"
       }
+    }
+  },
+  "clients": {
+    "title": "Issuer Clients",
+    "intro": "Machine-to-machine issuer clients for this tenant — API keys connectors use to issue credentials directly.",
+    "createCta": "Create issuer client",
+    "emptyTitle": "No issuer clients yet",
+    "emptyBody": "Create one to let a connector issue credentials without a human console session.",
+    "columnName": "Name",
+    "columnKeyPrefix": "Key prefix",
+    "columnStatus": "Status",
+    "columnAllowedSchemas": "Allowed schemas",
+    "columnLastUsed": "Last used",
+    "columnActions": "Actions",
+    "noAllowedSchemas": "None yet",
+    "neverUsed": "Never used",
+    "status": {
+      "active": "Active",
+      "suspended": "Suspended",
+      "retiring": "Retiring",
+      "revoked": "Revoked"
+    },
+    "actionRotate": "Rotate",
+    "actionSuspend": "Suspend",
+    "actionResume": "Resume",
+    "actionRevoke": "Revoke",
+    "create": {
+      "title": "Create issuer client",
+      "nameEn": "Name (English)",
+      "nameAr": "Name (Arabic)",
+      "nameRequired": "Both English and Arabic names are required",
+      "expiresAt": "Expires at (optional)",
+      "expiresAtHelp": "Leave blank for a client that never expires.",
+      "allowedSchemas": "Allowed schemas",
+      "noSchemas": "No schemas are registered yet.",
+      "cancel": "Cancel",
+      "submit": "Create",
+      "submitting": "Creating…"
+    },
+    "suspendConfirm": {
+      "title": "Suspend this issuer client?",
+      "body": "Its API key stops authenticating immediately. You can resume it at any time.",
+      "confirm": "Suspend now",
+      "suspending": "Suspending…",
+      "cancel": "Cancel"
+    },
+    "resumeConfirm": {
+      "title": "Resume this issuer client?",
+      "body": "Its API key will authenticate again.",
+      "confirm": "Resume now",
+      "resuming": "Resuming…",
+      "cancel": "Cancel"
+    },
+    "revokeConfirm": {
+      "title": "Revoke this issuer client?",
+      "body": "This is permanent — the key can never authenticate again. Type the client's key prefix below to confirm.",
+      "typePrompt": "Type the key prefix to confirm",
+      "mismatch": "Doesn't match this client's key prefix",
+      "confirm": "Revoke",
+      "revoking": "Revoking…",
+      "cancel": "Cancel"
+    },
+    "rotate": {
+      "title": "Rotate this issuer client's key?",
+      "prefixLabel": "Rotating client:",
+      "body": "Creates a replacement client with a new key, the same allowed schemas and expiry. The current client keeps authenticating for the grace window below, then is revoked automatically.",
+      "retireAfterHours": "Grace window (hours)",
+      "retireAfterHoursHelp": "The current client stops authenticating {{hours}} hour(s) after rotation. 0 revokes it immediately.",
+      "retireAfterHoursInvalid": "Enter a whole number of hours between 0 and 72.",
+      "confirm": "Rotate",
+      "rotating": "Rotating…",
+      "cancel": "Cancel"
+    },
+    "reveal": {
+      "title": "Issuer client created",
+      "prefixLabel": "Key prefix:",
+      "retiringNote": "The replaced client keeps authenticating until its grace window ends, then stops automatically.",
+      "warning": "This API key is shown once. Copy it now and store it securely — the platform cannot show it again.",
+      "apiKeyLabel": "API key",
+      "holderSecretLabel": "Holder HMAC secret",
+      "holderSecretWarning": "This is the tenant's holder HMAC secret, generated once for its first issuer client. It's for connectors only — Khatm never uses it itself, and it will never be shown again.",
+      "confirmCopiedAndClose": "I copied the key — close"
     }
   },
   "issueBulk": {
