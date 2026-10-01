@@ -8,7 +8,8 @@ server {
 
     # Re-resolve the CDN host periodically instead of pinning the IP for the worker's lifetime
     # (the stale-upstream lesson from 2026-08-12).
-    resolver ${NGINX_RESOLVER} valid=60s ipv6=off;
+    # Old Value: resolver ${NGINX_RESOLVER} valid=60s ipv6=off;
+	resolver ${NGINX_LOCAL_RESOLVERS} valid=60s ipv6=off;
     resolver_timeout 5s;
     client_max_body_size 10m;
 

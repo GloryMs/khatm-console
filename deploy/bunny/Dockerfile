@@ -15,5 +15,6 @@ FROM nginx:1.27-alpine
 RUN rm -f /etc/nginx/conf.d/default.conf
 COPY deploy/bunny/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
-ENV NGINX_RESOLVER=1.1.1.1
+# Old Value: ENV NGINX_RESOLVER=1.1.1.1
+ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
 EXPOSE 8080
